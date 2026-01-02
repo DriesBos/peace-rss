@@ -116,7 +116,10 @@ export default function Home() {
     setIsLoading(true);
     setError(null);
     try {
-      await Promise.all([loadFeeds(), loadEntries({ append: false, nextOffset: 0 })]);
+      await Promise.all([
+        loadFeeds(),
+        loadEntries({ append: false, nextOffset: 0 }),
+      ]);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load');
     } finally {
@@ -124,7 +127,10 @@ export default function Home() {
     }
   }
 
-  async function markEntryStatus(entryIds: number[], status: 'read' | 'unread') {
+  async function markEntryStatus(
+    entryIds: number[],
+    status: 'read' | 'unread'
+  ) {
     await fetchJson<{ ok: true }>('/api/entries/status', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -141,7 +147,10 @@ export default function Home() {
         entries.map((e) => e.id),
         'read'
       );
-      await Promise.all([loadFeeds(), loadEntries({ append: false, nextOffset: 0 })]);
+      await Promise.all([
+        loadFeeds(),
+        loadEntries({ append: false, nextOffset: 0 }),
+      ]);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to mark page read');
     } finally {
@@ -154,9 +163,12 @@ export default function Home() {
     setIsLoading(true);
     setError(null);
     try {
-      await fetchJson<{ ok: true }>(`/api/entries/${selectedEntry.id}/bookmark`, {
-        method: 'POST',
-      });
+      await fetchJson<{ ok: true }>(
+        `/api/entries/${selectedEntry.id}/bookmark`,
+        {
+          method: 'POST',
+        }
+      );
       // Refresh list + selection state
       await Promise.all([
         loadFeeds(),
@@ -213,7 +225,9 @@ export default function Home() {
 
   const canLoadMore = entries.length > 0 && total > entries.length;
   const selectedFeedTitle =
-    selectedFeedId === null ? 'All feeds' : feedsById.get(selectedFeedId)?.title;
+    selectedFeedId === null
+      ? 'All feeds'
+      : feedsById.get(selectedFeedId)?.title;
 
   return (
     <div className={styles.app}>
@@ -300,7 +314,9 @@ export default function Home() {
             entries.map((e) => {
               const isActive = e.id === selectedEntryId;
               const feedTitle =
-                e.feed_title ?? e.feed?.title ?? feedsById.get(e.feed_id)?.title;
+                e.feed_title ??
+                e.feed?.title ??
+                feedsById.get(e.feed_id)?.title;
               const published = formatDate(e.published_at);
               return (
                 <button
