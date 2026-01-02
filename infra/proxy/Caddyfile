@@ -1,7 +1,7 @@
 peacerss.duckdns.org {
 
-  # Miniflux UI at /miniflux (strip prefix before proxying)
-  handle_path /miniflux* {
+  # Miniflux UI at /miniflux (do NOT strip prefix)
+  handle /miniflux* {
     reverse_proxy miniflux:8080
   }
 
