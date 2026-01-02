@@ -1,0 +1,242 @@
+.app
+  display: grid
+  grid-template-columns: 240px 360px 1fr
+  height: 100vh
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"
+  background: #fafafa
+
+.sidebar,
+.listPane,
+.detailPane
+  min-width: 0
+  border-right: 1px solid #e6e6e6
+  background: #fff
+
+.detailPane
+  border-right: none
+
+.sidebar
+  padding: 12px
+  display: flex
+  flex-direction: column
+  gap: 10px
+
+.brand
+  font-weight: 600
+  letter-spacing: -0.2px
+
+.sectionTitle
+  margin-top: 8px
+  font-size: 12px
+  text-transform: uppercase
+  letter-spacing: 0.6px
+  color: #666
+
+.link
+  color: inherit
+  text-decoration: none
+  border: 1px solid #e6e6e6
+  background: #f7f7f7
+  padding: 6px 8px
+  border-radius: 6px
+  display: inline-block
+
+.link:hover
+  background: #f1f1f1
+
+.feedList
+  display: flex
+  flex-direction: column
+  gap: 2px
+  overflow: auto
+  padding-right: 4px
+
+.feedItem
+  appearance: none
+  width: 100%
+  padding: 6px 8px
+  border-radius: 6px
+  border: 1px solid transparent
+  text-align: left
+  white-space: nowrap
+  overflow: hidden
+  text-overflow: ellipsis
+  background: transparent
+  cursor: pointer
+  font: inherit
+  display: flex
+  align-items: center
+  gap: 8px
+
+.feedItem:hover
+  border-color: #e6e6e6
+  background: #f7f7f7
+
+.feedItemActive
+  border-color: #dcdcdc
+  background: #f1f1f1
+
+.feedTitle
+  flex: 1
+  min-width: 0
+  overflow: hidden
+  text-overflow: ellipsis
+
+.badge
+  flex: 0 0 auto
+  font-size: 12px
+  color: #333
+  background: #f1f1f1
+  border: 1px solid #e6e6e6
+  padding: 2px 6px
+  border-radius: 999px
+
+.listPane
+  display: flex
+  flex-direction: column
+  min-height: 0
+
+.toolbar
+  display: flex
+  align-items: center
+  gap: 8px
+  padding: 10px 12px
+  border-bottom: 1px solid #e6e6e6
+  background: #fff
+
+.button
+  border: 1px solid #e6e6e6
+  background: #f7f7f7
+  padding: 6px 10px
+  border-radius: 6px
+  cursor: pointer
+  font: inherit
+
+.button:hover:enabled
+  background: #f1f1f1
+
+.button:disabled
+  opacity: 0.6
+  cursor: not-allowed
+
+.spacer
+  flex: 1
+
+.meta
+  font-size: 12px
+  color: #666
+
+.error
+  padding: 10px 12px
+  border-bottom: 1px solid #e6e6e6
+  background: #f7f7f7
+  color: #333
+  font-size: 13px
+  white-space: pre-wrap
+  overflow-wrap: anywhere
+
+.entryList
+  overflow: auto
+  padding: 6px
+  background: #fff
+
+.entryItem
+  width: 100%
+  text-align: left
+  border: 1px solid transparent
+  background: #fff
+  padding: 10px 10px
+  border-radius: 8px
+  cursor: pointer
+
+.entryItem:hover
+  background: #f7f7f7
+  border-color: #e6e6e6
+
+.entryItemActive
+  background: #f1f1f1
+  border-color: #dcdcdc
+
+.entryTitle
+  font-size: 14px
+  line-height: 18px
+  margin-bottom: 4px
+  overflow: hidden
+  display: -webkit-box
+  -webkit-line-clamp: 2
+  -webkit-box-orient: vertical
+
+.entryMeta
+  display: flex
+  gap: 10px
+  justify-content: space-between
+  font-size: 12px
+  color: #666
+  white-space: nowrap
+  overflow: hidden
+  text-overflow: ellipsis
+
+.listFooter
+  padding: 10px 12px
+  border-top: 1px solid #e6e6e6
+  background: #fff
+  display: flex
+  justify-content: center
+
+.detailPane
+  padding: 16px
+  overflow: auto
+
+.detailHeader
+  display: flex
+  align-items: baseline
+  justify-content: space-between
+  gap: 12px
+  padding-bottom: 10px
+  border-bottom: 1px solid #e6e6e6
+  margin-bottom: 12px
+
+.detailActions
+  display: flex
+  gap: 8px
+  flex-wrap: wrap
+  justify-content: flex-end
+
+.detailTitle
+  font-size: 18px
+  line-height: 24px
+  font-weight: 600
+  margin: 0
+
+.content
+  font-size: 14px
+  line-height: 1.55
+
+.content :global(p)
+  margin: 0 0 12px 0
+
+.content :global(a)
+  color: inherit
+  text-decoration: underline
+
+.content :global(img)
+  max-width: 100%
+  height: auto
+
+.muted
+  color: #666
+  font-size: 13px
+
+@media (max-width: 980px)
+  .app
+    grid-template-columns: 220px 1fr
+
+  .detailPane
+    display: none
+
+@media (max-width: 620px)
+  .app
+    grid-template-columns: 1fr
+
+  .sidebar
+    display: none

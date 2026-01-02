@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import styles from './page.module.scss';
+import styles from './page.module.sass';
 
 type Feed = {
   id: number;
