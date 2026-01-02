@@ -62,6 +62,8 @@
 }
 
 .feedItem {
+  appearance: none;
+  width: 100%;
   padding: 6px 8px;
   border-radius: 6px;
   border: 1px solid transparent;
@@ -69,11 +71,39 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .feedItem:hover {
   border-color: #e6e6e6;
   background: #f7f7f7;
+}
+
+.feedItemActive {
+  border-color: #dcdcdc;
+  background: #f1f1f1;
+}
+
+.feedTitle {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.badge {
+  flex: 0 0 auto;
+  font-size: 12px;
+  color: #333;
+  background: #f1f1f1;
+  border: 1px solid #e6e6e6;
+  padding: 2px 6px;
+  border-radius: 999px;
 }
 
 .listPane {
@@ -165,11 +195,22 @@
 }
 
 .entryMeta {
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
   font-size: 12px;
   color: #666;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.listFooter {
+  padding: 10px 12px;
+  border-top: 1px solid #e6e6e6;
+  background: #fff;
+  display: flex;
+  justify-content: center;
 }
 
 .detailPane {
@@ -185,6 +226,13 @@
   padding-bottom: 10px;
   border-bottom: 1px solid #e6e6e6;
   margin-bottom: 12px;
+}
+
+.detailActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .detailTitle {

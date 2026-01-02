@@ -1,40 +1,18 @@
-import { NextResponse } from "next/server";
+import 'server-only';
 
-export const runtime = "nodejs";
+import { NextResponse } from 'next/server';
+import { mfFetch } from '@/lib/miniflux';
 
-function getMinifluxConfig() {
-  const baseUrl = process.env.MINIFLUX_BASE_URL;
-  const token = process.env.MINIFLUX_API_TOKEN;
-  if (!baseUrl || !token) {
-    throw new Error("Missing MINIFLUX_BASE_URL or MINIFLUX_API_TOKEN");
-  }
-  return { baseUrl: baseUrl.replace(/\/+$/, ""), token };
-}
+export const runtime = 'nodejs';
 
 export async function GET() {
   try {
-    const { baseUrl, token } = getMinifluxConfig();
-
-    const res = await fetch(`${baseUrl}/v1/feeds`, {
-      method: "GET",
-      headers: {
-        "X-Auth-Token": token,
-        Accept: "application/json",
-      },
-      cache: "no-store",
-    });
-
-    const text = await res.text();
-    return new NextResponse(text, {
-      status: res.status,
-      headers: {
-        "Content-Type": res.headers.get("content-type") ?? "application/json",
-      },
-    });
+    const data = await mfFetch<unknown>('/v1/feeds');
+    return NextResponse.json(data);
   } catch (err) {
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Unknown error" },
-      { status: 500 },
+      { error: err instanceof Error ? err.message : 'Unknown error' },
+      { status: 500 }
     );
   }
 }
