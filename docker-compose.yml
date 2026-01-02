@@ -2,10 +2,9 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      TZ: ${TZ}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - pgdata:/var/lib/postgresql/data
     restart: unless-stopped
@@ -16,12 +15,23 @@ services:
       - postgres
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
+      BASE_URL: ${MINIFLUX_PUBLIC_URL}
       RUN_MIGRATIONS: '1'
+      # Admin bootstrap (optional if already created)
       CREATE_ADMIN: '1'
       ADMIN_USERNAME: ${MINIFLUX_ADMIN_USERNAME}
       ADMIN_PASSWORD: ${MINIFLUX_ADMIN_PASSWORD}
-      BASE_URL: ${BASE_URL}
-      TZ: ${TZ}
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+    environment:
+      # internal docker network URL
+      MINIFLUX_BASE_URL: http://miniflux:8080
+      MINIFLUX_API_TOKEN: ${MINIFLUX_API_TOKEN}
+    depends_on:
+      - miniflux
     restart: unless-stopped
 
   caddy:
@@ -29,10 +39,14 @@ services:
     ports:
       - '80:80'
       - '443:443'
+      - '443:443/udp'
     volumes:
       - ./infra/proxy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
       - caddy_config:/config
+    depends_on:
+      - frontend
+      - miniflux
     restart: unless-stopped
 
 volumes:
