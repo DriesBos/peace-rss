@@ -28,7 +28,7 @@ services:
       context: ./frontend
     environment:
       # internal docker network URL
-      MINIFLUX_BASE_URL: http://miniflux:8080
+      MINIFLUX_BASE_URL: http://miniflux:8080/miniflux
       MINIFLUX_API_TOKEN: ${MINIFLUX_API_TOKEN}
     depends_on:
       - miniflux
