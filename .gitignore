@@ -1,0 +1,87 @@
+############################################
+# Node / Next.js / React
+############################################
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+.next/
+out/
+dist/
+build/
+.cache/
+
+############################################
+# Environment & Secrets
+############################################
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+.env.*.local
+
+# Clerk
+.clerk/
+clerk.dev.json
+clerk.production.json
+
+############################################
+# PostgreSQL
+############################################
+*.sql
+*.dump
+*.pgdump
+postgres-data/
+pgdata/
+tmp/db/
+.tmp/db/
+
+############################################
+# Miniflux
+############################################
+miniflux.env
+miniflux.db
+miniflux-data/
+miniflux-config.yaml
+
+############################################
+# Docker
+############################################
+docker-compose.override.yml
+docker-compose.local.yml
+*.docker.env
+
+############################################
+# Logs
+############################################
+logs/
+*.log
+
+############################################
+# OS / Editor
+############################################
+.DS_Store
+Thumbs.db
+
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json
+
+.idea/
+*.swp
+
+############################################
+# Testing / Coverage
+############################################
+coverage/
+.nyc_output/
+
+############################################
+# Misc
+############################################
+tmp/
+temp/
+.cache/
