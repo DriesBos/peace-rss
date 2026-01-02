@@ -1,11 +1,12 @@
 peacerss.duckdns.org {
 
-  # Miniflux UI at /miniflux (do NOT strip prefix)
+  @minifluxNoSlash path /miniflux
+  redir @minifluxNoSlash /miniflux/ 308
+
   handle /miniflux* {
     reverse_proxy miniflux:8080
   }
 
-  # Everything else goes to Next.js
   handle {
     reverse_proxy frontend:3000
   }
