@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { useEffect, useMemo, useState } from "react";
-import styles from "./page.module.scss";
+import { useEffect, useMemo, useState } from 'react';
+import styles from './page.module.scss';
 
 type Feed = {
   id: number;
@@ -22,7 +22,7 @@ type Entry = {
 async function fetchJson<T>(input: string, init?: RequestInit): Promise<T> {
   const res = await fetch(input, init);
   if (!res.ok) {
-    const text = await res.text().catch(() => "");
+    const text = await res.text().catch(() => '');
     throw new Error(text || `Request failed (${res.status})`);
   }
   return (await res.json()) as T;
@@ -46,14 +46,14 @@ export default function Home() {
   }, [entries, selectedEntryId]);
 
   async function loadFeeds() {
-    const data = await fetchJson<Feed[]>("/api/feeds", { cache: "no-store" });
+    const data = await fetchJson<Feed[]>('/api/feeds', { cache: 'no-store' });
     setFeeds(data);
   }
 
   async function loadEntries() {
     const data = await fetchJson<{ total: number; entries: Entry[] }>(
-      "/api/entries?status=unread&limit=50&offset=0&order=published_at&direction=desc",
-      { cache: "no-store" },
+      '/api/entries?status=unread&limit=50&offset=0&order=published_at&direction=desc',
+      { cache: 'no-store' }
     );
     setEntries(data.entries);
     setSelectedEntryId((prev) => {
@@ -68,7 +68,7 @@ export default function Home() {
     try {
       await Promise.all([loadFeeds(), loadEntries()]);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load");
+      setError(e instanceof Error ? e.message : 'Failed to load');
     } finally {
       setIsLoading(false);
     }
@@ -79,14 +79,14 @@ export default function Home() {
     setIsLoading(true);
     setError(null);
     try {
-      await fetchJson<{ ok: true }>("/api/entries/status", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ entry_ids: [selectedEntry.id], status: "read" }),
+      await fetchJson<{ ok: true }>('/api/entries/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entry_ids: [selectedEntry.id], status: 'read' }),
       });
       await loadEntries();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to mark read");
+      setError(e instanceof Error ? e.message : 'Failed to mark read');
     } finally {
       setIsLoading(false);
     }
@@ -97,12 +97,15 @@ export default function Home() {
     setIsLoading(true);
     setError(null);
     try {
-      await fetchJson<{ ok: true }>(`/api/entries/${selectedEntry.id}/bookmark`, {
-        method: "POST",
-      });
+      await fetchJson<{ ok: true }>(
+        `/api/entries/${selectedEntry.id}/bookmark`,
+        {
+          method: 'POST',
+        }
+      );
       await loadEntries();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to toggle star");
+      setError(e instanceof Error ? e.message : 'Failed to toggle star');
     } finally {
       setIsLoading(false);
     }
@@ -114,7 +117,7 @@ export default function Home() {
   }, []);
 
   const selectedIsStarred = Boolean(
-    selectedEntry?.starred ?? selectedEntry?.bookmarked,
+    selectedEntry?.starred ?? selectedEntry?.bookmarked
   );
 
   return (
@@ -165,11 +168,11 @@ export default function Home() {
             onClick={() => void toggleSelectedStar()}
             disabled={isLoading || !selectedEntry}
           >
-            {selectedIsStarred ? "Unstar" : "Star"}
+            {selectedIsStarred ? 'Unstar' : 'Star'}
           </button>
           <div className={styles.spacer} />
           <div className={styles.meta}>
-            {isLoading ? "Loading…" : `${entries.length} unread`}
+            {isLoading ? 'Loading…' : `${entries.length} unread`}
           </div>
         </div>
 
@@ -182,17 +185,20 @@ export default function Home() {
             entries.map((e) => {
               const isActive = e.id === selectedEntryId;
               const feedTitle =
-                e.feed_title ?? (e.feed_id ? feedsById.get(e.feed_id)?.title : "");
+                e.feed_title ??
+                (e.feed_id ? feedsById.get(e.feed_id)?.title : '');
               return (
                 <button
                   key={e.id}
                   className={`${styles.entryItem} ${
-                    isActive ? styles.entryItemActive : ""
+                    isActive ? styles.entryItemActive : ''
                   }`}
                   onClick={() => setSelectedEntryId(e.id)}
                   type="button"
                 >
-                  <div className={styles.entryTitle}>{e.title || "(untitled)"}</div>
+                  <div className={styles.entryTitle}>
+                    {e.title || '(untitled)'}
+                  </div>
                   {feedTitle ? (
                     <div className={styles.entryMeta}>{feedTitle}</div>
                   ) : null}
@@ -210,7 +216,7 @@ export default function Home() {
           <>
             <div className={styles.detailHeader}>
               <h1 className={styles.detailTitle}>
-                {selectedEntry.title || "(untitled)"}
+                {selectedEntry.title || '(untitled)'}
               </h1>
               <a
                 className={styles.link}
@@ -225,7 +231,7 @@ export default function Home() {
             <div
               className={styles.content}
               dangerouslySetInnerHTML={{
-                __html: selectedEntry.content ?? "",
+                __html: selectedEntry.content ?? '',
               }}
             />
           </>
