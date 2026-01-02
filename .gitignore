@@ -85,3 +85,8 @@ coverage/
 tmp/
 temp/
 .cache/
+
+.env
+backups/
+_server_backup/
+
