@@ -26,7 +26,7 @@ MINIFLUX_ADMIN_USERNAME=admin
 MINIFLUX_ADMIN_PASSWORD=your_secure_admin_password_here
 
 # Public URL (used by Miniflux for links and BASE_URL config)
-MINIFLUX_PUBLIC_URL=https://peacerss.duckdns.org/miniflux
+MINIFLUX_PUBLIC_URL=https://pathanam.xyz/miniflux
 
 # ============================================
 # PostgreSQL Database
@@ -42,7 +42,7 @@ POSTGRES_DB=miniflux
 2. **Different keys for dev/prod**:
    - Local development: Use Clerk test keys
    - Production server: Use Clerk live keys
-3. **MINIFLUX_BASE_URL**: 
+3. **MINIFLUX_BASE_URL**:
    - Local Docker: `http://miniflux:8080/miniflux`
    - Production Docker: Same (internal DNS)
 4. **MINIFLUX_PUBLIC_URL**:
@@ -80,4 +80,3 @@ docker compose exec frontend env | grep -E 'CLERK|MINIFLUX'
 # MINIFLUX_ADMIN_USERNAME=admin
 # MINIFLUX_ADMIN_PASSWORD=...
 ```
-

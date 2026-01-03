@@ -1,4 +1,4 @@
-peacerss.duckdns.org {
+pathanam.xyz {
 
   @minifluxNoSlash path /miniflux
   redir @minifluxNoSlash /miniflux/ 308
