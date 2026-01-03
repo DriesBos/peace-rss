@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { SignedIn, SignedOut } from '@clerk/nextjs';
+import { SignedIn, SignedOut, RedirectToSignIn } from '@clerk/nextjs';
 import styles from './page.module.sass';
 
 type Feed = {
@@ -237,7 +237,7 @@ export default function Home() {
   // Load feeds/entries after provisioning
   useEffect(() => {
     if (!isProvisioned) return;
-    
+
     setIsLoading(true);
     setError(null);
     Promise.all([loadFeeds(), loadEntries({ append: false, nextOffset: 0 })])
@@ -256,254 +256,257 @@ export default function Home() {
       ? 'All feeds'
       : feedsById.get(selectedFeedId)?.title;
 
-  // Show provisioning error with retry button
-  if (provisionError && !isProvisioned) {
-    return (
-      <div className={styles.app}>
-        <div style={{ padding: '2rem', textAlign: 'center' }}>
-          <div className={styles.error}>{provisionError}</div>
-          <button
-            className={styles.button}
-            onClick={() => void bootstrap()}
-            style={{ marginTop: '1rem' }}
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Show loading state while provisioning
-  if (!isProvisioned) {
-    return (
-      <div className={styles.app}>
-        <div style={{ padding: '2rem', textAlign: 'center' }}>
-          Setting up your account...
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className={styles.app}>
-      <aside className={styles.sidebar}>
-        <div className={styles.brand}>Peace RSS</div>
-        <a
-          className={styles.link}
-          href="/miniflux"
-          target="_blank"
-          rel="noreferrer"
-        >
-          Open Miniflux
-        </a>
-
-        <div className={styles.sectionTitle}>Feeds</div>
-        <div className={styles.feedList}>
-          <button
-            type="button"
-            className={`${styles.feedItem} ${
-              selectedFeedId === null ? styles.feedItemActive : ''
-            }`}
-            onClick={() => setSelectedFeedId(null)}
-            disabled={isLoading}
-          >
-            <span className={styles.feedTitle}>All feeds</span>
-          </button>
-
-          {feeds.length === 0 ? (
-            <div className={styles.muted}>No feeds yet.</div>
-          ) : (
-            feeds.map((f) => (
+    <>
+      <SignedIn>
+        {/* Show provisioning error with retry button */}
+        {provisionError && !isProvisioned ? (
+          <div className={styles.app}>
+            <div style={{ padding: '2rem', textAlign: 'center' }}>
+              <div className={styles.error}>{provisionError}</div>
               <button
-                key={f.id}
-                type="button"
-                className={`${styles.feedItem} ${
-                  selectedFeedId === f.id ? styles.feedItemActive : ''
-                }`}
-                onClick={() => setSelectedFeedId(f.id)}
-                disabled={isLoading}
-                title={f.title}
+                className={styles.button}
+                onClick={() => void bootstrap()}
+                style={{ marginTop: '1rem' }}
               >
-                <span className={styles.feedTitle}>{f.title}</span>
-                {typeof f.unread_count === 'number' ? (
-                  <span className={styles.badge}>{f.unread_count}</span>
-                ) : null}
+                Retry
               </button>
-            ))
-          )}
-        </div>
-      </aside>
-
-      <section className={styles.listPane}>
-        <div className={styles.toolbar}>
-          <button
-            className={styles.button}
-            onClick={() => void refreshAll()}
-            disabled={isLoading}
-          >
-            Refresh
-          </button>
-          <button
-            className={styles.button}
-            onClick={() => void markPageRead()}
-            disabled={isLoading || entries.length === 0}
-          >
-            Mark page read
-          </button>
-          <div className={styles.spacer} />
-          <div className={styles.meta}>
-            {isLoading
-              ? 'Loading…'
-              : `${entries.length}${total ? ` / ${total}` : ''} unread${
-                  selectedFeedTitle ? ` — ${selectedFeedTitle}` : ''
-                }`}
-          </div>
-        </div>
-
-        {error ? <div className={styles.error}>{error}</div> : null}
-
-        <div className={styles.entryList}>
-          {entries.length === 0 ? (
-            <div className={styles.muted}>No unread entries.</div>
-          ) : (
-            entries.map((e) => {
-              const isActive = e.id === selectedEntryId;
-              const feedTitle =
-                e.feed_title ??
-                e.feed?.title ??
-                feedsById.get(e.feed_id)?.title;
-              const published = formatDate(e.published_at);
-              return (
-                <button
-                  key={e.id}
-                  className={`${styles.entryItem} ${
-                    isActive ? styles.entryItemActive : ''
-                  }`}
-                  onClick={() => setSelectedEntryId(e.id)}
-                  type="button"
-                >
-                  <div className={styles.entryTitle}>
-                    {e.title || '(untitled)'}
-                  </div>
-                  <div className={styles.entryMeta}>
-                    {feedTitle ? <span>{feedTitle}</span> : null}
-                    {published ? <span>{published}</span> : null}
-                  </div>
-                </button>
-              );
-            })
-          )}
-        </div>
-
-        <div className={styles.listFooter}>
-          <button
-            className={styles.button}
-            onClick={() => void loadMore()}
-            disabled={isLoading || !canLoadMore}
-            type="button"
-          >
-            Load more
-          </button>
-        </div>
-      </section>
-
-      <section className={styles.detailPane}>
-        {!selectedEntry ? (
-          <div className={styles.muted}>Select an entry to read.</div>
-        ) : (
-          <>
-            <div className={styles.detailHeader}>
-              <div>
-                <h1 className={styles.detailTitle}>
-                  {selectedEntry.title || '(untitled)'}
-                </h1>
-                <div className={styles.meta}>
-                  {(selectedEntry.feed_title ??
-                    selectedEntry.feed?.title ??
-                    feedsById.get(selectedEntry.feed_id)?.title) ||
-                  selectedEntry.published_at ? (
-                    <>
-                      <span>
-                        {selectedEntry.feed_title ??
-                          selectedEntry.feed?.title ??
-                          feedsById.get(selectedEntry.feed_id)?.title ??
-                          ''}
-                      </span>
-                      <span>
-                        {formatDate(selectedEntry.published_at) || ''}
-                      </span>
-                    </>
-                  ) : null}
-                </div>
-              </div>
-              <div className={styles.detailActions}>
-                <a
-                  className={styles.link}
-                  href={selectedEntry.url}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Open source
-                </a>
-                <button
-                  className={styles.button}
-                  onClick={() => void toggleSelectedStar()}
-                  disabled={isLoading}
-                  type="button"
-                >
-                  {selectedIsStarred ? 'Unstar' : 'Star'}
-                </button>
-                <button
-                  className={styles.button}
-                  onClick={() => void setSelectedStatus('read')}
-                  disabled={isLoading}
-                  type="button"
-                >
-                  Mark read
-                </button>
-                <button
-                  className={styles.button}
-                  onClick={() => void setSelectedStatus('unread')}
-                  disabled={isLoading}
-                  type="button"
-                >
-                  Mark unread
-                </button>
-              </div>
             </div>
+          </div>
+        ) : !isProvisioned ? (
+          <div className={styles.app}>
+            <div style={{ padding: '2rem', textAlign: 'center' }}>
+              Setting up your account...
+            </div>
+          </div>
+        ) : (
+          <div className={styles.app}>
+            <aside className={styles.sidebar}>
+              <div className={styles.brand}>Peace RSS</div>
+              <a
+                className={styles.link}
+                href="/miniflux"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Open Miniflux
+              </a>
 
-            {selectedEntry.content ? (
-              <div
-                className={styles.content}
-                dangerouslySetInnerHTML={{
-                  __html: selectedEntry.content,
-                }}
-              />
-            ) : (
-              <div className={styles.content}>
-                {selectedEntry.summary ? (
-                  <div
-                    dangerouslySetInnerHTML={{ __html: selectedEntry.summary }}
-                  />
+              <div className={styles.sectionTitle}>Feeds</div>
+              <div className={styles.feedList}>
+                <button
+                  type="button"
+                  className={`${styles.feedItem} ${
+                    selectedFeedId === null ? styles.feedItemActive : ''
+                  }`}
+                  onClick={() => setSelectedFeedId(null)}
+                  disabled={isLoading}
+                >
+                  <span className={styles.feedTitle}>All feeds</span>
+                </button>
+
+                {feeds.length === 0 ? (
+                  <div className={styles.muted}>No feeds yet.</div>
                 ) : (
-                  <div className={styles.muted}>No content.</div>
+                  feeds.map((f) => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      className={`${styles.feedItem} ${
+                        selectedFeedId === f.id ? styles.feedItemActive : ''
+                      }`}
+                      onClick={() => setSelectedFeedId(f.id)}
+                      disabled={isLoading}
+                      title={f.title}
+                    >
+                      <span className={styles.feedTitle}>{f.title}</span>
+                      {typeof f.unread_count === 'number' ? (
+                        <span className={styles.badge}>{f.unread_count}</span>
+                      ) : null}
+                    </button>
+                  ))
                 )}
-                <div style={{ marginTop: 12 }}>
-                  <a
-                    className={styles.link}
-                    href={selectedEntry.url}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    Open source
-                  </a>
+              </div>
+            </aside>
+
+            <section className={styles.listPane}>
+              <div className={styles.toolbar}>
+                <button
+                  className={styles.button}
+                  onClick={() => void refreshAll()}
+                  disabled={isLoading}
+                >
+                  Refresh
+                </button>
+                <button
+                  className={styles.button}
+                  onClick={() => void markPageRead()}
+                  disabled={isLoading || entries.length === 0}
+                >
+                  Mark page read
+                </button>
+                <div className={styles.spacer} />
+                <div className={styles.meta}>
+                  {isLoading
+                    ? 'Loading…'
+                    : `${entries.length}${total ? ` / ${total}` : ''} unread${
+                        selectedFeedTitle ? ` — ${selectedFeedTitle}` : ''
+                      }`}
                 </div>
               </div>
-            )}
-          </>
+
+              {error ? <div className={styles.error}>{error}</div> : null}
+
+              <div className={styles.entryList}>
+                {entries.length === 0 ? (
+                  <div className={styles.muted}>No unread entries.</div>
+                ) : (
+                  entries.map((e) => {
+                    const isActive = e.id === selectedEntryId;
+                    const feedTitle =
+                      e.feed_title ??
+                      e.feed?.title ??
+                      feedsById.get(e.feed_id)?.title;
+                    const published = formatDate(e.published_at);
+                    return (
+                      <button
+                        key={e.id}
+                        className={`${styles.entryItem} ${
+                          isActive ? styles.entryItemActive : ''
+                        }`}
+                        onClick={() => setSelectedEntryId(e.id)}
+                        type="button"
+                      >
+                        <div className={styles.entryTitle}>
+                          {e.title || '(untitled)'}
+                        </div>
+                        <div className={styles.entryMeta}>
+                          {feedTitle ? <span>{feedTitle}</span> : null}
+                          {published ? <span>{published}</span> : null}
+                        </div>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+
+              <div className={styles.listFooter}>
+                <button
+                  className={styles.button}
+                  onClick={() => void loadMore()}
+                  disabled={isLoading || !canLoadMore}
+                  type="button"
+                >
+                  Load more
+                </button>
+              </div>
+            </section>
+
+            <section className={styles.detailPane}>
+              {!selectedEntry ? (
+                <div className={styles.muted}>Select an entry to read.</div>
+              ) : (
+                <>
+                  <div className={styles.detailHeader}>
+                    <div>
+                      <h1 className={styles.detailTitle}>
+                        {selectedEntry.title || '(untitled)'}
+                      </h1>
+                      <div className={styles.meta}>
+                        {(selectedEntry.feed_title ??
+                          selectedEntry.feed?.title ??
+                          feedsById.get(selectedEntry.feed_id)?.title) ||
+                        selectedEntry.published_at ? (
+                          <>
+                            <span>
+                              {selectedEntry.feed_title ??
+                                selectedEntry.feed?.title ??
+                                feedsById.get(selectedEntry.feed_id)?.title ??
+                                ''}
+                            </span>
+                            <span>
+                              {formatDate(selectedEntry.published_at) || ''}
+                            </span>
+                          </>
+                        ) : null}
+                      </div>
+                    </div>
+                    <div className={styles.detailActions}>
+                      <a
+                        className={styles.link}
+                        href={selectedEntry.url}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Open source
+                      </a>
+                      <button
+                        className={styles.button}
+                        onClick={() => void toggleSelectedStar()}
+                        disabled={isLoading}
+                        type="button"
+                      >
+                        {selectedIsStarred ? 'Unstar' : 'Star'}
+                      </button>
+                      <button
+                        className={styles.button}
+                        onClick={() => void setSelectedStatus('read')}
+                        disabled={isLoading}
+                        type="button"
+                      >
+                        Mark read
+                      </button>
+                      <button
+                        className={styles.button}
+                        onClick={() => void setSelectedStatus('unread')}
+                        disabled={isLoading}
+                        type="button"
+                      >
+                        Mark unread
+                      </button>
+                    </div>
+                  </div>
+
+                  {selectedEntry.content ? (
+                    <div
+                      className={styles.content}
+                      dangerouslySetInnerHTML={{
+                        __html: selectedEntry.content,
+                      }}
+                    />
+                  ) : (
+                    <div className={styles.content}>
+                      {selectedEntry.summary ? (
+                        <div
+                          dangerouslySetInnerHTML={{
+                            __html: selectedEntry.summary,
+                          }}
+                        />
+                      ) : (
+                        <div className={styles.muted}>No content.</div>
+                      )}
+                      <div style={{ marginTop: 12 }}>
+                        <a
+                          className={styles.link}
+                          href={selectedEntry.url}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Open source
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </section>
+          </div>
         )}
-      </section>
-    </div>
+      </SignedIn>
+
+      <SignedOut>
+        <RedirectToSignIn />
+      </SignedOut>
+    </>
   );
 }

@@ -31,15 +31,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider>
+    <ClerkProvider afterSignInUrl="/" afterSignUpUrl="/">
       <html lang="en">
         <body className={`${geistSans.variable} ${geistMono.variable}`}>
-          <header style={{ 
-            position: 'absolute', 
-            top: '1rem', 
-            right: '1rem', 
-            zIndex: 1000 
-          }}>
+          <header
+            style={{
+              position: 'absolute',
+              top: '1rem',
+              right: '1rem',
+              zIndex: 1000,
+            }}
+          >
             <SignedOut>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <SignInButton />
@@ -51,21 +53,21 @@ export default function RootLayout({
             </SignedIn>
           </header>
           <SignedOut>
-            <div style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center', 
-              minHeight: '100vh',
-              flexDirection: 'column',
-              gap: '1rem'
-            }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minHeight: '100vh',
+                flexDirection: 'column',
+                gap: '1rem',
+              }}
+            >
               <h1>Peace RSS</h1>
               <p>Please sign in to continue</p>
             </div>
           </SignedOut>
-          <SignedIn>
-            {children}
-          </SignedIn>
+          <SignedIn>{children}</SignedIn>
         </body>
       </html>
     </ClerkProvider>
