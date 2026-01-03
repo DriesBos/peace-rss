@@ -43,8 +43,8 @@ services:
     ports:
       - '80:80'
       # If you want https locally later, add 443 back. For now, keep it off.
-      # - '443:443'
-      # - '443:443/udp'
+      - '443:443'
+      - '443:443/udp'
     volumes:
       - ./infra/proxy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
