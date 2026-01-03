@@ -37,7 +37,7 @@ function generateUsername(email: string | undefined, userId: string): string {
     if (prefix.length > 20) prefix = prefix.slice(0, 20);
     if (prefix.length === 0) prefix = 'user';
   }
-  
+
   // Add suffix from userId (last 4 chars)
   const suffix = userId.slice(-4);
   return `${prefix}-${suffix}`;
@@ -49,7 +49,8 @@ function generateUsername(email: string | undefined, userId: string): string {
  */
 function generateRandomPassword(): string {
   // 24 random alphanumeric characters
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  const chars =
+    'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   let password = '';
   for (let i = 0; i < 24; i++) {
     password += chars.charAt(Math.floor(Math.random() * chars.length));
@@ -59,10 +60,10 @@ function generateRandomPassword(): string {
 
 /**
  * POST /api/bootstrap
- * 
+ *
  * Provisions a Miniflux user for the currently authenticated Clerk user.
  * If already provisioned, returns success immediately.
- * 
+ *
  * Steps:
  * 1. Check if user already has minifluxToken in Clerk privateMetadata
  * 2. If not, create Miniflux user (admin endpoint)
@@ -74,10 +75,7 @@ export async function POST() {
     // 1. Require Clerk authentication
     const { userId } = await auth();
     if (!userId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // 2. Get Clerk user data
@@ -85,11 +83,14 @@ export async function POST() {
     const user = await client.users.getUser(userId);
 
     // 3. Check if already provisioned
-    const metadata = user.privateMetadata as { minifluxToken?: string; minifluxUsername?: string } | undefined;
+    const metadata = user.privateMetadata as
+      | { minifluxToken?: string; minifluxUsername?: string }
+      | undefined;
     if (metadata?.minifluxToken) {
       return NextResponse.json({
         ok: true,
         provisioned: true,
+        minifluxUsername: metadata.minifluxUsername ?? null,
       });
     }
 
@@ -114,7 +115,7 @@ export async function POST() {
       if (err instanceof Error && err.message.includes('already exists')) {
         const randomSuffix = Math.random().toString(36).slice(2, 6);
         username = `${username}-${randomSuffix}`;
-        
+
         try {
           minifluxUser = await mfFetchAdmin<MinifluxUser>('/v1/users', {
             method: 'POST',
@@ -125,7 +126,10 @@ export async function POST() {
             }),
           });
         } catch (retryErr) {
-          console.error('Failed to create Miniflux user after retry:', retryErr);
+          console.error(
+            'Failed to create Miniflux user after retry:',
+            retryErr
+          );
           return NextResponse.json(
             { error: 'Failed to create Miniflux user' },
             { status: 500 }
@@ -163,10 +167,13 @@ export async function POST() {
       );
     }
 
-    // 7. Store token in Clerk privateMetadata
+    // 7. Store token in Clerk privateMetadata (merge, don't overwrite)
     try {
+      const existing = (user.privateMetadata ?? {}) as Record<string, unknown>;
+
       await client.users.updateUser(userId, {
         privateMetadata: {
+          ...existing,
           minifluxToken: apiKey.token,
           minifluxUsername: username,
         },
@@ -191,4 +198,3 @@ export async function POST() {
     );
   }
 }
-
