@@ -27,9 +27,13 @@ services:
     build:
       context: ./frontend
     environment:
-      # internal docker network URL
-      MINIFLUX_BASE_URL: http://miniflux:8080/miniflux
-      MINIFLUX_API_TOKEN: ${MINIFLUX_API_TOKEN}
+      # Clerk Authentication
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY}
+      # Miniflux Configuration (internal docker network URL)
+      MINIFLUX_BASE_URL: ${MINIFLUX_BASE_URL:-http://miniflux:8080/miniflux}
+      MINIFLUX_ADMIN_USERNAME: ${MINIFLUX_ADMIN_USERNAME}
+      MINIFLUX_ADMIN_PASSWORD: ${MINIFLUX_ADMIN_PASSWORD}
     depends_on:
       - miniflux
     restart: unless-stopped

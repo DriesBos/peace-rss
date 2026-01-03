@@ -1,7 +1,8 @@
 import 'server-only';
 
 import { NextResponse } from 'next/server';
-import { mfFetch } from '@/lib/miniflux';
+import { auth, clerkClient } from '@clerk/nextjs/server';
+import { mfFetchUser } from '@/lib/miniflux';
 
 export const runtime = 'nodejs';
 
@@ -19,6 +20,28 @@ function getNumberParam(url: URL, key: string, defaultValue: number): number {
 
 export async function GET(request: Request) {
   try {
+    // 1. Require Clerk authentication
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // 2. Get user's Miniflux token from Clerk metadata
+    const client = await clerkClient();
+    const user = await client.users.getUser(userId);
+    const metadata = user.privateMetadata as
+      | { minifluxToken?: string }
+      | undefined;
+    const token = metadata?.minifluxToken;
+
+    if (!token) {
+      return NextResponse.json(
+        { error: 'Not provisioned. Call /api/bootstrap first.' },
+        { status: 401 }
+      );
+    }
+
+    // 3. Parse query parameters
     const url = new URL(request.url);
 
     const status = getStringParam(url, 'status', 'unread');
@@ -47,7 +70,11 @@ export async function GET(request: Request) {
     });
     if (feedId) qs.set('feed_id', String(feedId));
 
-    const data = await mfFetch<unknown>(`/v1/entries?${qs.toString()}`);
+    // 4. Fetch entries using per-user token
+    const data = await mfFetchUser<unknown>(
+      token,
+      `/v1/entries?${qs.toString()}`
+    );
     return NextResponse.json(data);
   } catch (err) {
     return NextResponse.json(
@@ -56,5 +83,3 @@ export async function GET(request: Request) {
     );
   }
 }
-
-

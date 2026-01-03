@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { SignedIn, SignedOut } from '@clerk/nextjs';
 import styles from './page.module.sass';
 
 type Feed = {
@@ -65,6 +66,8 @@ export default function Home() {
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isProvisioned, setIsProvisioned] = useState(false);
+  const [provisionError, setProvisionError] = useState<string | null>(null);
 
   const feedsById = useMemo(() => {
     const map = new Map<number, Feed>();
@@ -210,14 +213,38 @@ export default function Home() {
     }
   }
 
+  async function bootstrap() {
+    try {
+      const res = await fetchJson<{ ok: boolean; provisioned: boolean }>(
+        '/api/bootstrap',
+        { method: 'POST' }
+      );
+      if (res.ok && res.provisioned) {
+        setIsProvisioned(true);
+        setProvisionError(null);
+      }
+    } catch (e) {
+      setProvisionError(e instanceof Error ? e.message : 'Provisioning failed');
+      setIsProvisioned(false);
+    }
+  }
+
+  // Bootstrap on mount
   useEffect(() => {
+    void bootstrap();
+  }, []);
+
+  // Load feeds/entries after provisioning
+  useEffect(() => {
+    if (!isProvisioned) return;
+    
     setIsLoading(true);
     setError(null);
     Promise.all([loadFeeds(), loadEntries({ append: false, nextOffset: 0 })])
       .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load'))
       .finally(() => setIsLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedFeedId]);
+  }, [selectedFeedId, isProvisioned]);
 
   const selectedIsStarred = Boolean(
     selectedEntry?.starred ?? selectedEntry?.bookmarked
@@ -228,6 +255,35 @@ export default function Home() {
     selectedFeedId === null
       ? 'All feeds'
       : feedsById.get(selectedFeedId)?.title;
+
+  // Show provisioning error with retry button
+  if (provisionError && !isProvisioned) {
+    return (
+      <div className={styles.app}>
+        <div style={{ padding: '2rem', textAlign: 'center' }}>
+          <div className={styles.error}>{provisionError}</div>
+          <button
+            className={styles.button}
+            onClick={() => void bootstrap()}
+            style={{ marginTop: '1rem' }}
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading state while provisioning
+  if (!isProvisioned) {
+    return (
+      <div className={styles.app}>
+        <div style={{ padding: '2rem', textAlign: 'center' }}>
+          Setting up your account...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.app}>

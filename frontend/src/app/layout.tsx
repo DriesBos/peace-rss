@@ -34,16 +34,38 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="en">
         <body className={`${geistSans.variable} ${geistMono.variable}`}>
-          <header>
+          <header style={{ 
+            position: 'absolute', 
+            top: '1rem', 
+            right: '1rem', 
+            zIndex: 1000 
+          }}>
             <SignedOut>
-              <SignInButton />
-              <SignUpButton />
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <SignInButton />
+                <SignUpButton />
+              </div>
             </SignedOut>
             <SignedIn>
               <UserButton />
             </SignedIn>
           </header>
-          {children}
+          <SignedOut>
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              minHeight: '100vh',
+              flexDirection: 'column',
+              gap: '1rem'
+            }}>
+              <h1>Peace RSS</h1>
+              <p>Please sign in to continue</p>
+            </div>
+          </SignedOut>
+          <SignedIn>
+            {children}
+          </SignedIn>
         </body>
       </html>
     </ClerkProvider>
