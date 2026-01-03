@@ -24,14 +24,14 @@ services:
     restart: unless-stopped
 
   frontend:
+    ports:
+      - '3000:3000'
     build:
       context: ./frontend
     environment:
-      # Clerk Authentication
       NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
       CLERK_SECRET_KEY: ${CLERK_SECRET_KEY}
-      # Miniflux Configuration (internal docker network URL)
-      MINIFLUX_BASE_URL: ${MINIFLUX_BASE_URL:-http://miniflux:8080/miniflux}
+      MINIFLUX_BASE_URL: ${MINIFLUX_BASE_URL}
       MINIFLUX_ADMIN_USERNAME: ${MINIFLUX_ADMIN_USERNAME}
       MINIFLUX_ADMIN_PASSWORD: ${MINIFLUX_ADMIN_PASSWORD}
     depends_on:
