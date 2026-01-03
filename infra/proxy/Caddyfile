@@ -1,4 +1,4 @@
-peacerss.duckdns.org {
+:80 {
 
   # Canonicalize /miniflux -> /miniflux/
   @minifluxNoSlash path /miniflux
