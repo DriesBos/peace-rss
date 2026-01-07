@@ -844,20 +844,27 @@ export default function Home() {
                       {(selectedEntry.feed_title ??
                         selectedEntry.feed?.title ??
                         feedsById.get(selectedEntry.feed_id)?.title) ||
-                      selectedEntry.published_at ? (
+                      selectedEntry.published_at ||
+                      selectedEntry.author ? (
                         <>
                           <p>
-                            By:{' '}
+                            From:{' '}
                             <i>
+                              {selectedEntry.author &&
+                                `By: ${selectedEntry.author}, `}
                               {selectedEntry.feed_title ??
                                 selectedEntry.feed?.title ??
                                 feedsById.get(selectedEntry.feed_id)?.title ??
                                 ''}
                             </i>
                           </p>
-                          <p>
-                            <FormattedDate date={selectedEntry.published_at} />
-                          </p>
+                          {selectedEntry.published_at && (
+                            <p>
+                              <FormattedDate
+                                date={selectedEntry.published_at}
+                              />
+                            </p>
+                          )}
                         </>
                       ) : null}
                     </div>

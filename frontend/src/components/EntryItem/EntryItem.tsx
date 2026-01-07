@@ -87,7 +87,7 @@ export function EntryItem({
           <h1>{title}</h1>
           <div className={styles.entryItem_Meta}>
             <p>
-              By: <i>{author ? `${author}, ${feedTitle}` : feedTitle}</i>
+              From: <i>{author ? `${author}, ${feedTitle}` : feedTitle}</i>
             </p>
             <p>
               <FormattedDate date={publishedAt} />
