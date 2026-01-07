@@ -54,7 +54,9 @@ export async function GET(request: Request) {
     const isStarredQuery = starred === 'true';
 
     // For non-starred queries, use status filter (default: unread)
-    const status = !isStarredQuery ? getStringParam(url, 'status', 'unread') : undefined;
+    const status = !isStarredQuery
+      ? getStringParam(url, 'status', 'unread')
+      : undefined;
 
     // Optional feed filter (used by the UI); ignore when missing.
     const feedIdRaw = url.searchParams.get('feed_id');
@@ -73,17 +75,17 @@ export async function GET(request: Request) {
       order,
       direction,
     });
-    
+
     // Add status only for non-starred queries
     if (status) {
       qs.set('status', status);
     }
-    
+
     // Add starred parameter if requesting starred entries
     if (isStarredQuery) {
       qs.set('starred', 'true');
     }
-    
+
     if (feedId) qs.set('feed_id', String(feedId));
 
     // 4. Fetch entries using per-user token

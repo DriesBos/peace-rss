@@ -71,7 +71,9 @@ export default function Home() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [selectedEntryId, setSelectedEntryId] = useState<number | null>(null);
   const [selectedFeedId, setSelectedFeedId] = useState<number | null>(null);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
+    null
+  );
   const [isStarredView, setIsStarredView] = useState(false);
   const [offset, setOffset] = useState(0);
   const [total, setTotal] = useState(0);
@@ -80,12 +82,15 @@ export default function Home() {
   const [isProvisioned, setIsProvisioned] = useState(false);
   const [provisionError, setProvisionError] = useState<string | null>(null);
   const [newFeedUrl, setNewFeedUrl] = useState('');
-  const [newFeedCategoryId, setNewFeedCategoryId] = useState<number | null>(null);
+  const [newFeedCategoryId, setNewFeedCategoryId] = useState<number | null>(
+    null
+  );
   const [addFeedLoading, setAddFeedLoading] = useState(false);
   const [addFeedError, setAddFeedError] = useState<string | null>(null);
   const [newCategoryTitle, setNewCategoryTitle] = useState('');
   const [addCategoryLoading, setAddCategoryLoading] = useState(false);
   const [addCategoryError, setAddCategoryError] = useState<string | null>(null);
+  const [fetchingOriginal, setFetchingOriginal] = useState(false);
 
   const feedsById = useMemo(() => {
     const map = new Map<number, Feed>();
@@ -114,7 +119,7 @@ export default function Home() {
       order: 'published_at',
       direction: 'desc',
     });
-    
+
     if (isStarredView) {
       // For starred view, fetch starred entries (any status)
       qs.set('starred', 'true');
@@ -122,7 +127,7 @@ export default function Home() {
       // For normal view, fetch unread entries
       qs.set('status', 'unread');
     }
-    
+
     if (selectedFeedId) qs.set('feed_id', String(selectedFeedId));
     return `/api/entries?${qs.toString()}`;
   }
@@ -263,7 +268,7 @@ export default function Home() {
 
   async function addFeed(e: React.FormEvent) {
     e.preventDefault();
-    
+
     const trimmedUrl = newFeedUrl.trim();
     if (!trimmedUrl) return;
 
@@ -274,7 +279,7 @@ export default function Home() {
       const requestBody: { feed_url: string; category_id?: number } = {
         feed_url: trimmedUrl,
       };
-      
+
       if (newFeedCategoryId) {
         requestBody.category_id = newFeedCategoryId;
       }
@@ -298,7 +303,7 @@ export default function Home() {
 
   async function addCategory(e: React.FormEvent) {
     e.preventDefault();
-    
+
     const trimmedTitle = newCategoryTitle.trim();
     if (!trimmedTitle) return;
 
@@ -316,9 +321,40 @@ export default function Home() {
       setNewCategoryTitle('');
       await loadCategories();
     } catch (e) {
-      setAddCategoryError(e instanceof Error ? e.message : 'Failed to add category');
+      setAddCategoryError(
+        e instanceof Error ? e.message : 'Failed to add category'
+      );
     } finally {
       setAddCategoryLoading(false);
+    }
+  }
+
+  async function fetchOriginalArticle() {
+    if (!selectedEntry) return;
+
+    setFetchingOriginal(true);
+    setError(null);
+
+    try {
+      const result = await fetchJson<{ ok: boolean; content: string }>(
+        `/api/entries/${selectedEntry.id}/fetch-content`,
+        { method: 'POST' }
+      );
+
+      if (result.ok && result.content) {
+        // Update the entry in the entries array with the new content
+        setEntries((prev) =>
+          prev.map((e) =>
+            e.id === selectedEntry.id ? { ...e, content: result.content } : e
+          )
+        );
+      }
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : 'Failed to fetch original article'
+      );
+    } finally {
+      setFetchingOriginal(false);
     }
   }
 
@@ -413,7 +449,9 @@ export default function Home() {
                 />
                 <button
                   type="submit"
-                  disabled={addCategoryLoading || isLoading || !newCategoryTitle.trim()}
+                  disabled={
+                    addCategoryLoading || isLoading || !newCategoryTitle.trim()
+                  }
                   className={styles.button}
                 >
                   {addCategoryLoading ? 'Adding...' : 'Add category'}
@@ -437,7 +475,11 @@ export default function Home() {
                 />
                 <select
                   value={newFeedCategoryId ?? ''}
-                  onChange={(e) => setNewFeedCategoryId(e.target.value ? Number(e.target.value) : null)}
+                  onChange={(e) =>
+                    setNewFeedCategoryId(
+                      e.target.value ? Number(e.target.value) : null
+                    )
+                  }
                   disabled={addFeedLoading || isLoading}
                   className={styles.select}
                 >
@@ -464,7 +506,11 @@ export default function Home() {
               <div className={styles.categoryFilter}>
                 <select
                   value={selectedCategoryId ?? ''}
-                  onChange={(e) => setSelectedCategoryId(e.target.value ? Number(e.target.value) : null)}
+                  onChange={(e) =>
+                    setSelectedCategoryId(
+                      e.target.value ? Number(e.target.value) : null
+                    )
+                  }
                   disabled={isLoading}
                   className={styles.select}
                 >
@@ -480,7 +526,9 @@ export default function Home() {
                 <button
                   type="button"
                   className={`${styles.feedItem} ${
-                    selectedFeedId === null && !isStarredView ? styles.feedItemActive : ''
+                    selectedFeedId === null && !isStarredView
+                      ? styles.feedItemActive
+                      : ''
                   }`}
                   onClick={() => {
                     setSelectedFeedId(null);
@@ -507,7 +555,9 @@ export default function Home() {
 
                 {filteredFeeds.length === 0 ? (
                   <div className={styles.muted}>
-                    {selectedCategoryId ? 'No feeds in this category.' : 'No feeds yet.'}
+                    {selectedCategoryId
+                      ? 'No feeds in this category.'
+                      : 'No feeds yet.'}
                   </div>
                 ) : (
                   filteredFeeds.map((f) => (
@@ -564,7 +614,9 @@ export default function Home() {
               <div className={styles.entryList}>
                 {entries.length === 0 ? (
                   <div className={styles.muted}>
-                    {isStarredView ? 'No starred entries.' : 'No unread entries.'}
+                    {isStarredView
+                      ? 'No starred entries.'
+                      : 'No unread entries.'}
                   </div>
                 ) : (
                   entries.map((e) => {
@@ -646,6 +698,16 @@ export default function Home() {
                       >
                         Open source
                       </a>
+                      <button
+                        className={styles.button}
+                        onClick={() => void fetchOriginalArticle()}
+                        disabled={isLoading || fetchingOriginal}
+                        type="button"
+                      >
+                        {fetchingOriginal
+                          ? 'Fetching...'
+                          : 'Fetch original article'}
+                      </button>
                       <button
                         className={styles.button}
                         onClick={() => void toggleSelectedStar()}
