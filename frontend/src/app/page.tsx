@@ -69,6 +69,9 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [isProvisioned, setIsProvisioned] = useState(false);
   const [provisionError, setProvisionError] = useState<string | null>(null);
+  const [newFeedUrl, setNewFeedUrl] = useState('');
+  const [addFeedLoading, setAddFeedLoading] = useState(false);
+  const [addFeedError, setAddFeedError] = useState<string | null>(null);
 
   const feedsById = useMemo(() => {
     const map = new Map<number, Feed>();
@@ -230,6 +233,32 @@ export default function Home() {
     }
   }
 
+  async function addFeed(e: React.FormEvent) {
+    e.preventDefault();
+
+    const trimmedUrl = newFeedUrl.trim();
+    if (!trimmedUrl) return;
+
+    setAddFeedLoading(true);
+    setAddFeedError(null);
+
+    try {
+      await fetchJson<unknown>('/api/feeds/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ feed_url: trimmedUrl }),
+      });
+
+      // Success: clear input and refresh feeds
+      setNewFeedUrl('');
+      await loadFeeds();
+    } catch (e) {
+      setAddFeedError(e instanceof Error ? e.message : 'Failed to add feed');
+    } finally {
+      setAddFeedLoading(false);
+    }
+  }
+
   // Bootstrap on mount
   useEffect(() => {
     void bootstrap();
@@ -295,6 +324,28 @@ export default function Home() {
               </a> */}
 
               <div className={styles.sectionTitle}>Feeds</div>
+
+              {/* Add Feed Form */}
+              <form onSubmit={addFeed} className={styles.addFeedForm}>
+                <input
+                  type="text"
+                  value={newFeedUrl}
+                  onChange={(e) => setNewFeedUrl(e.target.value)}
+                  placeholder="RSS feed URL"
+                  disabled={addFeedLoading || isLoading}
+                  className={styles.input}
+                />
+                <button
+                  type="submit"
+                  disabled={addFeedLoading || isLoading || !newFeedUrl.trim()}
+                  className={styles.button}
+                >
+                  {addFeedLoading ? 'Adding...' : 'Add feed'}
+                </button>
+                {addFeedError && (
+                  <div className={styles.error}>{addFeedError}</div>
+                )}
+              </form>
               <div className={styles.feedList}>
                 <button
                   type="button"
