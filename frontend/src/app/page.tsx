@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { SignedIn, SignedOut, RedirectToSignIn } from '@clerk/nextjs';
 import styles from './page.module.sass';
+import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 
 type Feed = {
   id: number;
@@ -282,15 +283,16 @@ export default function Home() {
         ) : (
           <div className={styles.app}>
             <aside className={styles.sidebar}>
-              <div className={styles.brand}>Peace RSS</div>
-              <a
+              <div className={styles.brand}>Pathanam Reader</div>
+              <ThemeSwitcher />
+              {/* <a
                 className={styles.link}
                 href="/miniflux"
                 target="_blank"
                 rel="noreferrer"
               >
                 Open Miniflux
-              </a>
+              </a> */}
 
               <div className={styles.sectionTitle}>Feeds</div>
               <div className={styles.feedList}>
@@ -327,6 +329,7 @@ export default function Home() {
                   ))
                 )}
               </div>
+              <ThemeSwitcher />
             </aside>
 
             <section className={styles.listPane}>

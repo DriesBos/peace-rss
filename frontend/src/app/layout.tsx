@@ -8,7 +8,9 @@ import {
   SignedOut,
   UserButton,
 } from '@clerk/nextjs';
-import './globals.css';
+import './globals.sass';
+import '@/styles/vars.sass';
+import { ThemeProvider } from '@/components/ThemeProvider';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -32,42 +34,50 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider afterSignInUrl="/" afterSignUpUrl="/">
-      <html lang="en">
+      <html lang="en" suppressHydrationWarning>
         <body className={`${geistSans.variable} ${geistMono.variable}`}>
-          <header
-            style={{
-              position: 'absolute',
-              top: '1rem',
-              right: '1rem',
-              zIndex: 1000,
-            }}
+          <ThemeProvider
+            attribute="data-theme"
+            defaultTheme="light"
+            themes={['light', 'dark', 'softlight', 'softdark', 'green']}
+            enableSystem={true}
+            storageKey="peace-rss-theme"
           >
-            <SignedOut>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <SignInButton />
-                <SignUpButton />
-              </div>
-            </SignedOut>
-            <SignedIn>
-              <UserButton />
-            </SignedIn>
-          </header>
-          <SignedOut>
-            <div
+            <header
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                minHeight: '100vh',
-                flexDirection: 'column',
-                gap: '1rem',
+                position: 'absolute',
+                top: '1rem',
+                right: '1rem',
+                zIndex: 1000,
               }}
             >
-              <h1>Peace RSS</h1>
-              <p>Please sign in to continue</p>
-            </div>
-          </SignedOut>
-          <SignedIn>{children}</SignedIn>
+              <SignedOut>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <SignInButton />
+                  <SignUpButton />
+                </div>
+              </SignedOut>
+              <SignedIn>
+                <UserButton />
+              </SignedIn>
+            </header>
+            <SignedOut>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minHeight: '100vh',
+                  flexDirection: 'column',
+                  gap: '1rem',
+                }}
+              >
+                <h1>Peace RSS</h1>
+                <p>Please sign in to continue</p>
+              </div>
+            </SignedOut>
+            <SignedIn>{children}</SignedIn>
+          </ThemeProvider>
         </body>
       </html>
     </ClerkProvider>
