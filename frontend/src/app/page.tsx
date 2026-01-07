@@ -903,7 +903,7 @@ export default function Home() {
                       >
                         {selectedIsStarred ? 'Unbookmark' : 'Bookmark'}
                       </Button>
-                      {', &nbsp;'}
+                      {', '}
                       <Button
                         onClick={() => void fetchOriginalArticle()}
                         disabled={isLoading || fetchingOriginal}
@@ -911,7 +911,7 @@ export default function Home() {
                       >
                         Link to original article
                       </Button>
-                      {', &nbsp;'}
+                      {', '}
                       <Button
                         className={styles.button}
                         onClick={() => void fetchOriginalArticle()}
@@ -926,16 +926,27 @@ export default function Home() {
                           ? 'Fetching...'
                           : 'Fetch original article'}
                       </Button>
-                      {', &nbsp;'}
-                      <Button
-                        className={styles.button}
-                        onClick={() => void setSelectedStatus('read')}
-                        disabled={isLoading}
-                        type="button"
-                      >
-                        Mark read
-                      </Button>
-                      {', &nbsp;'}
+                      {', '}
+                      {selectedEntry.status === 'unread' ? (
+                        <Button
+                          className={styles.button}
+                          onClick={() => void setSelectedStatus('read')}
+                          disabled={isLoading}
+                          type="button"
+                        >
+                          Mark read
+                        </Button>
+                      ) : (
+                        <Button
+                          className={styles.button}
+                          onClick={() => void setSelectedStatus('unread')}
+                          disabled={isLoading}
+                          type="button"
+                        >
+                          Mark unread
+                        </Button>
+                      )}
+                      {', '}
                       <Button
                         className={styles.button}
                         onClick={() => void setSelectedStatus('unread')}

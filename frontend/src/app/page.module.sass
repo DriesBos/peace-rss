@@ -178,25 +178,41 @@
 
 // DETAILPANE
 .detailPane
-  padding: 1rem var(--space-sides-general)
+  display: flex
+  flex-direction: column
   padding-top: var(--space-top)
+  padding-bottom: var(--space-bottom)
   overflow: auto
   gap: 1.5rem
   &_Header
     display: flex
     flex-direction: column
     gap: 2px
+    padding: 0 var(--space-sides-general)
     // padding-bottom: 10px
     // border-bottom: 1px solid #e6e6e6
     // margin-bottom: 12px
   &_Meta
     display: flex
     justify-content: space-between
-    padding: 0 var(--space-sides-general)
+    padding-left: 0 var(--space-sides-general)
     color: var(--color-text-secondary)
     @include font-meta
     p, i
       @include font-meta
+
+.detailPane_content
+  @include font-body
+  display: flex
+  flex-direction: column
+  gap: 1.5rem
+  padding: 0 var(--space-sides-stories)
+  &:global(a)
+    color: inherit
+    text-decoration: underline
+  &:global(img)
+    max-width: 100%
+    height: auto
 
 .detailFooter
   display: flex
@@ -208,21 +224,9 @@
   display: flex
   flex-direction: row
   flex-wrap: wrap
-  padding-top: 1.5rem
+  padding-top: 3rem
 
 .prevNextButtons
   display: flex
   justify-content: space-between
   padding: 0 var(--space-sides-general)
-
-.detailPane_content
-  @include font-body
-  display: flex
-  flex-direction: column
-  gap: 1.5rem
-  &:global(a)
-    color: inherit
-    text-decoration: underline
-  &:global(img)
-    max-width: 100%
-    height: auto
