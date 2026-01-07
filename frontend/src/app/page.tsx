@@ -75,6 +75,8 @@ export default function Home() {
     null
   );
   const [isStarredView, setIsStarredView] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchMode, setSearchMode] = useState(false);
   const [offset, setOffset] = useState(0);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -132,7 +134,10 @@ export default function Home() {
       direction: 'desc',
     });
 
-    if (isStarredView) {
+    if (searchMode && searchQuery.trim()) {
+      // For search mode, search all entries
+      qs.set('search', searchQuery.trim());
+    } else if (isStarredView) {
       // For starred view, fetch starred entries (any status)
       qs.set('starred', 'true');
     } else {
@@ -140,7 +145,8 @@ export default function Home() {
       qs.set('status', 'unread');
     }
 
-    if (selectedFeedId) qs.set('feed_id', String(selectedFeedId));
+    if (selectedFeedId && !searchMode)
+      qs.set('feed_id', String(selectedFeedId));
     return `/api/entries?${qs.toString()}`;
   }
 
@@ -341,6 +347,32 @@ export default function Home() {
     }
   }
 
+  async function handleSearch(e: React.FormEvent) {
+    e.preventDefault();
+
+    const trimmedQuery = searchQuery.trim();
+    if (!trimmedQuery) return;
+
+    setSearchMode(true);
+    setIsStarredView(false);
+    setSelectedFeedId(null);
+
+    setIsLoading(true);
+    setError(null);
+    try {
+      await loadEntries({ append: false, nextOffset: 0 });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to search');
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  function clearSearch() {
+    setSearchQuery('');
+    setSearchMode(false);
+  }
+
   const fetchOriginalArticle = useCallback(async () => {
     if (!selectedEntry) return;
 
@@ -405,7 +437,7 @@ export default function Home() {
       .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load'))
       .finally(() => setIsLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedFeedId, isStarredView, isProvisioned]);
+  }, [selectedFeedId, isStarredView, searchMode, isProvisioned]);
 
   // Keyboard shortcuts for navigation
   useEffect(() => {
@@ -466,7 +498,9 @@ export default function Home() {
   );
 
   const canLoadMore = entries.length > 0 && total > entries.length;
-  const selectedFeedTitle = isStarredView
+  const selectedFeedTitle = searchMode
+    ? `Search: ${searchQuery}`
+    : isStarredView
     ? 'Starred'
     : selectedFeedId === null
     ? 'All feeds'
@@ -608,13 +642,14 @@ export default function Home() {
                 <button
                   type="button"
                   className={`${styles.feedItem} ${
-                    selectedFeedId === null && !isStarredView
+                    selectedFeedId === null && !isStarredView && !searchMode
                       ? styles.feedItemActive
                       : ''
                   }`}
                   onClick={() => {
                     setSelectedFeedId(null);
                     setIsStarredView(false);
+                    setSearchMode(false);
                   }}
                   disabled={isLoading}
                 >
@@ -629,6 +664,7 @@ export default function Home() {
                   onClick={() => {
                     setSelectedFeedId(null);
                     setIsStarredView(true);
+                    setSearchMode(false);
                   }}
                   disabled={isLoading}
                 >
@@ -647,9 +683,14 @@ export default function Home() {
                       key={f.id}
                       type="button"
                       className={`${styles.feedItem} ${
-                        selectedFeedId === f.id ? styles.feedItemActive : ''
+                        selectedFeedId === f.id && !searchMode
+                          ? styles.feedItemActive
+                          : ''
                       }`}
-                      onClick={() => setSelectedFeedId(f.id)}
+                      onClick={() => {
+                        setSelectedFeedId(f.id);
+                        setSearchMode(false);
+                      }}
                       disabled={isLoading}
                       title={f.title}
                     >
@@ -661,6 +702,43 @@ export default function Home() {
                   ))
                 )}
               </div>
+
+              {/* Search Section */}
+              <div
+                className={styles.sectionTitle}
+                style={{ marginTop: '2rem' }}
+              >
+                Search
+              </div>
+              <form onSubmit={handleSearch} className={styles.addFeedForm}>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search entries..."
+                  disabled={isLoading}
+                  className={styles.input}
+                />
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button
+                    type="submit"
+                    disabled={isLoading || !searchQuery.trim()}
+                    className={styles.button}
+                  >
+                    Search
+                  </button>
+                  {searchMode && (
+                    <button
+                      type="button"
+                      onClick={clearSearch}
+                      disabled={isLoading}
+                      className={styles.button}
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+              </form>
             </aside>
 
             <section className={styles.listPane}>
@@ -672,7 +750,7 @@ export default function Home() {
                 >
                   Refresh
                 </button>
-                {!isStarredView && (
+                {!isStarredView && !searchMode && (
                   <button
                     className={styles.button}
                     onClick={() => void markPageRead()}
@@ -686,7 +764,11 @@ export default function Home() {
                   {isLoading
                     ? 'Loading…'
                     : `${entries.length}${total ? ` / ${total}` : ''} ${
-                        isStarredView ? 'starred' : 'unread'
+                        searchMode
+                          ? 'results'
+                          : isStarredView
+                          ? 'starred'
+                          : 'unread'
                       }${selectedFeedTitle ? ` — ${selectedFeedTitle}` : ''}`}
                 </div>
               </div>
@@ -696,7 +778,9 @@ export default function Home() {
               <div className={styles.entryList}>
                 {entries.length === 0 ? (
                   <div className={styles.muted}>
-                    {isStarredView
+                    {searchMode
+                      ? 'No results found.'
+                      : isStarredView
                       ? 'No starred entries.'
                       : 'No unread entries.'}
                   </div>

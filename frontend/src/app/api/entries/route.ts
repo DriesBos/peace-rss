@@ -49,14 +49,19 @@ export async function GET(request: Request) {
     const direction = getStringParam(url, 'direction', 'desc');
     const order = getStringParam(url, 'order', 'published_at');
 
+    // Check if we're searching
+    const searchQuery = url.searchParams.get('search');
+    const isSearchQuery = searchQuery && searchQuery.trim().length > 0;
+
     // Check if we're fetching starred entries
     const starred = url.searchParams.get('starred');
     const isStarredQuery = starred === 'true';
 
-    // For non-starred queries, use status filter (default: unread)
-    const status = !isStarredQuery
-      ? getStringParam(url, 'status', 'unread')
-      : undefined;
+    // For non-starred/non-search queries, use status filter (default: unread)
+    const status =
+      !isStarredQuery && !isSearchQuery
+        ? getStringParam(url, 'status', 'unread')
+        : undefined;
 
     // Optional feed filter (used by the UI); ignore when missing.
     const feedIdRaw = url.searchParams.get('feed_id');
@@ -76,7 +81,12 @@ export async function GET(request: Request) {
       direction,
     });
 
-    // Add status only for non-starred queries
+    // Add search parameter if searching
+    if (isSearchQuery && searchQuery) {
+      qs.set('search', searchQuery.trim());
+    }
+
+    // Add status only for non-starred/non-search queries
     if (status) {
       qs.set('status', status);
     }
