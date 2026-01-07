@@ -5,6 +5,7 @@ import { SignedIn, SignedOut, RedirectToSignIn } from '@clerk/nextjs';
 import styles from './page.module.sass';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { EntryItem } from '@/components/EntryItem/EntryItem';
+import { Button } from '@/components/Button/Button';
 
 type Category = {
   id: number;
@@ -818,14 +819,13 @@ export default function Home() {
 
               <div className={styles.listFooter}>
                 {canLoadMore && (
-                  <button
-                    className={styles.button}
+                  <Button
+                    variant="primary"
                     onClick={() => void loadMore()}
                     disabled={isLoading}
-                    type="button"
                   >
                     Load more
-                  </button>
+                  </Button>
                 )}
               </div>
             </section>
