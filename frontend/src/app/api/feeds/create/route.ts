@@ -8,7 +8,16 @@ export const runtime = 'nodejs';
 
 type CreateFeedRequest = {
   feed_url: string;
+  category_id?: number;
 };
+
+type DiscoveredFeed = {
+  url: string;
+  title: string;
+  type: string;
+};
+
+type DiscoverResponse = DiscoveredFeed[];
 
 type CreateFeedResponse = {
   id: number;
@@ -73,7 +82,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { feed_url } = body as CreateFeedRequest;
+    const { feed_url, category_id } = body as CreateFeedRequest;
     if (!feed_url || typeof feed_url !== 'string' || !feed_url.trim()) {
       return NextResponse.json(
         { error: 'feed_url is required' },
@@ -82,15 +91,60 @@ export async function POST(request: NextRequest) {
     }
 
     const trimmedUrl = feed_url.trim();
-    console.log('Creating feed with URL:', trimmedUrl);
+    console.log(
+      'Creating feed with URL:',
+      trimmedUrl,
+      'category_id:',
+      category_id
+    );
 
-    // 4. Create feed using per-user token (NOT admin credentials)
+    // 4. Try to discover feeds from the URL first
+    let feedUrlToCreate = trimmedUrl;
+    try {
+      console.log('Attempting feed discovery...');
+      const discovered = await mfFetchUser<DiscoverResponse>(
+        token,
+        '/v1/discover',
+        {
+          method: 'POST',
+          body: JSON.stringify({ url: trimmedUrl }),
+        }
+      );
+
+      if (discovered && discovered.length > 0) {
+        // Use the first discovered feed
+        feedUrlToCreate = discovered[0].url;
+        console.log(
+          `Discovered ${discovered.length} feed(s), using:`,
+          feedUrlToCreate
+        );
+      } else {
+        console.log('No feeds discovered, will try direct URL');
+      }
+    } catch (discoverErr) {
+      console.log(
+        'Feed discovery failed or not available, trying direct URL:',
+        discoverErr
+      );
+      // Continue with original URL
+    }
+
+    // 5. Create feed using the discovered or original URL
+    const requestBody: { feed_url: string; category_id?: number } = {
+      feed_url: feedUrlToCreate,
+    };
+
+    // Add category_id if provided
+    if (category_id && typeof category_id === 'number') {
+      requestBody.category_id = category_id;
+    }
+
     const createdFeed = await mfFetchUser<CreateFeedResponse>(
       token,
       '/v1/feeds',
       {
         method: 'POST',
-        body: JSON.stringify({ feed_url: trimmedUrl }),
+        body: JSON.stringify(requestBody),
       }
     );
 
@@ -103,10 +157,10 @@ export async function POST(request: NextRequest) {
 
     if (errorMessage.includes('unable to detect feed format')) {
       errorMessage =
-        'Unable to parse feed. Please check that:\n' +
-        '• The URL points to a valid RSS/Atom feed\n' +
+        'Unable to find or parse a feed at this URL. Please check that:\n' +
+        '• The URL is accessible\n' +
         '• The URL includes http:// or https://\n' +
-        '• The feed is publicly accessible';
+        '• The page contains an RSS/Atom feed or links to one';
     }
 
     return NextResponse.json({ error: errorMessage }, { status: 500 });

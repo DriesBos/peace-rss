@@ -5,10 +5,17 @@ import { SignedIn, SignedOut, RedirectToSignIn } from '@clerk/nextjs';
 import styles from './page.module.sass';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 
+type Category = {
+  id: number;
+  user_id: number;
+  title: string;
+};
+
 type Feed = {
   id: number;
   title: string;
   unread_count?: number;
+  category?: { id: number; title: string };
 };
 
 type Entry = {
@@ -60,9 +67,11 @@ function formatDate(value?: string): string {
 
 export default function Home() {
   const [feeds, setFeeds] = useState<Feed[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [selectedEntryId, setSelectedEntryId] = useState<number | null>(null);
   const [selectedFeedId, setSelectedFeedId] = useState<number | null>(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [offset, setOffset] = useState(0);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -70,8 +79,12 @@ export default function Home() {
   const [isProvisioned, setIsProvisioned] = useState(false);
   const [provisionError, setProvisionError] = useState<string | null>(null);
   const [newFeedUrl, setNewFeedUrl] = useState('');
+  const [newFeedCategoryId, setNewFeedCategoryId] = useState<number | null>(null);
   const [addFeedLoading, setAddFeedLoading] = useState(false);
   const [addFeedError, setAddFeedError] = useState<string | null>(null);
+  const [newCategoryTitle, setNewCategoryTitle] = useState('');
+  const [addCategoryLoading, setAddCategoryLoading] = useState(false);
+  const [addCategoryError, setAddCategoryError] = useState<string | null>(null);
 
   const feedsById = useMemo(() => {
     const map = new Map<number, Feed>();
@@ -86,6 +99,11 @@ export default function Home() {
   async function loadFeeds() {
     const data = await fetchJson<Feed[]>('/api/feeds');
     setFeeds(data);
+  }
+
+  async function loadCategories() {
+    const data = await fetchJson<Category[]>('/api/categories');
+    setCategories(data);
   }
 
   function entriesUrl(nextOffset: number) {
@@ -125,6 +143,7 @@ export default function Home() {
     try {
       await Promise.all([
         loadFeeds(),
+        loadCategories(),
         loadEntries({ append: false, nextOffset: 0 }),
       ]);
     } catch (e) {
@@ -235,7 +254,7 @@ export default function Home() {
 
   async function addFeed(e: React.FormEvent) {
     e.preventDefault();
-
+    
     const trimmedUrl = newFeedUrl.trim();
     if (!trimmedUrl) return;
 
@@ -243,19 +262,54 @@ export default function Home() {
     setAddFeedError(null);
 
     try {
+      const requestBody: { feed_url: string; category_id?: number } = {
+        feed_url: trimmedUrl,
+      };
+      
+      if (newFeedCategoryId) {
+        requestBody.category_id = newFeedCategoryId;
+      }
+
       await fetchJson<unknown>('/api/feeds/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ feed_url: trimmedUrl }),
+        body: JSON.stringify(requestBody),
       });
 
       // Success: clear input and refresh feeds
       setNewFeedUrl('');
+      setNewFeedCategoryId(null);
       await loadFeeds();
     } catch (e) {
       setAddFeedError(e instanceof Error ? e.message : 'Failed to add feed');
     } finally {
       setAddFeedLoading(false);
+    }
+  }
+
+  async function addCategory(e: React.FormEvent) {
+    e.preventDefault();
+    
+    const trimmedTitle = newCategoryTitle.trim();
+    if (!trimmedTitle) return;
+
+    setAddCategoryLoading(true);
+    setAddCategoryError(null);
+
+    try {
+      await fetchJson<unknown>('/api/categories/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: trimmedTitle }),
+      });
+
+      // Success: clear input and refresh categories
+      setNewCategoryTitle('');
+      await loadCategories();
+    } catch (e) {
+      setAddCategoryError(e instanceof Error ? e.message : 'Failed to add category');
+    } finally {
+      setAddCategoryLoading(false);
     }
   }
 
@@ -270,7 +324,11 @@ export default function Home() {
 
     setIsLoading(true);
     setError(null);
-    Promise.all([loadFeeds(), loadEntries({ append: false, nextOffset: 0 })])
+    Promise.all([
+      loadFeeds(),
+      loadCategories(),
+      loadEntries({ append: false, nextOffset: 0 }),
+    ])
       .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load'))
       .finally(() => setIsLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -285,6 +343,14 @@ export default function Home() {
     selectedFeedId === null
       ? 'All feeds'
       : feedsById.get(selectedFeedId)?.title;
+
+  // Filter feeds by selected category
+  const filteredFeeds = useMemo(() => {
+    if (selectedCategoryId === null) {
+      return feeds;
+    }
+    return feeds.filter((feed) => feed.category?.id === selectedCategoryId);
+  }, [feeds, selectedCategoryId]);
 
   return (
     <>
@@ -323,6 +389,30 @@ export default function Home() {
                 Open Miniflux
               </a> */}
 
+              <div className={styles.sectionTitle}>Categories</div>
+
+              {/* Add Category Form */}
+              <form onSubmit={addCategory} className={styles.addFeedForm}>
+                <input
+                  type="text"
+                  value={newCategoryTitle}
+                  onChange={(e) => setNewCategoryTitle(e.target.value)}
+                  placeholder="Category name"
+                  disabled={addCategoryLoading || isLoading}
+                  className={styles.input}
+                />
+                <button
+                  type="submit"
+                  disabled={addCategoryLoading || isLoading || !newCategoryTitle.trim()}
+                  className={styles.button}
+                >
+                  {addCategoryLoading ? 'Adding...' : 'Add category'}
+                </button>
+                {addCategoryError && (
+                  <div className={styles.error}>{addCategoryError}</div>
+                )}
+              </form>
+
               <div className={styles.sectionTitle}>Feeds</div>
 
               {/* Add Feed Form */}
@@ -335,6 +425,19 @@ export default function Home() {
                   disabled={addFeedLoading || isLoading}
                   className={styles.input}
                 />
+                <select
+                  value={newFeedCategoryId ?? ''}
+                  onChange={(e) => setNewFeedCategoryId(e.target.value ? Number(e.target.value) : null)}
+                  disabled={addFeedLoading || isLoading}
+                  className={styles.select}
+                >
+                  <option value="">Select category (optional)</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.title}
+                    </option>
+                  ))}
+                </select>
                 <button
                   type="submit"
                   disabled={addFeedLoading || isLoading || !newFeedUrl.trim()}
@@ -346,6 +449,23 @@ export default function Home() {
                   <div className={styles.error}>{addFeedError}</div>
                 )}
               </form>
+
+              {/* Category Filter */}
+              <div className={styles.categoryFilter}>
+                <select
+                  value={selectedCategoryId ?? ''}
+                  onChange={(e) => setSelectedCategoryId(e.target.value ? Number(e.target.value) : null)}
+                  disabled={isLoading}
+                  className={styles.select}
+                >
+                  <option value="">All categories</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <div className={styles.feedList}>
                 <button
                   type="button"
@@ -358,10 +478,12 @@ export default function Home() {
                   <span className={styles.feedTitle}>All feeds</span>
                 </button>
 
-                {feeds.length === 0 ? (
-                  <div className={styles.muted}>No feeds yet.</div>
+                {filteredFeeds.length === 0 ? (
+                  <div className={styles.muted}>
+                    {selectedCategoryId ? 'No feeds in this category.' : 'No feeds yet.'}
+                  </div>
                 ) : (
-                  feeds.map((f) => (
+                  filteredFeeds.map((f) => (
                     <button
                       key={f.id}
                       type="button"
