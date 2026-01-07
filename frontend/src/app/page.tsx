@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { SignedIn, SignedOut, RedirectToSignIn } from '@clerk/nextjs';
 import styles from './page.module.sass';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
+import { EntryItem } from '@/components/EntryItem/EntryItem';
 
 type Category = {
   id: number;
@@ -24,6 +25,7 @@ type Entry = {
   url: string;
   content?: string;
   summary?: string;
+  author?: string;
   feed_id: number;
   feed?: { id: number; title: string };
   feed_title?: string;
@@ -467,6 +469,12 @@ export default function Home() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [hasPrev, hasNext, navigateToNext, navigateToPrev]);
 
+  // Console log entries data
+  useEffect(() => {
+    console.log('Entries data:', entries);
+    console.log(`Total entries loaded: ${entries.length}`);
+  }, [entries]);
+
   // Auto-fetch original article when entry is selected
   useEffect(() => {
     if (!selectedEntry || fetchingOriginal || !isProvisioned) return;
@@ -793,22 +801,15 @@ export default function Home() {
                       feedsById.get(e.feed_id)?.title;
                     const published = formatDate(e.published_at);
                     return (
-                      <button
+                      <EntryItem
                         key={e.id}
-                        className={`${styles.entryItem} ${
-                          isActive ? styles.entryItemActive : ''
-                        }`}
-                        onClick={() => setSelectedEntryId(e.id)}
-                        type="button"
-                      >
-                        <div className={styles.entryTitle}>
-                          {e.title || '(untitled)'}
-                        </div>
-                        <div className={styles.entryMeta}>
-                          {feedTitle ? <span>{feedTitle}</span> : null}
-                          {published ? <span>{published}</span> : null}
-                        </div>
-                      </button>
+                        title={e.title}
+                        author={e.author}
+                        feedTitle={feedTitle}
+                        publishedAt={published}
+                        active={isActive}
+                        summary={e.summary}
+                      />
                     );
                   })
                 )}
