@@ -785,48 +785,49 @@ export default function Home() {
               {error ? <div className={styles.error}>{error}</div> : null}
 
               <div className={styles.entryList}>
-                {entries.length === 0 ? (
-                  <div className={styles.muted}>
-                    {searchMode
-                      ? 'No results found.'
-                      : isStarredView
-                      ? 'No starred entries.'
-                      : 'No unread entries.'}
+                <>
+                  {entries.length === 0 ? (
+                    <div className={styles.muted}>
+                      {searchMode
+                        ? 'No results found.'
+                        : isStarredView
+                        ? 'No starred entries.'
+                        : 'No unread entries.'}
+                    </div>
+                  ) : (
+                    entries.map((e) => {
+                      const isActive = e.id === selectedEntryId;
+                      const feedTitle =
+                        e.feed_title ??
+                        e.feed?.title ??
+                        feedsById.get(e.feed_id)?.title;
+                      const published = formatDate(e.published_at);
+                      return (
+                        <EntryItem
+                          key={e.id}
+                          title={e.title}
+                          author={e.author}
+                          feedTitle={feedTitle}
+                          publishedAt={published}
+                          active={isActive}
+                          content={e.content}
+                          onClick={() => setSelectedEntryId(e.id)}
+                        />
+                      );
+                    })
+                  )}
+                  <div className={styles.listFooter}>
+                    {canLoadMore && (
+                      <Button
+                        variant="primary"
+                        onClick={() => void loadMore()}
+                        disabled={isLoading}
+                      >
+                        Load more
+                      </Button>
+                    )}
                   </div>
-                ) : (
-                  entries.map((e) => {
-                    const isActive = e.id === selectedEntryId;
-                    const feedTitle =
-                      e.feed_title ??
-                      e.feed?.title ??
-                      feedsById.get(e.feed_id)?.title;
-                    const published = formatDate(e.published_at);
-                    return (
-                      <EntryItem
-                        key={e.id}
-                        title={e.title}
-                        author={e.author}
-                        feedTitle={feedTitle}
-                        publishedAt={published}
-                        active={isActive}
-                        content={e.content}
-                        onClick={() => setSelectedEntryId(e.id)}
-                      />
-                    );
-                  })
-                )}
-              </div>
-
-              <div className={styles.listFooter}>
-                {canLoadMore && (
-                  <Button
-                    variant="primary"
-                    onClick={() => void loadMore()}
-                    disabled={isLoading}
-                  >
-                    Load more
-                  </Button>
-                )}
+                </>
               </div>
             </section>
 
