@@ -1,12 +1,14 @@
 .entryItem
-  &[data-active="true"]
-    border: 1px solid red
   &_Body
     display: flex
     gap: 0.5rem
   &_Header
     display: flex
+    flex-direction: column
     gap: 2px
     p
       padding: 0 var(--space-sides-general)
       color: var(--color-text-secondary)
+  &_Meta
+    display: flex
+    justify-content: space-between

@@ -809,6 +809,7 @@ export default function Home() {
                         publishedAt={published}
                         active={isActive}
                         summary={e.summary}
+                        onClick={() => setSelectedEntryId(e.id)}
                       />
                     );
                   })
