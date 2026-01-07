@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { SignedIn, SignedOut, RedirectToSignIn } from '@clerk/nextjs';
 import styles from './page.module.sass';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
@@ -100,6 +100,15 @@ export default function Home() {
 
   const selectedEntry = useMemo(() => {
     return entries.find((e) => e.id === selectedEntryId) ?? null;
+  }, [entries, selectedEntryId]);
+
+  const { selectedIndex, hasPrev, hasNext } = useMemo(() => {
+    const index = entries.findIndex((e) => e.id === selectedEntryId);
+    return {
+      selectedIndex: index,
+      hasPrev: index > 0,
+      hasNext: index >= 0 && index < entries.length - 1,
+    };
   }, [entries, selectedEntryId]);
 
   async function loadFeeds() {
@@ -358,6 +367,18 @@ export default function Home() {
     }
   }
 
+  const navigateToPrev = useCallback(() => {
+    if (hasPrev && selectedIndex > 0) {
+      setSelectedEntryId(entries[selectedIndex - 1].id);
+    }
+  }, [hasPrev, selectedIndex, entries]);
+
+  const navigateToNext = useCallback(() => {
+    if (hasNext && selectedIndex < entries.length - 1) {
+      setSelectedEntryId(entries[selectedIndex + 1].id);
+    }
+  }, [hasNext, selectedIndex, entries]);
+
   // Bootstrap on mount
   useEffect(() => {
     void bootstrap();
@@ -378,6 +399,34 @@ export default function Home() {
       .finally(() => setIsLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedFeedId, isStarredView, isProvisioned]);
+
+  // Keyboard shortcuts for navigation
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      // Don't trigger shortcuts if user is typing in an input
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        e.target instanceof HTMLSelectElement
+      ) {
+        return;
+      }
+
+      // j or ArrowDown = next entry
+      if (e.key === 'j' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (hasNext) navigateToNext();
+      }
+      // k or ArrowUp = previous entry
+      else if (e.key === 'k' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (hasPrev) navigateToPrev();
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [hasPrev, hasNext, navigateToNext, navigateToPrev]);
 
   const selectedIsStarred = Boolean(
     selectedEntry?.starred ?? selectedEntry?.bookmarked
@@ -667,6 +716,32 @@ export default function Home() {
                 <>
                   <div className={styles.detailHeader}>
                     <div>
+                      <div
+                        style={{
+                          display: 'flex',
+                          gap: '0.5rem',
+                          marginBottom: '1rem',
+                        }}
+                      >
+                        <button
+                          className={styles.button}
+                          onClick={navigateToPrev}
+                          disabled={!hasPrev || isLoading}
+                          type="button"
+                          title="Previous entry"
+                        >
+                          ← Prev
+                        </button>
+                        <button
+                          className={styles.button}
+                          onClick={navigateToNext}
+                          disabled={!hasNext || isLoading}
+                          type="button"
+                          title="Next entry"
+                        >
+                          Next →
+                        </button>
+                      </div>
                       <h1 className={styles.detailTitle}>
                         {selectedEntry.title || '(untitled)'}
                       </h1>
