@@ -15,9 +15,12 @@
     padding: 0 var(--space-sides-general)
     color: var(--color-text-secondary)
     @include font-meta
+    p, i
+      @include font-meta
   &_Preview
     @include font-summary
     display: -webkit-box
     -webkit-line-clamp: 3
     -webkit-box-orient: vertical
     overflow: hidden
+    color: var(--color-text-secondary)
