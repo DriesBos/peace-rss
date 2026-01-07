@@ -41,4 +41,40 @@
   --type-nav: 14px
   --type-data: 12px
   --type-button: 14px
-  --type-caption: 10px
+  --type-caption: 12px
+  --type-meta: 10px
+  --type-summary: 12px
+
+// Font Mixins
+@mixin font-body
+  font-size: var(--type-body)
+  line-height: 1.54
+  letter-spacing: 0.02em
+
+@mixin font-title
+  font-size: var(--type-title)
+  line-height: 1.45
+
+@mixin font-caption
+  font-size: var(--type-caption)
+  line-height: 1.45
+
+@mixin font-nav
+  font-size: var(--type-nav)
+  line-height: 1
+
+@mixin font-data
+  font-size: var(--type-data)
+  line-height: 1.45
+
+@mixin font-button
+  font-size: var(--type-button)
+  line-height: 1
+
+@mixin font-meta
+  font-size: var(--type-meta)
+  line-height: 1.25
+
+@mixin font-summary
+  font-size: var(--type-summary)
+  line-height: 1.25
