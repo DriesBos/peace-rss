@@ -81,21 +81,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const trimmedUrl = feed_url.trim();
+    console.log('Creating feed with URL:', trimmedUrl);
+
     // 4. Create feed using per-user token (NOT admin credentials)
     const createdFeed = await mfFetchUser<CreateFeedResponse>(
       token,
       '/v1/feeds',
       {
         method: 'POST',
-        body: JSON.stringify({ feed_url: feed_url.trim() }),
+        body: JSON.stringify({ feed_url: trimmedUrl }),
       }
     );
 
     return NextResponse.json(createdFeed);
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Unknown error' },
-      { status: 500 }
-    );
+    console.error('Failed to create feed:', err);
+
+    // Provide more helpful error messages
+    let errorMessage = err instanceof Error ? err.message : 'Unknown error';
+
+    if (errorMessage.includes('unable to detect feed format')) {
+      errorMessage =
+        'Unable to parse feed. Please check that:\n' +
+        '• The URL points to a valid RSS/Atom feed\n' +
+        '• The URL includes http:// or https://\n' +
+        '• The feed is publicly accessible';
+    }
+
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 }
