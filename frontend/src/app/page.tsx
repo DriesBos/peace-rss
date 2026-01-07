@@ -91,6 +91,9 @@ export default function Home() {
   const [addCategoryLoading, setAddCategoryLoading] = useState(false);
   const [addCategoryError, setAddCategoryError] = useState<string | null>(null);
   const [fetchingOriginal, setFetchingOriginal] = useState(false);
+  const [fetchedEntryIds, setFetchedEntryIds] = useState<Set<number>>(
+    new Set()
+  );
 
   const feedsById = useMemo(() => {
     const map = new Map<number, Feed>();
@@ -338,7 +341,7 @@ export default function Home() {
     }
   }
 
-  async function fetchOriginalArticle() {
+  const fetchOriginalArticle = useCallback(async () => {
     if (!selectedEntry) return;
 
     setFetchingOriginal(true);
@@ -357,15 +360,19 @@ export default function Home() {
             e.id === selectedEntry.id ? { ...e, content: result.content } : e
           )
         );
+        // Mark this entry as fetched
+        setFetchedEntryIds((prev) => new Set(prev).add(selectedEntry.id));
       }
     } catch (e) {
       setError(
         e instanceof Error ? e.message : 'Failed to fetch original article'
       );
+      // Mark as fetched even on error to avoid retry loops
+      setFetchedEntryIds((prev) => new Set(prev).add(selectedEntry.id));
     } finally {
       setFetchingOriginal(false);
     }
-  }
+  }, [selectedEntry]);
 
   const navigateToPrev = useCallback(() => {
     if (hasPrev && selectedIndex > 0) {
@@ -427,6 +434,32 @@ export default function Home() {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [hasPrev, hasNext, navigateToNext, navigateToPrev]);
+
+  // Auto-fetch original article when entry is selected
+  useEffect(() => {
+    if (!selectedEntry || fetchingOriginal || !isProvisioned) return;
+
+    // Skip if we've already attempted to fetch this entry
+    if (fetchedEntryIds.has(selectedEntry.id)) return;
+
+    // Check if content is missing or minimal (likely just a summary)
+    const hasMinimalContent =
+      !selectedEntry.content ||
+      selectedEntry.content.length < 200 ||
+      (selectedEntry.summary &&
+        selectedEntry.content === selectedEntry.summary);
+
+    if (hasMinimalContent) {
+      // Automatically fetch the original article
+      void fetchOriginalArticle();
+    }
+  }, [
+    selectedEntry,
+    fetchingOriginal,
+    fetchedEntryIds,
+    isProvisioned,
+    fetchOriginalArticle,
+  ]);
 
   const selectedIsStarred = Boolean(
     selectedEntry?.starred ?? selectedEntry?.bookmarked
