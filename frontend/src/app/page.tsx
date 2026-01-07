@@ -72,6 +72,7 @@ export default function Home() {
   const [selectedEntryId, setSelectedEntryId] = useState<number | null>(null);
   const [selectedFeedId, setSelectedFeedId] = useState<number | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
+  const [isStarredView, setIsStarredView] = useState(false);
   const [offset, setOffset] = useState(0);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -108,12 +109,20 @@ export default function Home() {
 
   function entriesUrl(nextOffset: number) {
     const qs = new URLSearchParams({
-      status: 'unread',
       limit: '50',
       offset: String(nextOffset),
       order: 'published_at',
       direction: 'desc',
     });
+    
+    if (isStarredView) {
+      // For starred view, fetch starred entries (any status)
+      qs.set('starred', 'true');
+    } else {
+      // For normal view, fetch unread entries
+      qs.set('status', 'unread');
+    }
+    
     if (selectedFeedId) qs.set('feed_id', String(selectedFeedId));
     return `/api/entries?${qs.toString()}`;
   }
@@ -332,17 +341,18 @@ export default function Home() {
       .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load'))
       .finally(() => setIsLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedFeedId, isProvisioned]);
+  }, [selectedFeedId, isStarredView, isProvisioned]);
 
   const selectedIsStarred = Boolean(
     selectedEntry?.starred ?? selectedEntry?.bookmarked
   );
 
   const canLoadMore = entries.length > 0 && total > entries.length;
-  const selectedFeedTitle =
-    selectedFeedId === null
-      ? 'All feeds'
-      : feedsById.get(selectedFeedId)?.title;
+  const selectedFeedTitle = isStarredView
+    ? 'Starred'
+    : selectedFeedId === null
+    ? 'All feeds'
+    : feedsById.get(selectedFeedId)?.title;
 
   // Filter feeds by selected category
   const filteredFeeds = useMemo(() => {
@@ -470,12 +480,29 @@ export default function Home() {
                 <button
                   type="button"
                   className={`${styles.feedItem} ${
-                    selectedFeedId === null ? styles.feedItemActive : ''
+                    selectedFeedId === null && !isStarredView ? styles.feedItemActive : ''
                   }`}
-                  onClick={() => setSelectedFeedId(null)}
+                  onClick={() => {
+                    setSelectedFeedId(null);
+                    setIsStarredView(false);
+                  }}
                   disabled={isLoading}
                 >
                   <span className={styles.feedTitle}>All feeds</span>
+                </button>
+
+                <button
+                  type="button"
+                  className={`${styles.feedItem} ${
+                    isStarredView ? styles.feedItemActive : ''
+                  }`}
+                  onClick={() => {
+                    setSelectedFeedId(null);
+                    setIsStarredView(true);
+                  }}
+                  disabled={isLoading}
+                >
+                  <span className={styles.feedTitle}>⭐ Starred</span>
                 </button>
 
                 {filteredFeeds.length === 0 ? (
@@ -513,20 +540,22 @@ export default function Home() {
                 >
                   Refresh
                 </button>
-                <button
-                  className={styles.button}
-                  onClick={() => void markPageRead()}
-                  disabled={isLoading || entries.length === 0}
-                >
-                  Mark page read
-                </button>
+                {!isStarredView && (
+                  <button
+                    className={styles.button}
+                    onClick={() => void markPageRead()}
+                    disabled={isLoading || entries.length === 0}
+                  >
+                    Mark page read
+                  </button>
+                )}
                 <div className={styles.spacer} />
                 <div className={styles.meta}>
                   {isLoading
                     ? 'Loading…'
-                    : `${entries.length}${total ? ` / ${total}` : ''} unread${
-                        selectedFeedTitle ? ` — ${selectedFeedTitle}` : ''
-                      }`}
+                    : `${entries.length}${total ? ` / ${total}` : ''} ${
+                        isStarredView ? 'starred' : 'unread'
+                      }${selectedFeedTitle ? ` — ${selectedFeedTitle}` : ''}`}
                 </div>
               </div>
 
@@ -534,7 +563,9 @@ export default function Home() {
 
               <div className={styles.entryList}>
                 {entries.length === 0 ? (
-                  <div className={styles.muted}>No unread entries.</div>
+                  <div className={styles.muted}>
+                    {isStarredView ? 'No starred entries.' : 'No unread entries.'}
+                  </div>
                 ) : (
                   entries.map((e) => {
                     const isActive = e.id === selectedEntryId;

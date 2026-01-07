@@ -44,11 +44,17 @@ export async function GET(request: Request) {
     // 3. Parse query parameters
     const url = new URL(request.url);
 
-    const status = getStringParam(url, 'status', 'unread');
     const limit = getNumberParam(url, 'limit', 50);
     const offset = getNumberParam(url, 'offset', 0);
     const direction = getStringParam(url, 'direction', 'desc');
     const order = getStringParam(url, 'order', 'published_at');
+
+    // Check if we're fetching starred entries
+    const starred = url.searchParams.get('starred');
+    const isStarredQuery = starred === 'true';
+
+    // For non-starred queries, use status filter (default: unread)
+    const status = !isStarredQuery ? getStringParam(url, 'status', 'unread') : undefined;
 
     // Optional feed filter (used by the UI); ignore when missing.
     const feedIdRaw = url.searchParams.get('feed_id');
@@ -62,12 +68,22 @@ export async function GET(request: Request) {
     }
 
     const qs = new URLSearchParams({
-      status,
       limit: String(limit),
       offset: String(offset),
       order,
       direction,
     });
+    
+    // Add status only for non-starred queries
+    if (status) {
+      qs.set('status', status);
+    }
+    
+    // Add starred parameter if requesting starred entries
+    if (isStarredQuery) {
+      qs.set('starred', 'true');
+    }
+    
     if (feedId) qs.set('feed_id', String(feedId));
 
     // 4. Fetch entries using per-user token
