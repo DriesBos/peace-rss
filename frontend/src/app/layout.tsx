@@ -26,6 +26,32 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: 'Peace RSS',
   description: 'Read your news in peace',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Peace RSS',
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#e3e3d1' },
+    { media: '(prefers-color-scheme: dark)', color: '#3d3f31' },
+  ],
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+    viewportFit: 'cover',
+  },
+  icons: {
+    icon: '/favicon.ico',
+    apple: [
+      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
+  },
 };
 
 export default function RootLayout({

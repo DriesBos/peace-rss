@@ -1,0 +1,145 @@
+// Service Worker Template for Peace RSS
+// Rename to sw.js to enable offline support
+// Register this in your app by adding to layout.tsx:
+//
+// useEffect(() => {
+//   if ('serviceWorker' in navigator) {
+//     navigator.serviceWorker.register('/sw.js')
+//       .then(reg => console.log('SW registered', reg))
+//       .catch(err => console.error('SW registration failed', err));
+//   }
+// }, []);
+
+const CACHE_NAME = 'peace-rss-v1';
+const urlsToCache = [
+  '/',
+  '/manifest.json',
+  '/icon-192x192.png',
+  '/icon-512x512.png',
+  '/apple-touch-icon.png',
+];
+
+// Install event - cache critical assets
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => {
+        console.log('Opened cache');
+        return cache.addAll(urlsToCache);
+      })
+  );
+  // Force the waiting service worker to become the active service worker
+  self.skipWaiting();
+});
+
+// Activate event - clean up old caches
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== CACHE_NAME) {
+            console.log('Deleting old cache:', cacheName);
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    })
+  );
+  // Take control of all pages immediately
+  return self.clients.claim();
+});
+
+// Fetch event - network first, fallback to cache
+self.addEventListener('fetch', (event) => {
+  // Skip non-GET requests
+  if (event.request.method !== 'GET') {
+    return;
+  }
+
+  // Skip chrome-extension:// and other non-http(s) requests
+  if (!event.request.url.startsWith('http')) {
+    return;
+  }
+
+  event.respondWith(
+    fetch(event.request)
+      .then((response) => {
+        // Don't cache if not a valid response
+        if (!response || response.status !== 200 || response.type === 'error') {
+          return response;
+        }
+
+        // Clone the response
+        const responseToCache = response.clone();
+
+        // Cache API responses for offline access
+        if (event.request.url.includes('/api/')) {
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
+        }
+
+        return response;
+      })
+      .catch(() => {
+        // Network failed, try cache
+        return caches.match(event.request).then((response) => {
+          if (response) {
+            return response;
+          }
+
+          // Return a custom offline page if you have one
+          if (event.request.destination === 'document') {
+            return caches.match('/');
+          }
+
+          return new Response('Offline - content not available', {
+            status: 503,
+            statusText: 'Service Unavailable',
+            headers: new Headers({
+              'Content-Type': 'text/plain',
+            }),
+          });
+        });
+      })
+  );
+});
+
+// Background sync event (optional)
+self.addEventListener('sync', (event) => {
+  if (event.tag === 'sync-feeds') {
+    event.waitUntil(syncFeeds());
+  }
+});
+
+async function syncFeeds() {
+  // Implement feed syncing logic here
+  console.log('Syncing feeds in background...');
+}
+
+// Push notification event (optional)
+self.addEventListener('push', (event) => {
+  const options = {
+    body: event.data ? event.data.text() : 'New articles available!',
+    icon: '/icon-192x192.png',
+    badge: '/icon-192x192.png',
+    vibrate: [200, 100, 200],
+    tag: 'peace-rss-notification',
+    requireInteraction: false,
+  };
+
+  event.waitUntil(
+    self.registration.showNotification('Peace RSS', options)
+  );
+});
+
+// Notification click event
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  event.waitUntil(
+    clients.openWindow('/')
+  );
+});
+

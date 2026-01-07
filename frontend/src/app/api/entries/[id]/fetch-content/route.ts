@@ -1,38 +1,50 @@
-import { NextResponse, type NextRequest } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import 'server-only';
+
+import { NextRequest, NextResponse } from 'next/server';
+import { auth, clerkClient } from '@clerk/nextjs/server';
 import { mfFetchUser } from '@/lib/miniflux';
+
+export const runtime = 'nodejs';
+
+// Next.js (v16) Route Handler typing: params may be Promise-wrapped.
+type Ctx = { params: Promise<{ id: string }> };
 
 /**
  * POST /api/entries/[id]/fetch-content
  * Fetch original article content for an entry
  */
-export async function POST(
-  _req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const { id } = await params;
-  const entryId = parseInt(id, 10);
-  if (!entryId || isNaN(entryId)) {
-    return NextResponse.json({ error: 'Invalid entry ID' }, { status: 400 });
-  }
-
+export async function POST(_request: NextRequest, context: Ctx) {
   try {
-    // Get the user's Miniflux token from metadata
-    const token =
-      (process.env[`MINIFLUX_TOKEN_${userId}`] as string | undefined) ?? '';
-    if (!token) {
+    // 1. Require Clerk authentication
+    const { userId } = await auth();
+    if (!userId) {
       return NextResponse.json(
-        { error: 'User not provisioned' },
-        { status: 403 }
+        { error: 'Unauthorized' },
+        { status: 401 }
       );
     }
 
-    // Fetch original content from Miniflux
+    // 2. Get user's Miniflux token from Clerk metadata
+    const client = await clerkClient();
+    const user = await client.users.getUser(userId);
+    const metadata = user.privateMetadata as { minifluxToken?: string } | undefined;
+    const token = metadata?.minifluxToken;
+
+    if (!token) {
+      return NextResponse.json(
+        { error: 'Not provisioned. Call /api/bootstrap first.' },
+        { status: 401 }
+      );
+    }
+
+    // 3. Parse entry ID from route params
+    const { id } = await context.params;
+    const entryId = Number(id);
+    if (!Number.isFinite(entryId) || entryId <= 0) {
+      return NextResponse.json({ error: 'Invalid entry id' }, { status: 400 });
+    }
+
+    // 4. Fetch original content from Miniflux
     // This endpoint returns the entry with updated content
     const entry = await mfFetchUser<{
       id: number;
@@ -44,9 +56,11 @@ export async function POST(
     });
 
     return NextResponse.json({ ok: true, content: entry.content });
-  } catch (e) {
-    const message = e instanceof Error ? e.message : 'Failed to fetch content';
-    return NextResponse.json({ error: message }, { status: 500 });
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'Failed to fetch content' },
+      { status: 500 }
+    );
   }
 }
 
