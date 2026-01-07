@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import localFont from 'next/font/local';
 import {
   ClerkProvider,
   SignInButton,
@@ -13,14 +13,50 @@ import '@/styles/reset.css';
 import '@/styles/globals.sass';
 import { ThemeProvider } from '@/components/ThemeProvider';
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
-});
-
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
-  subsets: ['latin'],
+const untitledSans = localFont({
+  src: [
+    {
+      path: '../fonts/untitled/test-untitled-sans-light.woff2',
+      weight: '300',
+      style: 'normal',
+    },
+    {
+      path: '../fonts/untitled/test-untitled-sans-light-italic.woff2',
+      weight: '300',
+      style: 'italic',
+    },
+    {
+      path: '../fonts/untitled/test-untitled-sans-regular.woff2',
+      weight: '400',
+      style: 'normal',
+    },
+    {
+      path: '../fonts/untitled/test-untitled-sans-regular-italic.woff2',
+      weight: '400',
+      style: 'italic',
+    },
+    {
+      path: '../fonts/untitled/test-untitled-sans-medium.woff2',
+      weight: '500',
+      style: 'normal',
+    },
+    {
+      path: '../fonts/untitled/test-untitled-sans-medium-italic.woff2',
+      weight: '500',
+      style: 'italic',
+    },
+    {
+      path: '../fonts/untitled/test-untitled-sans-bold.woff2',
+      weight: '700',
+      style: 'normal',
+    },
+    {
+      path: '../fonts/untitled/test-untitled-sans-bold-italic.woff2',
+      weight: '700',
+      style: 'italic',
+    },
+  ],
+  variable: '--font-untitled-sans',
 });
 
 export const metadata: Metadata = {
@@ -62,7 +98,7 @@ export default function RootLayout({
   return (
     <ClerkProvider signInFallbackRedirectUrl="/">
       <html lang="en" suppressHydrationWarning>
-        <body className={`${geistSans.variable} ${geistMono.variable}`}>
+        <body className={`${untitledSans.variable}`}>
           <ThemeProvider
             attribute="data-theme"
             defaultTheme="light"
