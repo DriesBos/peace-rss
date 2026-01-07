@@ -6,6 +6,7 @@ import styles from './page.module.sass';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { EntryItem } from '@/components/EntryItem/EntryItem';
 import { Button } from '@/components/Button/Button';
+import { FormattedDate } from '@/components/FormattedDate';
 
 type Category = {
   id: number;
@@ -831,110 +832,40 @@ export default function Home() {
               </div>
             </section>
 
+            {/* DETAILPANE */}
             <section className={styles.detailPane}>
               {!selectedEntry ? (
                 <div className={styles.muted}>Select an entry to read.</div>
               ) : (
                 <>
-                  <div className={styles.detailHeader}>
-                    <div>
-                      <div
-                        style={{
-                          display: 'flex',
-                          gap: '0.5rem',
-                          marginBottom: '1rem',
-                        }}
-                      >
-                        <button
-                          className={styles.button}
-                          onClick={navigateToPrev}
-                          disabled={!hasPrev || isLoading}
-                          type="button"
-                          title="Previous entry"
-                        >
-                          ← Prev
-                        </button>
-                        <button
-                          className={styles.button}
-                          onClick={navigateToNext}
-                          disabled={!hasNext || isLoading}
-                          type="button"
-                          title="Next entry"
-                        >
-                          Next →
-                        </button>
-                      </div>
-                      <h1 className={styles.detailTitle}>
-                        {selectedEntry.title || '(untitled)'}
-                      </h1>
-                      <div className={styles.meta}>
-                        {(selectedEntry.feed_title ??
-                          selectedEntry.feed?.title ??
-                          feedsById.get(selectedEntry.feed_id)?.title) ||
-                        selectedEntry.published_at ? (
-                          <>
-                            <span>
+                  <div className={styles.detailPane_Header}>
+                    <h1>{selectedEntry.title || '(untitled)'}</h1>
+                    <div className={styles.detailPane_Meta}>
+                      {(selectedEntry.feed_title ??
+                        selectedEntry.feed?.title ??
+                        feedsById.get(selectedEntry.feed_id)?.title) ||
+                      selectedEntry.published_at ? (
+                        <>
+                          <p>
+                            By:{' '}
+                            <i>
                               {selectedEntry.feed_title ??
                                 selectedEntry.feed?.title ??
                                 feedsById.get(selectedEntry.feed_id)?.title ??
                                 ''}
-                            </span>
-                            <span>
-                              {formatDate(selectedEntry.published_at) || ''}
-                            </span>
-                          </>
-                        ) : null}
-                      </div>
-                    </div>
-                    <div className={styles.detailActions}>
-                      <a
-                        className={styles.link}
-                        href={selectedEntry.url}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Open source
-                      </a>
-                      <button
-                        className={styles.button}
-                        onClick={() => void fetchOriginalArticle()}
-                        disabled={isLoading || fetchingOriginal}
-                        type="button"
-                      >
-                        {fetchingOriginal
-                          ? 'Fetching...'
-                          : 'Fetch original article'}
-                      </button>
-                      <button
-                        className={styles.button}
-                        onClick={() => void toggleSelectedStar()}
-                        disabled={isLoading}
-                        type="button"
-                      >
-                        {selectedIsStarred ? 'Unstar' : 'Star'}
-                      </button>
-                      <button
-                        className={styles.button}
-                        onClick={() => void setSelectedStatus('read')}
-                        disabled={isLoading}
-                        type="button"
-                      >
-                        Mark read
-                      </button>
-                      <button
-                        className={styles.button}
-                        onClick={() => void setSelectedStatus('unread')}
-                        disabled={isLoading}
-                        type="button"
-                      >
-                        Mark unread
-                      </button>
+                            </i>
+                          </p>
+                          <p>
+                            <FormattedDate date={selectedEntry.published_at} />
+                          </p>
+                        </>
+                      ) : null}
                     </div>
                   </div>
 
                   {selectedEntry.content ? (
                     <div
-                      className={styles.content}
+                      className={styles.detailPane_content}
                       dangerouslySetInnerHTML={{
                         __html: selectedEntry.content,
                       }}
@@ -950,7 +881,7 @@ export default function Home() {
                       ) : (
                         <div className={styles.muted}>No content.</div>
                       )}
-                      <div style={{ marginTop: 12 }}>
+                      <div>
                         <a
                           className={styles.link}
                           href={selectedEntry.url}
@@ -962,6 +893,79 @@ export default function Home() {
                       </div>
                     </div>
                   )}
+                  <div className={styles.detailFooter}>
+                    <div className={styles.actionsRow}>
+                      <Button
+                        variant="primary"
+                        onClick={() => void toggleSelectedStar()}
+                        disabled={isLoading}
+                        title={selectedIsStarred ? 'Unbookmark' : 'Bookmark'}
+                      >
+                        {selectedIsStarred ? 'Unbookmark' : 'Bookmark'}
+                      </Button>
+                      {', &nbsp;'}
+                      <Button
+                        onClick={() => void fetchOriginalArticle()}
+                        disabled={isLoading || fetchingOriginal}
+                        title="Link to original article"
+                      >
+                        Link to original article
+                      </Button>
+                      {', &nbsp;'}
+                      <Button
+                        className={styles.button}
+                        onClick={() => void fetchOriginalArticle()}
+                        disabled={isLoading || fetchingOriginal}
+                        title={
+                          fetchingOriginal
+                            ? 'Fetching...'
+                            : 'Fetch original article'
+                        }
+                      >
+                        {fetchingOriginal
+                          ? 'Fetching...'
+                          : 'Fetch original article'}
+                      </Button>
+                      {', &nbsp;'}
+                      <Button
+                        className={styles.button}
+                        onClick={() => void setSelectedStatus('read')}
+                        disabled={isLoading}
+                        type="button"
+                      >
+                        Mark read
+                      </Button>
+                      {', &nbsp;'}
+                      <Button
+                        className={styles.button}
+                        onClick={() => void setSelectedStatus('unread')}
+                        disabled={isLoading}
+                        type="button"
+                      >
+                        Mark unread
+                      </Button>
+                    </div>
+                    <div className={styles.prevNextButtons}>
+                      <Button
+                        className={styles.button}
+                        onClick={navigateToPrev}
+                        disabled={!hasPrev || isLoading}
+                        type="button"
+                        title="Previous entry"
+                      >
+                        ← Prev
+                      </Button>
+                      <Button
+                        className={styles.button}
+                        onClick={navigateToNext}
+                        disabled={!hasNext || isLoading}
+                        type="button"
+                        title="Next entry"
+                      >
+                        Next →
+                      </Button>
+                    </div>
+                  </div>
                 </>
               )}
             </section>

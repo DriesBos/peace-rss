@@ -89,8 +89,12 @@ export function EntryItem({
             <p>
               By: <i>{author ? `${author}, ${feedTitle}` : feedTitle}</i>
             </p>
+            <p>
+              <FormattedDate date={publishedAt} />
+            </p>
           </div>
         </div>
+        {preview && <p className={styles.entryItem_Preview}>{preview}</p>}
       </div>
     </div>
   );
