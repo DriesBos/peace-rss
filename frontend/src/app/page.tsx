@@ -808,7 +808,7 @@ export default function Home() {
                         feedTitle={feedTitle}
                         publishedAt={published}
                         active={isActive}
-                        summary={e.summary}
+                        content={e.content}
                         onClick={() => setSelectedEntryId(e.id)}
                       />
                     );
@@ -817,14 +817,16 @@ export default function Home() {
               </div>
 
               <div className={styles.listFooter}>
-                <button
-                  className={styles.button}
-                  onClick={() => void loadMore()}
-                  disabled={isLoading || !canLoadMore}
-                  type="button"
-                >
-                  Load more
-                </button>
+                {canLoadMore && (
+                  <button
+                    className={styles.button}
+                    onClick={() => void loadMore()}
+                    disabled={isLoading}
+                    type="button"
+                  >
+                    Load more
+                  </button>
+                )}
               </div>
             </section>
 
