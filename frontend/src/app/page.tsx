@@ -329,7 +329,6 @@ export default function Home() {
                   ))
                 )}
               </div>
-              <ThemeSwitcher />
             </aside>
 
             <section className={styles.listPane}>
