@@ -8,8 +8,9 @@ import {
   SignedOut,
   UserButton,
 } from '@clerk/nextjs';
-import './globals.sass';
 import '@/styles/vars.sass';
+import '@/styles/reset.css';
+import '@/styles/globals.sass';
 import { ThemeProvider } from '@/components/ThemeProvider';
 
 const geistSans = Geist({
