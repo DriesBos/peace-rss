@@ -66,18 +66,13 @@
   font: inherit
   font-size: 13px
   cursor: pointer
-
 .select:focus
   outline: none
   border-color: var(--color-text-secondary)
-
 .select:disabled
   opacity: 0.6
   cursor: not-allowed
   background: #f7f7f7
-
-.categoryFilter
-  margin-bottom: 8px
 
 .link
   color: inherit
@@ -146,8 +141,12 @@
   overflow: auto
   max-width: 400px
   padding-top: var(--space-top)
+  scrollbar-width: none
+  -ms-overflow-style: none
+  &::-webkit-scrollbar
+    display: none
 
-.toolbar
+.topBar
   display: flex
   flex-direction: row
   overflow-x: auto
@@ -155,6 +154,21 @@
   align-items: center
   gap: 1rem
   padding: 1rem var(--space-sides-general)
+
+.categoryList
+  list-style: none
+  display: flex
+  flex-direction: row
+  flex-wrap: nowrap
+  gap: 1rem
+  overflow-x: auto
+  scrollbar-width: none
+  -ms-overflow-style: none
+  &::-webkit-scrollbar
+    display: none
+  &_Item
+    display: flex
+    align-items: center
 
 .error
   padding: 10px 12px
@@ -184,6 +198,10 @@
   padding-bottom: var(--space-bottom)
   overflow: auto
   gap: 1.5rem
+  scrollbar-width: none
+  -ms-overflow-style: none
+  &::-webkit-scrollbar
+    display: none
   &_Header
     display: flex
     flex-direction: column

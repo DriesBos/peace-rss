@@ -628,27 +628,8 @@ export default function Home() {
                 )}
               </form>
 
-              {/* Category Filter */}
-              <div className={styles.categoryFilter}>
-                <select
-                  value={selectedCategoryId ?? ''}
-                  onChange={(e) =>
-                    setSelectedCategoryId(
-                      e.target.value ? Number(e.target.value) : null
-                    )
-                  }
-                  disabled={isLoading}
-                  className={styles.select}
-                >
-                  <option value="">All categories</option>
-                  {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.title}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className={styles.feedList}>
+              {/* FEEDLIST */}
+              {/* <div className={styles.feedList}>
                 <button
                   type="button"
                   className={`${styles.feedItem} ${
@@ -711,10 +692,10 @@ export default function Home() {
                     </button>
                   ))
                 )}
-              </div>
+              </div> */}
 
               {/* Search Section */}
-              <div
+              {/* <div
                 className={styles.sectionTitle}
                 style={{ marginTop: '2rem' }}
               >
@@ -748,12 +729,49 @@ export default function Home() {
                     </button>
                   )}
                 </div>
-              </form>
+              </form> */}
             </aside>
 
             {/* LISTPANE */}
             <section className={styles.listPane}>
-              <div className={styles.toolbar}>
+              <div className={styles.topBar}>
+                {/* Category List */}
+                <ul className={styles.categoryList}>
+                  <li>
+                    <Button
+                      type="button"
+                      variant="category"
+                      active={selectedCategoryId === null}
+                      className={`${styles.categoryItem} ${
+                        selectedCategoryId === null
+                          ? styles.categoryItemActive
+                          : ''
+                      }`}
+                      onClick={() => setSelectedCategoryId(null)}
+                      disabled={isLoading}
+                    >
+                      All
+                    </Button>
+                  </li>
+                  {categories.map((cat) => (
+                    <li key={cat.id}>
+                      <Button
+                        type="button"
+                        variant="category"
+                        active={selectedCategoryId === cat.id}
+                        className={`${styles.categoryList_Item} ${
+                          selectedCategoryId === cat.id
+                            ? styles.categoryItemActive
+                            : ''
+                        }`}
+                        onClick={() => setSelectedCategoryId(cat.id)}
+                        disabled={isLoading}
+                      >
+                        {cat.title}
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
                 {/* <button
                   className={styles.button}
                   onClick={() => void refreshAll()}
