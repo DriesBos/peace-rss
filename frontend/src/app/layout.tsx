@@ -34,7 +34,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider fallbackRedirectUrl="/">
+    <ClerkProvider signInFallbackRedirectUrl="/">
       <html lang="en" suppressHydrationWarning>
         <body className={`${geistSans.variable} ${geistMono.variable}`}>
           <ThemeProvider
