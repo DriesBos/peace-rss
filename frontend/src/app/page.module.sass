@@ -8,7 +8,7 @@
 .listPane,
 .detailPane
   min-width: 0
-  border-right: 1px solid var(--color-text-secondary)
+  border-right: 1px solid var(--color-text)
 
 .detailPane
   border-right: none
@@ -139,36 +139,17 @@
   display: flex
   flex-direction: column
   min-height: 0
+  gap: 4rem
+  overflow: auto
 
 .toolbar
   display: flex
+  flex-direction: row
+  overflow-x: auto
+  width: 100%
   align-items: center
-  gap: 8px
-  padding: 10px 12px
-  border-bottom: 1px solid #e6e6e6
-  background: #fff
-
-.button
-  border: 1px solid #e6e6e6
-  background: #f7f7f7
-  padding: 6px 10px
-  border-radius: 6px
-  cursor: pointer
-  font: inherit
-
-.button:hover:enabled
-  background: #f1f1f1
-
-.button:disabled
-  opacity: 0.6
-  cursor: not-allowed
-
-.spacer
-  flex: 1
-
-.meta
-  font-size: 12px
-  color: #666
+  gap: 1rem
+  padding: 1rem var(--space-sides-general)
 
 .error
   padding: 10px 12px
@@ -180,7 +161,6 @@
   overflow-wrap: anywhere
 
 .entryList
-  overflow: auto
   padding: 0 var(--space-sides-general)
   display: flex
   flex-direction: column

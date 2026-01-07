@@ -753,14 +753,14 @@ export default function Home() {
             {/* LISTPANE */}
             <section className={styles.listPane}>
               <div className={styles.toolbar}>
-                <button
+                {/* <button
                   className={styles.button}
                   onClick={() => void refreshAll()}
                   disabled={isLoading}
                 >
                   Refresh
-                </button>
-                {!isStarredView && !searchMode && (
+                </button> */}
+                {/* {!isStarredView && !searchMode && (
                   <button
                     className={styles.button}
                     onClick={() => void markPageRead()}
@@ -768,9 +768,8 @@ export default function Home() {
                   >
                     Mark page read
                   </button>
-                )}
-                <div className={styles.spacer} />
-                <div className={styles.meta}>
+                )} */}
+                {/* <div className={styles.meta}>
                   {isLoading
                     ? 'Loading…'
                     : `${entries.length}${total ? ` / ${total}` : ''} ${
@@ -780,7 +779,7 @@ export default function Home() {
                           ? 'starred'
                           : 'unread'
                       }${selectedFeedTitle ? ` — ${selectedFeedTitle}` : ''}`}
-                </div>
+                </div> */}
               </div>
 
               {error ? <div className={styles.error}>{error}</div> : null}
