@@ -1,0 +1,36 @@
+
+.modal
+  &_Overlay
+    position: fixed
+    inset: 0
+    background: var(--color-modal-bg)
+    display: flex
+    align-items: center
+    justify-content: center
+    padding: 1rem
+    z-index: 1000
+    opacity: 0
+    pointer-events: none
+    transition: opacity 0.165s ease-in
+    &[data-active="true"]
+      opacity: 1
+      pointer-events: auto
+  &_Container
+    position: absolute
+    bottom: 0
+    left: 0
+    right: 0
+    transform: translateY(100%)
+    width: 100%
+    min-height: 180px
+    background: var(--color-app)
+    padding: 1.5rem
+    display: flex
+    flex-direction: column
+    gap: 1rem
+    transition: transform 0.3s ease-in-out
+    &[data-active="true"]
+      transform: translateY(0)
+  &_Header
+    display: flex
+    justify-content: flex-end
