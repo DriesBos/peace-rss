@@ -14,17 +14,18 @@ export const IconArrowShortLeft: React.FC<IconArrowShortLeftProps> = ({
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
+      xmlnsXlink="http://www.w3.org/1999/xlink"
       fill="none"
+      viewBox="0 0 16 16"
       width={width}
       height={height}
       className={className}
-      viewBox="0 0 16 16"
     >
       <g clipPath="url(#a)">
         <path
           fill="currentColor"
           fillRule="evenodd"
-          d="M0 8.311h13.554L7.409 14.45l.904.903 6.785-6.777h.001L16 7.678h-.001L16 7.675l-.904-.904h-.002L8.314 0l-.902.9 6.142 6.134H0z"
+          d="M15.36 8.631H1.806l6.146 6.138-.905.904L.262 8.896l-.902-.899.002-.001H-.64l.905-.904h.001L7.047.32l.901.9-6.142 6.133H15.36z"
           clipRule="evenodd"
         />
       </g>
