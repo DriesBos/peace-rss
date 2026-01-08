@@ -803,7 +803,7 @@ export default function Home() {
               <div className={styles.topBar}>
                 {/* Category List */}
                 <ul className={styles.categoryList}>
-                  {/* <li>
+                  <li>
                     <Button
                       type="button"
                       variant="category"
@@ -821,8 +821,8 @@ export default function Home() {
                     >
                       All
                     </Button>
-                  </li> */}
-                  {categories.map((cat) => (
+                  </li>
+                  {categories.slice(1).map((cat) => (
                     <li key={cat.id}>
                       <Button
                         type="button"
