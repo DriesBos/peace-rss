@@ -501,9 +501,11 @@ export default function Home() {
     }
 
     setEntries(data.entries);
+    // Only keep selection if the previously selected entry still exists
+    // Don't auto-select the first entry on initial load
     setSelectedEntryId((prev) => {
       if (prev && data.entries.some((e) => e.id === prev)) return prev;
-      return data.entries[0]?.id ?? null;
+      return null;
     });
   }
 
