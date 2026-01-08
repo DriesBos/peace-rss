@@ -33,7 +33,6 @@ type Entry = {
   title: string;
   url: string;
   content?: string;
-  summary?: string;
   author?: string;
   feed_id: number;
   feed?: { id: number; title: string };
@@ -837,12 +836,9 @@ export default function Home() {
     // Skip if we've already attempted to fetch this entry
     if (fetchedEntryIds.has(selectedEntry.id)) return;
 
-    // Check if content is missing or minimal (likely just a summary)
+    // Check if content is missing or minimal
     const hasMinimalContent =
-      !selectedEntry.content ||
-      selectedEntry.content.length < 200 ||
-      (selectedEntry.summary &&
-        selectedEntry.content === selectedEntry.summary);
+      !selectedEntry.content || selectedEntry.content.length < 200;
 
     if (hasMinimalContent) {
       // Automatically fetch the original article
@@ -1065,7 +1061,7 @@ export default function Home() {
               </div>
             </section>
 
-            {/* DETAILPANE - SLIDE PANEL */}
+            {/* SLIDE PANEL */}
             <SlidePanel
               isOpen={!!selectedEntry}
               onClose={() => setSelectedEntryId(null)}
@@ -1116,15 +1112,9 @@ export default function Home() {
                     />
                   ) : (
                     <div className={styles.content}>
-                      {selectedEntry.summary ? (
-                        <div
-                          dangerouslySetInnerHTML={{
-                            __html: selectedEntry.summary,
-                          }}
-                        />
-                      ) : (
-                        <div className={styles.muted}>No content.</div>
-                      )}
+                      <div className={styles.entry_noContent}>
+                        No content available.
+                      </div>
                       <div>
                         <a
                           className={styles.link}
