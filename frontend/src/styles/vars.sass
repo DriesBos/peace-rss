@@ -89,3 +89,13 @@
 @mixin font-count
   font-size: var(--type-count)
   line-height: 1
+
+// Utility Mixins
+@mixin underline($color, $height: 1px)
+  content: ''
+  position: absolute
+  bottom: 0
+  left: 0
+  width: 100%
+  height: $height
+  background: $color

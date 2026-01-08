@@ -1,3 +1,5 @@
+@import '@/styles/vars.sass'
+
 .button
   position: relative
   cursor: pointer
@@ -9,24 +11,12 @@
 .primary
   color: var(--color-text)
   &::after
-    content: ''
-    position: absolute
-    bottom: 0
-    left: 0
-    width: 100%
-    height: 1px
-    background: var(--color-text)
+    @include underline(var(--color-text))
 
 .category
   color: var(--color-text)
   &::after
-    content: ''
-    position: absolute
-    bottom: 0
-    left: 0
-    width: 100%
-    height: 1px
-    background: transparent
+    @include underline(transparent)
   &[data-active="true"]
     &::after
       background: var(--color-text)

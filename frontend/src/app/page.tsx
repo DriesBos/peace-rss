@@ -42,6 +42,11 @@ type EntriesResponse = {
   entries: Entry[];
 };
 
+type FeedCountersResponse = {
+  reads?: Record<string, number>;
+  unreads?: Record<string, number>;
+};
+
 async function fetchJson<T>(input: string, init?: RequestInit): Promise<T> {
   const res = await fetch(input, {
     cache: 'no-store',
@@ -67,6 +72,78 @@ function formatDate(value?: string): string {
     month: 'short',
     day: '2-digit',
   });
+}
+
+type ModalDrawerProps = {
+  isOpen: boolean;
+  onClose: () => void;
+  ariaLabel: string;
+  children: React.ReactNode;
+};
+
+function ModalDrawer({
+  isOpen,
+  onClose,
+  ariaLabel,
+  children,
+}: ModalDrawerProps) {
+  if (!isOpen) return null;
+
+  return (
+    <div
+      className={styles.modalOverlay}
+      role="presentation"
+      onClick={onClose}
+      aria-hidden="true"
+      data-active={isOpen}
+    >
+      <div
+        className={styles.modalContainer}
+        role="dialog"
+        aria-modal="true"
+        aria-label={ariaLabel}
+        onClick={(event) => event.stopPropagation()}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
+type MenuModalProps = {
+  isOpen: boolean;
+  onClose: () => void;
+};
+
+function MenuModal({ isOpen, onClose }: MenuModalProps) {
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [isOpen, onClose]);
+
+  return (
+    <ModalDrawer isOpen={isOpen} onClose={onClose} ariaLabel="Menu">
+      <div className={styles.modalHeader}>
+        <Button type="button" onClick={onClose} aria-label="Close menu modal">
+          Close
+        </Button>
+      </div>
+    </ModalDrawer>
+  );
 }
 
 export default function Home() {
@@ -103,6 +180,11 @@ export default function Home() {
   const [categoryCounts, setCategoryCounts] = useState<Map<number, number>>(
     new Map()
   );
+  const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
+  const [totalUnreadCount, setTotalUnreadCount] = useState(0);
+
+  const openMenuModal = useCallback(() => setIsMenuModalOpen(true), []);
+  const closeMenuModal = useCallback(() => setIsMenuModalOpen(false), []);
 
   const feedsById = useMemo(() => {
     const map = new Map<number, Feed>();
@@ -143,6 +225,26 @@ export default function Home() {
     }
     return counts;
   }, [feeds, categoryCounts]);
+
+  const loadUnreadCounters = useCallback(async () => {
+    try {
+      const counters = await fetchJson<FeedCountersResponse>(
+        '/api/feeds/counters'
+      );
+      const totalUnread = Object.values(counters.unreads ?? {}).reduce(
+        (sum, value) => sum + value,
+        0
+      );
+      setTotalUnreadCount(totalUnread);
+    } catch (err) {
+      console.error('Failed to load unread counters', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isProvisioned) return;
+    void loadUnreadCounters();
+  }, [isProvisioned, entries, loadUnreadCounters]);
 
   async function loadFeeds() {
     const data = await fetchJson<Feed[]>('/api/feeds');
@@ -615,6 +717,7 @@ export default function Home() {
           </div>
         ) : (
           <div className={styles.app}>
+            <MenuModal isOpen={isMenuModalOpen} onClose={closeMenuModal} />
             <aside className={styles.sidebar}>
               <div className={styles.brand}>Pathanam Reader</div>
               <ThemeSwitcher />
@@ -801,7 +904,16 @@ export default function Home() {
             {/* LISTPANE */}
             <section className={styles.listPane}>
               <div className={styles.topBar}>
-                <div className={styles.topBar_MenuButton}>Menu</div>
+                <button
+                  type="button"
+                  className={styles.topBar_MenuButton}
+                  onClick={openMenuModal}
+                  aria-haspopup="dialog"
+                  aria-expanded={isMenuModalOpen}
+                  data-active={isMenuModalOpen}
+                >
+                  Menu
+                </button>
                 {/* Category List */}
                 <ul className={styles.categoryList}>
                   <li>
@@ -822,6 +934,9 @@ export default function Home() {
                     >
                       All
                     </Button>
+                    <div className={styles.categoryList_Item_Count}>
+                      {totalUnreadCount}
+                    </div>
                   </li>
                   {categories.slice(1).map((cat) => (
                     <li key={cat.id}>
