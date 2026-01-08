@@ -801,6 +801,7 @@ export default function Home() {
             {/* LISTPANE */}
             <section className={styles.listPane}>
               <div className={styles.topBar}>
+                <div className={styles.topBar_MenuButton}>Menu</div>
                 {/* Category List */}
                 <ul className={styles.categoryList}>
                   <li>

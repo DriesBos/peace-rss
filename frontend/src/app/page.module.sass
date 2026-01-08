@@ -149,11 +149,13 @@
 .topBar
   display: flex
   flex-direction: row
-  overflow-x: auto
   width: 100%
   align-items: center
-  gap: 1rem
-  padding: 1rem var(--space-sides-general)
+
+  &_Menu
+    @include font-nav
+    padding: 0 var(--space-sides-general)
+    cursor: pointer
 
 .categoryList
   list-style: none
@@ -162,20 +164,21 @@
   flex-wrap: nowrap
   gap: .5rem
   overflow-x: auto
-  overflow-y: visible
   scrollbar-width: none
   -ms-overflow-style: none
+  padding: 0 var(--space-sides-general)
+  overflow-y: visible !important
   &::-webkit-scrollbar
     display: none
   li
+    @include font-nav
     display: flex
     align-items: flex-start
-    gap: 0.5rem
+    cursor: pointer
   &_Item_Count
     @include font-count
     flex: 0 0 auto
     color: var(--color-text-secondary)
-    margin-top: -2px
 
 .error
   padding: 10px 12px
