@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import styles from './SlidePanel.module.sass';
 import { Button } from '@/components/Button/Button';
+import { IconArrowLeft } from '@/components/icons/IconArrowLeft';
 
 type SlidePanelProps = {
   isOpen: boolean;
@@ -67,7 +68,8 @@ export function SlidePanel({
             onClick={onClose}
             aria-label="Close detail panel"
           >
-            ← Back
+            <IconArrowLeft />
+            <span>Back</span>
           </Button>
         </div>
         <div className={styles.slidePanel_Content}>{children}</div>

@@ -9,6 +9,7 @@ import { Button } from '@/components/Button/Button';
 import { FormattedDate } from '@/components/FormattedDate';
 import { ModalContainer } from '@/components/ModalContainer/ModalContainer';
 import { SlidePanel } from '@/components/SlidePanel/SlidePanel';
+import { IconMenu } from '@/components/icons/IconMenu';
 
 type Category = {
   id: number;
@@ -914,16 +915,18 @@ export default function Home() {
             <section className={styles.listPane}>
               <div className={styles.topBar}>
                 <div className={styles.topBar_Menu}>
-                  <button
+                  <Button
                     type="button"
+                    variant="nav"
                     className={styles.topBar_MenuButton}
                     onClick={openMenuModal}
                     aria-haspopup="dialog"
                     aria-expanded={isMenuModalOpen}
                     data-active={isMenuModalOpen}
                   >
-                    Menu
-                  </button>
+                    <IconMenu />
+                    <span>Menu</span>
+                  </Button>
                 </div>
                 {/* Category List */}
                 <ul className={styles.categoryList}>

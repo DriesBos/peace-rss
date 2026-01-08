@@ -3,6 +3,8 @@
 .button
   position: relative
   cursor: pointer
+  span
+    position: relative
 
   &:disabled
     color: var(--color-text-secondary)
@@ -25,8 +27,12 @@
 
 .nav
   @include font-nav
-  &::after
+  span::after
     @include underline(transparent)
   &[data-active="true"]
-    &::after
-      background: var(--color-text)
+    span::after
+      @include underline(var(--color-text))
+  &:hover
+    @media (hover: hover)
+      span::after
+        @include underline(var(--color-text))
