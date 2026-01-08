@@ -10,6 +10,7 @@ import { FormattedDate } from '@/components/FormattedDate';
 import { ModalContainer } from '@/components/ModalContainer/ModalContainer';
 import { SlidePanel } from '@/components/SlidePanel/SlidePanel';
 import { IconMenu } from '@/components/icons/IconMenu';
+import { Footer } from '@/components/Footer/Footer';
 
 type Category = {
   id: number;
@@ -96,6 +97,22 @@ type MenuModalProps = {
   isLoading: boolean;
 };
 
+function ThemeModal({
+  isOpen,
+  onClose,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+}) {
+  return (
+    <ModalContainer isOpen={isOpen} onClose={onClose} ariaLabel="Theme">
+      <div className={styles.modalTheme}>
+        <ThemeSwitcher />
+      </div>
+    </ModalContainer>
+  );
+}
+
 function MenuModal({
   isOpen,
   onClose,
@@ -135,18 +152,8 @@ function MenuModal({
 
   return (
     <ModalContainer isOpen={isOpen} onClose={onClose} ariaLabel="Menu">
-      <aside className={styles.sidebar}>
-        <div className={styles.brand}>Pathanam Reader</div>
+      <div className={styles.modalMenu}>
         <ThemeSwitcher />
-        {/* <a
-                className={styles.link}
-                href="/miniflux"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Open Miniflux
-              </a> */}
-
         <div className={styles.sectionTitle}>Categories</div>
 
         {/* Add Category Form */}
@@ -212,7 +219,7 @@ function MenuModal({
           {addFeedError && <div className={styles.error}>{addFeedError}</div>}
         </form>
 
-        {/* FEEDLIST */}
+        <Footer />
         {/* <div className={styles.feedList}>
                 <button
                   type="button"
@@ -314,7 +321,7 @@ function MenuModal({
                   )}
                 </div>
               </form> */}
-      </aside>
+      </div>
     </ModalContainer>
   );
 }

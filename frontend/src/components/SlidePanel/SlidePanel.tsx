@@ -71,6 +71,14 @@ export function SlidePanel({
             <IconArrowLeft />
             <span>Back</span>
           </Button>
+          <Button
+            type="button"
+            variant="nav"
+            onClick={onClose}
+            aria-label="Close detail panel"
+          >
+            <span>Theme</span>
+          </Button>
         </div>
         <div className={styles.slidePanel_Content}>{children}</div>
       </div>

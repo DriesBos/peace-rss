@@ -1,0 +1,16 @@
+@import '@/styles/vars.sass'
+
+.footer
+  display: flex
+  flex-direction: column
+  height: 200px
+  &_List
+    display: flex
+    justify-content: space-between
+    align-items: center
+    list-style: none
+    &_Item
+      a
+        color: var(--color-text)
+        text-decoration: none
+        @include font-nav
