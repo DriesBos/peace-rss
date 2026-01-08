@@ -100,6 +100,9 @@ export default function Home() {
   const [fetchedEntryIds, setFetchedEntryIds] = useState<Set<number>>(
     new Set()
   );
+  const [categoryCounts, setCategoryCounts] = useState<Map<number, number>>(
+    new Map()
+  );
 
   const feedsById = useMemo(() => {
     const map = new Map<number, Feed>();
@@ -120,6 +123,27 @@ export default function Home() {
     };
   }, [entries, selectedEntryId]);
 
+  // Calculate unread count per category
+  // First try from stored categoryCounts (from entries API), fallback to summing feed unread_count
+  const categoryUnreadCounts = useMemo(() => {
+    const counts = new Map<number, number>(categoryCounts);
+
+    // Fill in any missing counts by summing feed unread_count
+    for (const feed of feeds) {
+      const categoryId = feed.category?.id;
+      const unreadCount = feed.unread_count;
+
+      if (categoryId && typeof unreadCount === 'number') {
+        // Only use feed count if we don't already have a stored count for this category
+        if (!counts.has(categoryId)) {
+          const current = counts.get(categoryId) ?? 0;
+          counts.set(categoryId, current + unreadCount);
+        }
+      }
+    }
+    return counts;
+  }, [feeds, categoryCounts]);
+
   async function loadFeeds() {
     const data = await fetchJson<Feed[]>('/api/feeds');
     setFeeds(data);
@@ -128,6 +152,23 @@ export default function Home() {
   async function loadCategories() {
     const data = await fetchJson<Category[]>('/api/categories');
     setCategories(data);
+
+    // Fetch unread counts for all categories
+    const counts = new Map<number, number>();
+    await Promise.all(
+      data.map(async (cat) => {
+        try {
+          const entriesData = await fetchJson<EntriesResponse>(
+            `/api/entries?status=unread&category_id=${cat.id}&limit=1&offset=0`
+          );
+          counts.set(cat.id, entriesData.total ?? 0);
+        } catch (e) {
+          // Ignore errors, count will remain 0
+          console.error(`Failed to load count for category ${cat.id}:`, e);
+        }
+      })
+    );
+    setCategoryCounts(counts);
   }
 
   function entriesUrl(nextOffset: number) {
@@ -165,6 +206,21 @@ export default function Home() {
     const data = await fetchJson<EntriesResponse>(entriesUrl(nextOffset));
     setTotal(data.total ?? 0);
     setOffset(nextOffset);
+
+    // Store category count when loading entries for a specific category
+    if (
+      selectedCategoryId !== null &&
+      !searchMode &&
+      !isStarredView &&
+      nextOffset === 0
+    ) {
+      setCategoryCounts((prev) => {
+        const updated = new Map(prev);
+        updated.set(selectedCategoryId, data.total ?? 0);
+        return updated;
+      });
+    }
+
     if (append) {
       setEntries((prev) => [...prev, ...data.entries]);
       return;
@@ -785,6 +841,9 @@ export default function Home() {
                       >
                         {cat.title}
                       </Button>
+                      <div className={styles.categoryList_Item_Count}>
+                        {categoryUnreadCounts.get(cat.id) ?? 0}
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -846,6 +905,7 @@ export default function Home() {
                           publishedAt={published}
                           active={isActive}
                           content={e.content}
+                          url={e.url}
                           onClick={() => setSelectedEntryId(e.id)}
                         />
                       );
