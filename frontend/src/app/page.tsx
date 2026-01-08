@@ -1109,7 +1109,7 @@ export default function Home() {
                   {/* ENTRY CONTENT */}
                   {selectedEntry.content ? (
                     <div
-                      className={styles.entry_content}
+                      className={styles.entry_Content}
                       dangerouslySetInnerHTML={{
                         __html: selectedEntry.content,
                       }}

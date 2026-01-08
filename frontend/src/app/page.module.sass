@@ -202,14 +202,26 @@
     p, i
       @include font-meta
 
-.entry_content
+.entry_Content
   @include font-body
   display: flex
   flex-direction: column
-  gap: 1.5rem
   padding: 0 var(--space-sides-stories)
   h1, h2, h3, h4, h5, h6
+    @include font-title
     font-weight: 400
+    margin-bottom: 2rem
+  p
+    margin-bottom: 1rem
+  video, img
+    margin-bottom: 1rem
+    width: 100%
+    max-width: 100%
+    height: auto
+  picture, figure
+    width: 100%
+    max-width: 100%
+    height: auto
   &:global(a)
     color: inherit
     text-decoration: underline
@@ -242,11 +254,7 @@
   display: flex
   flex-direction: row
   flex-wrap: wrap
-  gap: 0.5rem
-  &_Item
-    margin-left: 0.33rem
-    &:first-child
-      margin-left: 0
+  gap: 0.5em
 
 .prevNextButtons
   display: flex
