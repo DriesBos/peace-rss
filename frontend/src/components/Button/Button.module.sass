@@ -10,16 +10,23 @@
 
 .primary
   color: var(--color-text)
+  @include font-button
   &::after
     @include underline(var(--color-text))
 
 .category
   color: var(--color-text)
+  @include font-nav
   &::after
     @include underline(transparent)
   &[data-active="true"]
     &::after
       background: var(--color-text)
 
-.default
-  font-size: var(--type-button)
+.nav
+  @include font-nav
+  &::after
+    @include underline(transparent)
+  &[data-active="true"]
+    &::after
+      background: var(--color-text)

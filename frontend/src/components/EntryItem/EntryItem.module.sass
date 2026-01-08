@@ -3,8 +3,9 @@
 .entryItem
   display: flex
   flex-direction: row
-  gap: 1rem
+  gap: 0.5rem
   align-items: flex-start
+  cursor: pointer
   &_Body
     flex: 1
     display: flex
@@ -33,10 +34,13 @@
   &_Thumbnail
     flex-shrink: 0
     width: 90px
-    height: 68px
+    aspect-ratio: 4 / 3
     overflow: hidden
     border-radius: 4px
     background-color: var(--color-bg-secondary)
+    @media (max-width: $res-tabled)
+      width: 23vw
+      aspect-ratio: 4 / 3
     img
       width: 100%
       height: 100%

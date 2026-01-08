@@ -61,13 +61,16 @@ export function SlidePanel({
         data-open={isOpen}
       >
         <div className={styles.slidePanel_Header}>
-          <Button type="button" onClick={onClose} aria-label="Close detail panel">
+          <Button
+            type="button"
+            variant="nav"
+            onClick={onClose}
+            aria-label="Close detail panel"
+          >
             ← Back
           </Button>
         </div>
-        <div className={styles.slidePanel_Content}>
-          {children}
-        </div>
+        <div className={styles.slidePanel_Content}>{children}</div>
       </div>
     </>
   );
