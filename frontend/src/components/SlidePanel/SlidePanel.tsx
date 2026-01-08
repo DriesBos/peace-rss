@@ -61,7 +61,7 @@ export function SlidePanel({
         aria-label={ariaLabel}
         data-open={isOpen}
       >
-        <div className={styles.slidePanel_Header}>
+        <div className={styles.slidePanel_Nav}>
           <Button
             type="button"
             variant="nav"

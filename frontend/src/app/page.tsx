@@ -11,6 +11,9 @@ import { ModalContainer } from '@/components/ModalContainer/ModalContainer';
 import { SlidePanel } from '@/components/SlidePanel/SlidePanel';
 import { IconMenu } from '@/components/icons/IconMenu';
 import { Footer } from '@/components/Footer/Footer';
+import { IconArrowLeft } from '@/components/icons/IconArrowLeft';
+import { IconArrowShortLeft } from '@/components/icons/IconArrowShortLeft';
+import { IconArrowShortRight } from '@/components/icons/IconArrowShortRight';
 
 type Category = {
   id: number;
@@ -1070,9 +1073,10 @@ export default function Home() {
             >
               {selectedEntry && (
                 <>
-                  <div className={styles.detailPane_Header}>
+                  {/* ENTRY HEADER */}
+                  <div className={styles.entry_Header}>
                     <h1>{selectedEntry.title || '(untitled)'}</h1>
-                    <div className={styles.detailPane_Meta}>
+                    <div className={styles.entry_Meta}>
                       {(selectedEntry.feed_title ??
                         selectedEntry.feed?.title ??
                         feedsById.get(selectedEntry.feed_id)?.title) ||
@@ -1102,9 +1106,10 @@ export default function Home() {
                     </div>
                   </div>
 
+                  {/* ENTRY CONTENT */}
                   {selectedEntry.content ? (
                     <div
-                      className={styles.detailPane_content}
+                      className={styles.entry_content}
                       dangerouslySetInnerHTML={{
                         __html: selectedEntry.content,
                       }}
@@ -1132,27 +1137,27 @@ export default function Home() {
                       </div>
                     </div>
                   )}
-                  <div className={styles.detailFooter}>
-                    <div className={styles.actionsRow}>
+                  <div className={styles.entry_Footer}>
+                    <div className={styles.actionsList}>
                       <Button
                         variant="primary"
                         onClick={() => void toggleSelectedStar()}
                         disabled={isLoading}
                         title={selectedIsStarred ? 'Unbookmark' : 'Bookmark'}
+                        className={styles.actionsList_Item}
                       >
                         {selectedIsStarred ? 'Unbookmark' : 'Bookmark'}
+                        {', '}
                       </Button>
-                      {', '}
                       <Button
                         onClick={() => void fetchOriginalArticle()}
                         disabled={isLoading || fetchingOriginal}
                         title="Link to original article"
+                        className={styles.actionsList_Item}
                       >
-                        Link to original article
+                        Link to original article{', '}
                       </Button>
-                      {', '}
                       <Button
-                        className={styles.button}
                         onClick={() => void fetchOriginalArticle()}
                         disabled={isLoading || fetchingOriginal}
                         title={
@@ -1160,39 +1165,39 @@ export default function Home() {
                             ? 'Fetching...'
                             : 'Fetch original article'
                         }
+                        className={styles.actionsList_Item}
                       >
                         {fetchingOriginal
                           ? 'Fetching...'
                           : 'Fetch original article'}
+                        {', '}
                       </Button>
-                      {', '}
                       {selectedEntry.status === 'unread' ? (
                         <Button
-                          className={styles.button}
                           onClick={() => void setSelectedStatus('read')}
                           disabled={isLoading}
                           type="button"
+                          className={styles.actionsList_Item}
                         >
-                          Mark read
+                          Mark read{', '}
                         </Button>
                       ) : (
                         <Button
-                          className={styles.button}
                           onClick={() => void setSelectedStatus('unread')}
                           disabled={isLoading}
                           type="button"
+                          className={styles.actionsList_Item}
                         >
-                          Mark unread
+                          Mark unread{', '}
                         </Button>
                       )}
-                      {', '}
                       <Button
-                        className={styles.button}
+                        className={styles.actionsList_Item}
                         onClick={() => void setSelectedStatus('unread')}
                         disabled={isLoading}
                         type="button"
                       >
-                        Mark unread
+                        Mark unread{', '}
                       </Button>
                     </div>
                     <div className={styles.prevNextButtons}>
@@ -1201,18 +1206,20 @@ export default function Home() {
                         onClick={navigateToPrev}
                         disabled={!hasPrev || isLoading}
                         type="button"
-                        title="Previous entry"
+                        variant="nav"
                       >
-                        ← Prev
+                        <IconArrowShortLeft />
+                        <span>Prev</span>
                       </Button>
                       <Button
                         className={styles.button}
                         onClick={navigateToNext}
                         disabled={!hasNext || isLoading}
                         type="button"
-                        title="Next entry"
+                        variant="nav"
                       >
-                        Next →
+                        <span>Next</span>
+                        <IconArrowShortRight />
                       </Button>
                     </div>
                   </div>

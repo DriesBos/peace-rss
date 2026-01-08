@@ -5,6 +5,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'category' | 'nav';
   children: React.ReactNode;
   active?: boolean;
+  className?: string;
 }
 
 export const Button: React.FC<ButtonProps> = ({
