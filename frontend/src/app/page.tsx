@@ -918,7 +918,6 @@ export default function Home() {
                   <Button
                     type="button"
                     variant="nav"
-                    className={styles.topBar_MenuButton}
                     onClick={openMenuModal}
                     aria-haspopup="dialog"
                     aria-expanded={isMenuModalOpen}

@@ -147,15 +147,6 @@
   align-items: center
   &_Menu
     padding: 0 var(--space-sides-general)
-  &_MenuButton
-    @include font-nav
-    cursor: pointer
-    position: relative
-    &::after
-      @include underline(transparent)
-    &[data-active="true"]
-      &::after
-        background: var(--color-text)
 
 .categoryList
   list-style: none
