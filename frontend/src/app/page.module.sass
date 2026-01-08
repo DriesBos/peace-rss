@@ -156,9 +156,11 @@
     @include font-nav
     padding: 0 var(--space-sides-general)
     cursor: pointer
+    &::after
+      @include underline(transparent)
     &[data-active="true"]
-      background: var(--color-text-secondary)
-      color: var(--color-app)
+      &::after
+        background: var(--color-text)
 
 .categoryList
   list-style: none
