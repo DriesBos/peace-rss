@@ -151,6 +151,10 @@ export default function Home() {
 
     if (selectedFeedId && !searchMode)
       qs.set('feed_id', String(selectedFeedId));
+
+    if (selectedCategoryId !== null && !searchMode)
+      qs.set('category_id', String(selectedCategoryId));
+
     return `/api/entries?${qs.toString()}`;
   }
 
@@ -441,7 +445,13 @@ export default function Home() {
       .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load'))
       .finally(() => setIsLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedFeedId, isStarredView, searchMode, isProvisioned]);
+  }, [
+    selectedFeedId,
+    selectedCategoryId,
+    isStarredView,
+    searchMode,
+    isProvisioned,
+  ]);
 
   // Keyboard shortcuts for navigation
   useEffect(() => {
@@ -737,7 +747,7 @@ export default function Home() {
               <div className={styles.topBar}>
                 {/* Category List */}
                 <ul className={styles.categoryList}>
-                  <li>
+                  {/* <li>
                     <Button
                       type="button"
                       variant="category"
@@ -747,12 +757,15 @@ export default function Home() {
                           ? styles.categoryItemActive
                           : ''
                       }`}
-                      onClick={() => setSelectedCategoryId(null)}
+                      onClick={() => {
+                        setSelectedCategoryId(null);
+                        setSelectedFeedId(null);
+                      }}
                       disabled={isLoading}
                     >
                       All
                     </Button>
-                  </li>
+                  </li> */}
                   {categories.map((cat) => (
                     <li key={cat.id}>
                       <Button
@@ -764,7 +777,10 @@ export default function Home() {
                             ? styles.categoryItemActive
                             : ''
                         }`}
-                        onClick={() => setSelectedCategoryId(cat.id)}
+                        onClick={() => {
+                          setSelectedCategoryId(cat.id);
+                          setSelectedFeedId(null);
+                        }}
                         disabled={isLoading}
                       >
                         {cat.title}

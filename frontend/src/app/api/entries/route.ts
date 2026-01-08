@@ -74,6 +74,20 @@ export async function GET(request: Request) {
       feedId = parsed;
     }
 
+    // Optional category filter (used by the UI); ignore when missing.
+    const categoryIdRaw = url.searchParams.get('category_id');
+    let categoryId: number | null = null;
+    if (categoryIdRaw !== null && categoryIdRaw.trim() !== '') {
+      const parsed = Number(categoryIdRaw);
+      if (!Number.isFinite(parsed) || parsed <= 0) {
+        return NextResponse.json(
+          { error: 'Invalid category_id' },
+          { status: 400 }
+        );
+      }
+      categoryId = parsed;
+    }
+
     const qs = new URLSearchParams({
       limit: String(limit),
       offset: String(offset),
@@ -97,6 +111,7 @@ export async function GET(request: Request) {
     }
 
     if (feedId) qs.set('feed_id', String(feedId));
+    if (categoryId) qs.set('category_id', String(categoryId));
 
     // 4. Fetch entries using per-user token
     const data = await mfFetchUser<unknown>(
