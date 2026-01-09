@@ -1,8 +1,16 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  createElement,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { SignedIn, SignedOut, RedirectToSignIn } from '@clerk/nextjs';
 import { useInView } from 'react-intersection-observer';
+import IntersectionImage from 'react-intersection-image';
 import styles from './page.module.sass';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { EntryItem } from '@/components/EntryItem/EntryItem';
@@ -123,6 +131,229 @@ function LazyEntryItem({
       )}
     </div>
   );
+}
+
+function useLazyEntryContent(html?: string) {
+  return useMemo<ReactNode[] | null>(() => {
+    const canUseDom =
+      typeof window !== 'undefined' && typeof window.DOMParser !== 'undefined';
+
+    if (!html || !canUseDom) return null;
+
+    try {
+      return convertHtmlToReactNodes(html);
+    } catch {
+      return null;
+    }
+  }, [html]);
+}
+
+function convertHtmlToReactNodes(html: string): ReactNode[] {
+  const parser = new window.DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+
+  return Array.from(doc.body.childNodes)
+    .map((node, index) => transformNodeToReact(node, `entry-node-${index}`))
+    .filter(
+      (child): child is ReactNode => child !== null && child !== undefined
+    );
+}
+
+function transformNodeToReact(node: ChildNode, key: string): ReactNode | null {
+  if (node.nodeType === Node.TEXT_NODE) {
+    return node.textContent;
+  }
+
+  if (node.nodeType !== Node.ELEMENT_NODE) {
+    return null;
+  }
+
+  const element = node as HTMLElement;
+  const tagName = element.tagName.toLowerCase();
+
+  if (tagName === 'script' || tagName === 'style') {
+    return null;
+  }
+
+  if (tagName === 'img') {
+    return createLazyImageElement(element as HTMLImageElement, key);
+  }
+
+  const props = buildElementProps(element);
+
+  const children = Array.from(element.childNodes).map((child, childIndex) =>
+    transformNodeToReact(child, `${key}-${childIndex}`)
+  );
+
+  return createElement(tagName, { ...props, key }, children);
+}
+
+type ElementProps = Record<string, unknown> & {
+  className?: string;
+  style?: CSSProperties;
+};
+
+function buildElementProps(
+  element: Element,
+  options: { omit?: string[] } = {}
+): ElementProps {
+  const props: ElementProps = {};
+  const omit = new Set(
+    (options.omit ?? []).map((attrName) => attrName.toLowerCase())
+  );
+
+  Array.from(element.attributes).forEach((attr) => {
+    const lowerName = attr.name.toLowerCase();
+    if (omit.has(lowerName)) {
+      return;
+    }
+
+    if (lowerName.startsWith('on')) {
+      return;
+    }
+
+    if (lowerName === 'style') {
+      const styleObj = styleStringToObject(attr.value);
+      if (styleObj) {
+        props.style = { ...(props.style ?? {}), ...styleObj };
+      }
+      return;
+    }
+
+    const mappedName = mapAttributeName(attr.name);
+
+    if (mappedName === 'className') {
+      props.className = props.className
+        ? `${props.className} ${attr.value}`
+        : attr.value;
+      return;
+    }
+
+    props[mappedName] = attr.value;
+  });
+
+  return props;
+}
+
+function createLazyImageElement(
+  element: HTMLImageElement,
+  key: string
+): ReactNode | null {
+  const src = element.getAttribute('src');
+
+  if (!src) {
+    return null;
+  }
+
+  const baseProps = buildElementProps(element, {
+    omit: ['src', 'srcset', 'sizes'],
+  });
+
+  const {
+    className: htmlClassName,
+    style: htmlStyle,
+    ...restProps
+  } = baseProps;
+
+  const combinedClassName = [styles.lazyEntryImage, htmlClassName]
+    .filter(Boolean)
+    .join(' ')
+    .trim();
+
+  const mergedStyle: CSSProperties = {
+    ...(htmlStyle ?? {}),
+  };
+
+  if (!mergedStyle.transition) {
+    mergedStyle.transition = 'opacity 0.6s ease-in-out';
+  }
+
+  const srcSet = element.getAttribute('srcset');
+  const sizes = element.getAttribute('sizes');
+  const alt = element.getAttribute('alt') ?? '';
+
+  return (
+    <IntersectionImage
+      key={key}
+      {...restProps}
+      src={src}
+      alt={alt}
+      srcSet={srcSet ?? undefined}
+      sizes={sizes ?? undefined}
+      className={combinedClassName || undefined}
+      style={Object.keys(mergedStyle).length ? mergedStyle : {}}
+    />
+  );
+}
+
+function styleStringToObject(value: string): CSSProperties | undefined {
+  const declarations = value
+    .split(';')
+    .map((declaration) => declaration.trim())
+    .filter(Boolean);
+
+  if (declarations.length === 0) {
+    return undefined;
+  }
+
+  const styleObject: Record<string, string> = {};
+
+  declarations.forEach((declaration) => {
+    const separatorIndex = declaration.indexOf(':');
+    if (separatorIndex === -1) {
+      return;
+    }
+
+    const property = declaration.slice(0, separatorIndex).trim();
+    const rawValue = declaration.slice(separatorIndex + 1).trim();
+
+    if (!property || !rawValue) {
+      return;
+    }
+
+    const camelCased = property.startsWith('--')
+      ? property
+      : property.replace(/-([a-z])/g, (_, char) => char.toUpperCase());
+
+    styleObject[camelCased] = rawValue;
+  });
+
+  return Object.keys(styleObject).length
+    ? (styleObject as CSSProperties)
+    : undefined;
+}
+
+function mapAttributeName(name: string): string {
+  const normalized = name.toLowerCase();
+
+  switch (normalized) {
+    case 'class':
+      return 'className';
+    case 'for':
+      return 'htmlFor';
+    case 'http-equiv':
+      return 'httpEquiv';
+    case 'accept-charset':
+      return 'acceptCharset';
+    case 'maxlength':
+      return 'maxLength';
+    case 'tabindex':
+      return 'tabIndex';
+    case 'readonly':
+      return 'readOnly';
+    case 'colspan':
+      return 'colSpan';
+    case 'rowspan':
+      return 'rowSpan';
+    case 'frameborder':
+      return 'frameBorder';
+    case 'allowfullscreen':
+      return 'allowFullScreen';
+    case 'srcset':
+      return 'srcSet';
+    default:
+      return name;
+  }
 }
 
 type MenuModalProps = {
@@ -918,6 +1149,8 @@ export default function Home() {
     return feeds.filter((feed) => feed.category?.id === selectedCategoryId);
   }, [feeds, selectedCategoryId]);
 
+  const lazyEntryContent = useLazyEntryContent(selectedEntry?.content);
+
   return (
     <>
       <SignedIn>
@@ -1135,12 +1368,18 @@ export default function Home() {
 
                   {/* ENTRY CONTENT */}
                   {selectedEntry.content ? (
-                    <div
-                      className={styles.entry_Content}
-                      dangerouslySetInnerHTML={{
-                        __html: selectedEntry.content,
-                      }}
-                    />
+                    lazyEntryContent ? (
+                      <div className={styles.entry_Content}>
+                        {lazyEntryContent}
+                      </div>
+                    ) : (
+                      <div
+                        className={styles.entry_Content}
+                        dangerouslySetInnerHTML={{
+                          __html: selectedEntry.content,
+                        }}
+                      />
+                    )
                   ) : (
                     <div className={styles.content}>
                       <div className={styles.entry_noContent}>
