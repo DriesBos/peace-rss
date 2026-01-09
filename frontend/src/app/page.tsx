@@ -962,79 +962,78 @@ export default function Home() {
               isLoading={isLoading}
             />
 
-            {/* LISTPANE */}
-            <section className={styles.listPane}>
-              <div className={styles.topBar}>
-                <div className={styles.topBar_Menu}>
+            {/* NEWS FEED */}
+            <div className={styles.header}>
+              <div className={styles.header_Menu}>
+                <Button
+                  type="button"
+                  variant="nav"
+                  onClick={openMenuModal}
+                  aria-haspopup="dialog"
+                  aria-expanded={isMenuModalOpen}
+                  data-active={isMenuModalOpen}
+                >
+                  <IconMenu />
+                  <span>Menu</span>
+                </Button>
+              </div>
+              {/* Category List */}
+              <ul className={styles.header_CategoryList}>
+                <li>
                   <Button
                     type="button"
-                    variant="nav"
-                    onClick={openMenuModal}
-                    aria-haspopup="dialog"
-                    aria-expanded={isMenuModalOpen}
-                    data-active={isMenuModalOpen}
+                    variant="category"
+                    active={selectedCategoryId === null}
+                    className={`${styles.header_CategoryList_Item} ${
+                      selectedCategoryId === null
+                        ? styles.categoryItemActive
+                        : ''
+                    }`}
+                    onClick={() => {
+                      setSelectedCategoryId(null);
+                      setSelectedFeedId(null);
+                    }}
+                    disabled={isLoading}
                   >
-                    <IconMenu />
-                    <span>Menu</span>
+                    All
                   </Button>
-                </div>
-                {/* Category List */}
-                <ul className={styles.categoryList}>
-                  <li>
+                  <div className={styles.header_CategoryList_Count}>
+                    {totalUnreadCount}
+                  </div>
+                </li>
+                {categories.slice(1).map((cat) => (
+                  <li key={cat.id}>
                     <Button
                       type="button"
                       variant="category"
-                      active={selectedCategoryId === null}
-                      className={`${styles.categoryItem} ${
-                        selectedCategoryId === null
+                      active={selectedCategoryId === cat.id}
+                      className={`${styles.categoryList_Item} ${
+                        selectedCategoryId === cat.id
                           ? styles.categoryItemActive
                           : ''
                       }`}
                       onClick={() => {
-                        setSelectedCategoryId(null);
+                        setSelectedCategoryId(cat.id);
                         setSelectedFeedId(null);
                       }}
                       disabled={isLoading}
                     >
-                      All
+                      {cat.title}
                     </Button>
                     <div className={styles.categoryList_Item_Count}>
-                      {totalUnreadCount}
+                      {categoryUnreadCounts.get(cat.id) ?? 0}
                     </div>
                   </li>
-                  {categories.slice(1).map((cat) => (
-                    <li key={cat.id}>
-                      <Button
-                        type="button"
-                        variant="category"
-                        active={selectedCategoryId === cat.id}
-                        className={`${styles.categoryList_Item} ${
-                          selectedCategoryId === cat.id
-                            ? styles.categoryItemActive
-                            : ''
-                        }`}
-                        onClick={() => {
-                          setSelectedCategoryId(cat.id);
-                          setSelectedFeedId(null);
-                        }}
-                        disabled={isLoading}
-                      >
-                        {cat.title}
-                      </Button>
-                      <div className={styles.categoryList_Item_Count}>
-                        {categoryUnreadCounts.get(cat.id) ?? 0}
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-                {/* <button
+                ))}
+              </ul>
+              {/* <button
                   className={styles.button}
                   onClick={() => void refreshAll()}
                   disabled={isLoading}
                 >
                   Refresh
                 </button> */}
-                {/* {!isStarredView && !searchMode && (
+              {/* {!isStarredView && !searchMode && (
                   <button
                     className={styles.button}
                     onClick={() => void markPageRead()}
@@ -1043,7 +1042,7 @@ export default function Home() {
                     Mark page read
                   </button>
                 )} */}
-                {/* <div className={styles.meta}>
+              {/* <div className={styles.meta}>
                   {isLoading
                     ? 'Loading…'
                     : `${entries.length}${total ? ` / ${total}` : ''} ${
@@ -1054,45 +1053,44 @@ export default function Home() {
                           : 'unread'
                       }${selectedFeedTitle ? ` — ${selectedFeedTitle}` : ''}`}
                 </div> */}
-              </div>
+            </div>
 
-              {error ? <div className={styles.error}>{error}</div> : null}
+            {error ? <div className={styles.error}>{error}</div> : null}
 
-              <div className={styles.entryList}>
-                <>
-                  {entries.length === 0 ? (
-                    <div className={styles.muted}>
-                      {searchMode
-                        ? 'No results found.'
-                        : isStarredView
-                        ? 'No starred entries.'
-                        : 'No unread entries.'}
-                    </div>
-                  ) : (
-                    entries.map((e) => (
-                      <LazyEntryItem
-                        key={e.id}
-                        entry={e}
-                        selectedEntryId={selectedEntryId}
-                        feedsById={feedsById}
-                        onEntryClick={setSelectedEntryId}
-                      />
-                    ))
-                  )}
-                  <div className={styles.listFooter}>
-                    {canLoadMore && (
-                      <Button
-                        variant="primary"
-                        onClick={() => void loadMore()}
-                        disabled={isLoading}
-                      >
-                        Load more
-                      </Button>
-                    )}
+            <div className={styles.entryList}>
+              <>
+                {entries.length === 0 ? (
+                  <div className={styles.muted}>
+                    {searchMode
+                      ? 'No results found.'
+                      : isStarredView
+                      ? 'No starred entries.'
+                      : 'No unread entries.'}
                   </div>
-                </>
-              </div>
-            </section>
+                ) : (
+                  entries.map((e) => (
+                    <LazyEntryItem
+                      key={e.id}
+                      entry={e}
+                      selectedEntryId={selectedEntryId}
+                      feedsById={feedsById}
+                      onEntryClick={setSelectedEntryId}
+                    />
+                  ))
+                )}
+                <div className={styles.entryList_Footer}>
+                  {canLoadMore && (
+                    <Button
+                      variant="primary"
+                      onClick={() => void loadMore()}
+                      disabled={isLoading}
+                    >
+                      Load more
+                    </Button>
+                  )}
+                </div>
+              </>
+            </div>
 
             {/* SLIDE PANEL */}
             <SlidePanel
