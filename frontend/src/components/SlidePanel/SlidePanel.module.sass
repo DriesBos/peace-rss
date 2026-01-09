@@ -16,12 +16,10 @@
     top: 0
     right: -1px
     bottom: 0
-    width: calc(100vw + 1px)
+    width: 100vw
     max-width: 100%
     background: var(--color-app)
-    outline-left: 1px solid var(--color-text)
-    transform: translateX(calc(100% + 1px))
-    transition: transform 0.33s ease
+    transition: opacity 0.33s ease
     z-index: var(--index-slidepanel)
     overflow-y: auto
     scrollbar-width: none
@@ -29,7 +27,7 @@
     &::-webkit-scrollbar
       display: none
     &[data-open="true"]
-      transform: translateX(0)
+      opacity: 1
 
   &_Content
     position: relative
@@ -44,7 +42,7 @@
     top: 0
     display: flex
     align-items: flex-shrink
-    padding: 8px var(--space-sides-general)
+    padding: 16px var(--space-sides-general)
     flex-shrink: 0
     background: var(--color-app)
     z-index: calc(var(--index-slidepanel) + 1)
