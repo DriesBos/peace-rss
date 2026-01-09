@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import styles from './SlidePanel.module.sass';
 import { Button } from '@/components/Button/Button';
 import { IconArrowLeft } from '@/components/icons/IconArrowLeft';
+import { useDisableScroll } from '@/hooks/useDisableScroll';
 
 type SlidePanelProps = {
   isOpen: boolean;
@@ -16,7 +17,10 @@ export function SlidePanel({
   ariaLabel = 'Detail panel',
   children,
 }: SlidePanelProps) {
-  // Handle Escape key to close panel and manage body scroll
+  // Disable body scroll when panel is open
+  useDisableScroll(isOpen);
+
+  // Handle Escape key to close panel
   useEffect(() => {
     if (!isOpen) return;
 

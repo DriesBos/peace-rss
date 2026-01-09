@@ -1,5 +1,6 @@
 import styles from './ModalContainer.module.sass';
 import { Button } from '@/components/Button/Button';
+import { useDisableScroll } from '@/hooks/useDisableScroll';
 
 type ModalContainerProps = {
   isOpen: boolean;
@@ -14,6 +15,9 @@ export function ModalContainer({
   ariaLabel,
   children,
 }: ModalContainerProps) {
+  // Disable body scroll when modal is open
+  useDisableScroll(isOpen);
+
   return (
     <div
       className={styles.modal_Overlay}

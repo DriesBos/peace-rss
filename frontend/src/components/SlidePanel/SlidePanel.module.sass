@@ -3,7 +3,7 @@
     position: fixed
     inset: 0
     background: var(--color-modal-bg)
-    z-index: 99
+    z-index: calc(var(--index-slidepanel) - 1)
     opacity: 0
     pointer-events: none
     transition: opacity 0.3s ease-in-out
@@ -22,7 +22,7 @@
     outline-left: 1px solid var(--color-text)
     transform: translateX(calc(100% + 1px))
     transition: transform 0.33s ease
-    z-index: 100
+    z-index: var(--index-slidepanel)
     overflow-y: auto
     scrollbar-width: none
     -ms-overflow-style: none
@@ -47,3 +47,4 @@
     padding: 8px var(--space-sides-general)
     flex-shrink: 0
     background: var(--color-app)
+    z-index: calc(var(--index-slidepanel) + 1)
