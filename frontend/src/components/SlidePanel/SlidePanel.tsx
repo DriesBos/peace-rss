@@ -61,26 +61,28 @@ export function SlidePanel({
         aria-label={ariaLabel}
         data-open={isOpen}
       >
-        <div className={styles.slidePanel_Header}>
-          <Button
-            type="button"
-            variant="nav"
-            onClick={onClose}
-            aria-label="Close detail panel"
-          >
-            <IconArrowLeft />
-            <span>Back</span>
-          </Button>
-          <Button
-            type="button"
-            variant="nav"
-            onClick={onClose}
-            aria-label="Close detail panel"
-          >
-            <span>Theme</span>
-          </Button>
+        <div className={styles.slidePanel_Content}>
+          <div className={styles.slidePanel_Header}>
+            <Button
+              type="button"
+              variant="nav"
+              onClick={onClose}
+              aria-label="Close detail panel"
+            >
+              <IconArrowLeft />
+              <span>Back</span>
+            </Button>
+            {/* <Button
+              type="button"
+              variant="nav"
+              onClick={onClose}
+              aria-label="Close detail panel"
+            >
+              <span>Theme</span>
+            </Button> */}
+          </div>
+          {children}
         </div>
-        <div className={styles.slidePanel_Content}>{children}</div>
       </div>
     </>
   );

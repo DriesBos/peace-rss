@@ -1332,7 +1332,7 @@ export default function Home() {
               ariaLabel="Entry details"
             >
               {selectedEntry && (
-                <>
+                <div className={styles.entry_Container}>
                   {/* ENTRY HEADER */}
                   <div className={styles.entry_Header}>
                     <h1>{selectedEntry.title || '(untitled)'}</h1>
@@ -1343,6 +1343,13 @@ export default function Home() {
                       selectedEntry.published_at ||
                       selectedEntry.author ? (
                         <>
+                          {selectedEntry.published_at && (
+                            <p>
+                              <FormattedDate
+                                date={selectedEntry.published_at}
+                              />
+                            </p>
+                          )}
                           <p>
                             From:{' '}
                             <i>
@@ -1354,13 +1361,6 @@ export default function Home() {
                                 ''}
                             </i>
                           </p>
-                          {selectedEntry.published_at && (
-                            <p>
-                              <FormattedDate
-                                date={selectedEntry.published_at}
-                              />
-                            </p>
-                          )}
                         </>
                       ) : null}
                     </div>
@@ -1483,7 +1483,7 @@ export default function Home() {
                       </Button>
                     </div>
                   </div>
-                </>
+                </div>
               )}
             </SlidePanel>
           </div>

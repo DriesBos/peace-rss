@@ -87,15 +87,20 @@
 
 // ENTRY MODAL 
 .entry
+  &_Container
+    display: flex
+    flex-direction: column
+    gap: var(--space-headcontent-gap)
   &_Header
     display: flex
     flex-direction: column
-    gap: 2px
+    gap: var(--space-titlemeta-gap)
     padding: 0 var(--space-sides-general)
   &_Meta
     display: flex
-    justify-content: space-between
     color: var(--color-text-secondary)
+    gap: 8px
+    padding-left: 0 var(--space-sides-general)
     @include font-meta
     p, i
       @include font-meta

@@ -19,37 +19,31 @@
     width: calc(100vw + 1px)
     max-width: 100%
     background: var(--color-app)
+    outline-left: 1px solid var(--color-text)
     transform: translateX(calc(100% + 1px))
     transition: transform 0.33s ease
     z-index: 100
+    overflow-y: auto
+    scrollbar-width: none
+    -ms-overflow-style: none
+    &::-webkit-scrollbar
+      display: none
+    &[data-open="true"]
+      transform: translateX(0)
+
+  &_Content
+    position: relative
+    height: 100%
     display: flex
     flex-direction: column
     padding-top: var(--space-top)
     gap: var(--space-headcontent-gap)
-    overflow: hidden
-    outline-left: 1px solid var(--color-text)
-    &[data-open="true"]
-      transform: translateX(0)
 
   &_Header
     position: sticky
     top: 0
     display: flex
     align-items: flex-shrink
-    justify-content: space-between
-    padding: 0 var(--space-sides-general)
+    padding: 8px var(--space-sides-general)
     flex-shrink: 0
-
-  &_Content
-    flex: 1
-    flex-grow: 1
-    overflow-y: auto
-    overflow-x: hidden
-    scrollbar-width: none
-    -ms-overflow-style: none
-    padding-bottom: 4rem
-    display: flex
-    flex-direction: column
-    gap: 2rem
-    &::-webkit-scrollbar
-      display: none
+    background: var(--color-app)
