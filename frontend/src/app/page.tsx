@@ -1007,7 +1007,7 @@ export default function Home() {
                       type="button"
                       variant="category"
                       active={selectedCategoryId === cat.id}
-                      className={`${styles.categoryList_Item} ${
+                      className={`${styles.header_CategoryList_Item} ${
                         selectedCategoryId === cat.id
                           ? styles.categoryItemActive
                           : ''
@@ -1020,7 +1020,7 @@ export default function Home() {
                     >
                       {cat.title}
                     </Button>
-                    <div className={styles.categoryList_Item_Count}>
+                    <div className={styles.header_CategoryList_Count}>
                       {categoryUnreadCounts.get(cat.id) ?? 0}
                     </div>
                   </li>

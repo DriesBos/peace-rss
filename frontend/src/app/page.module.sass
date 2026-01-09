@@ -42,7 +42,6 @@
 .app
   position: relative
   height: 100%
-  overflow-y: auto
   display: flex
   flex-direction: column
   min-height: 100vh
@@ -57,13 +56,13 @@
 .header
   position: sticky
   top: 0
-  background: var(--color-app)
-  z-index: 100
+  width: 100%
   display: flex
   flex-direction: row
   justify-content: space-between
-  width: 100%
   align-items: center
+  background: var(--color-app)
+  z-index: 100
   &_Menu
     padding: 8px var(--space-sides-general)
   &_CategoryList

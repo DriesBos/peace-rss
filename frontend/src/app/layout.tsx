@@ -139,7 +139,9 @@ export default function RootLayout({
                 <p>Please sign in to continue</p>
               </div>
             </SignedOut>
-            <SignedIn>{children}</SignedIn>
+            <SignedIn>
+              <main>{children}</main>
+            </SignedIn>
           </ThemeProvider>
         </body>
       </html>
