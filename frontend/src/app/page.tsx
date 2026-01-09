@@ -375,21 +375,21 @@ type MenuModalProps = {
   isLoading: boolean;
 };
 
-function ThemeModal({
-  isOpen,
-  onClose,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-}) {
-  return (
-    <ModalContainer isOpen={isOpen} onClose={onClose} ariaLabel="Theme">
-      <div className={styles.modalTheme}>
-        <ThemeSwitcher />
-      </div>
-    </ModalContainer>
-  );
-}
+// function ThemeModal({
+//   isOpen,
+//   onClose,
+// }: {
+//   isOpen: boolean;
+//   onClose: () => void;
+// }) {
+//   return (
+//     <ModalContainer isOpen={isOpen} onClose={onClose} ariaLabel="Theme">
+//       <div className={styles.modalTheme}>
+//         <ThemeSwitcher />
+//       </div>
+//     </ModalContainer>
+//   );
+// }
 
 function MenuModal({
   isOpen,
@@ -792,21 +792,22 @@ export default function Home() {
     });
   }
 
-  async function refreshAll() {
-    setIsLoading(true);
-    setError(null);
-    try {
-      await Promise.all([
-        loadFeeds(),
-        loadCategories(),
-        loadEntries({ append: false, nextOffset: 0 }),
-      ]);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load');
-    } finally {
-      setIsLoading(false);
-    }
-  }
+  // TODO: Active for feed pull downs
+  // async function refreshAll() {
+  //   setIsLoading(true);
+  //   setError(null);
+  //   try {
+  //     await Promise.all([
+  //       loadFeeds(),
+  //       loadCategories(),
+  //       loadEntries({ append: false, nextOffset: 0 }),
+  //     ]);
+  //   } catch (e) {
+  //     setError(e instanceof Error ? e.message : 'Failed to load');
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // }
 
   async function markEntryStatus(
     entryIds: number[],
@@ -991,55 +992,83 @@ export default function Home() {
     }
   }
 
-  function clearSearch() {
-    setSearchQuery('');
-    setSearchMode(false);
-  }
+  // function clearSearch() {
+  //   setSearchQuery('');
+  //   setSearchMode(false);
+  // }
 
-  const fetchOriginalArticle = useCallback(async () => {
-    if (!selectedEntry) return;
+  const fetchOriginalArticle = useCallback(
+    async (entryId?: number) => {
+      const targetEntry = entryId
+        ? entries.find((e) => e.id === entryId)
+        : selectedEntry;
 
-    setFetchingOriginal(true);
-    setError(null);
+      if (!targetEntry || !isProvisioned) return;
 
-    try {
-      const result = await fetchJson<{ ok: boolean; content: string }>(
-        `/api/entries/${selectedEntry.id}/fetch-content`,
-        { method: 'POST' }
-      );
+      // Skip if we've already attempted to fetch this entry
+      if (fetchedEntryIds.has(targetEntry.id)) return;
 
-      if (result.ok && result.content) {
-        // Update the entry in the entries array with the new content
-        setEntries((prev) =>
-          prev.map((e) =>
-            e.id === selectedEntry.id ? { ...e, content: result.content } : e
-          )
+      setFetchingOriginal(true);
+      setError(null);
+
+      try {
+        const result = await fetchJson<{ ok: boolean; content: string }>(
+          `/api/entries/${targetEntry.id}/fetch-content`,
+          { method: 'POST' }
         );
-        // Mark this entry as fetched
-        setFetchedEntryIds((prev) => new Set(prev).add(selectedEntry.id));
+
+        if (result.ok && result.content) {
+          // Update the entry in the entries array with the new content
+          setEntries((prev) =>
+            prev.map((e) =>
+              e.id === targetEntry.id ? { ...e, content: result.content } : e
+            )
+          );
+          // Mark this entry as fetched
+          setFetchedEntryIds((prev) => new Set(prev).add(targetEntry.id));
+        }
+      } catch (e) {
+        setError(
+          e instanceof Error ? e.message : 'Failed to fetch original article'
+        );
+        // Mark as fetched even on error to avoid retry loops
+        setFetchedEntryIds((prev) => new Set(prev).add(targetEntry.id));
+      } finally {
+        setFetchingOriginal(false);
       }
-    } catch (e) {
-      setError(
-        e instanceof Error ? e.message : 'Failed to fetch original article'
-      );
-      // Mark as fetched even on error to avoid retry loops
-      setFetchedEntryIds((prev) => new Set(prev).add(selectedEntry.id));
-    } finally {
-      setFetchingOriginal(false);
-    }
-  }, [selectedEntry]);
+    },
+    [selectedEntry, entries, isProvisioned, fetchedEntryIds]
+  );
+
+  const handleEntrySelect = useCallback(
+    (entryId: number) => {
+      setSelectedEntryId(entryId);
+
+      // Immediately check if we should fetch original content
+      const entry = entries.find((e) => e.id === entryId);
+      if (!entry) return;
+
+      // Always attempt to fetch if not already fetched, regardless of content length
+      // This ensures we get the full article content when available
+      if (!fetchedEntryIds.has(entryId) && isProvisioned) {
+        // Trigger fetch with the entry ID immediately
+        void fetchOriginalArticle(entryId);
+      }
+    },
+    [entries, fetchedEntryIds, isProvisioned, fetchOriginalArticle]
+  );
 
   const navigateToPrev = useCallback(() => {
     if (hasPrev && selectedIndex > 0) {
-      setSelectedEntryId(entries[selectedIndex - 1].id);
+      handleEntrySelect(entries[selectedIndex - 1].id);
     }
-  }, [hasPrev, selectedIndex, entries]);
+  }, [hasPrev, selectedIndex, entries, handleEntrySelect]);
 
   const navigateToNext = useCallback(() => {
     if (hasNext && selectedIndex < entries.length - 1) {
-      setSelectedEntryId(entries[selectedIndex + 1].id);
+      handleEntrySelect(entries[selectedIndex + 1].id);
     }
-  }, [hasNext, selectedIndex, entries]);
+  }, [hasNext, selectedIndex, entries, handleEntrySelect]);
 
   // Bootstrap on mount
   useEffect(() => {
@@ -1102,21 +1131,23 @@ export default function Home() {
     console.log(`Total entries loaded: ${entries.length}`);
   }, [entries]);
 
-  // Auto-fetch original article when entry is selected
+  // Auto-fetch original article when entry is selected (safety net)
+  // Primary fetch happens in handleEntrySelect for immediate response
+  // This useEffect acts as a fallback in case handleEntrySelect didn't trigger
   useEffect(() => {
     if (!selectedEntry || fetchingOriginal || !isProvisioned) return;
 
     // Skip if we've already attempted to fetch this entry
     if (fetchedEntryIds.has(selectedEntry.id)) return;
 
-    // Check if content is missing or minimal
-    const hasMinimalContent =
-      !selectedEntry.content || selectedEntry.content.length < 200;
+    // Trigger the fetch as a safety net (small delay to avoid duplicate calls)
+    const timeoutId = setTimeout(() => {
+      if (!fetchedEntryIds.has(selectedEntry.id)) {
+        void fetchOriginalArticle();
+      }
+    }, 100);
 
-    if (hasMinimalContent) {
-      // Automatically fetch the original article
-      void fetchOriginalArticle();
-    }
+    return () => clearTimeout(timeoutId);
   }, [
     selectedEntry,
     fetchingOriginal,
@@ -1130,21 +1161,21 @@ export default function Home() {
   );
 
   const canLoadMore = entries.length > 0 && total > entries.length;
-  const selectedFeedTitle = searchMode
-    ? `Search: ${searchQuery}`
-    : isStarredView
-    ? 'Starred'
-    : selectedFeedId === null
-    ? 'All feeds'
-    : feedsById.get(selectedFeedId)?.title;
+  // const selectedFeedTitle = searchMode
+  //   ? `Search: ${searchQuery}`
+  //   : isStarredView
+  //   ? 'Starred'
+  //   : selectedFeedId === null
+  //   ? 'All feeds'
+  //   : feedsById.get(selectedFeedId)?.title;
 
   // Filter feeds by selected category
-  const filteredFeeds = useMemo(() => {
-    if (selectedCategoryId === null) {
-      return feeds;
-    }
-    return feeds.filter((feed) => feed.category?.id === selectedCategoryId);
-  }, [feeds, selectedCategoryId]);
+  // const filteredFeeds = useMemo(() => {
+  //   if (selectedCategoryId === null) {
+  //     return feeds;
+  //   }
+  //   return feeds.filter((feed) => feed.category?.id === selectedCategoryId);
+  // }, [feeds, selectedCategoryId]);
 
   const lazyEntryContent = useLazyEntryContent(selectedEntry?.content);
 
@@ -1304,7 +1335,7 @@ export default function Home() {
                       entry={e}
                       selectedEntryId={selectedEntryId}
                       feedsById={feedsById}
-                      onEntryClick={setSelectedEntryId}
+                      onEntryClick={handleEntrySelect}
                     />
                   ))
                 )}
