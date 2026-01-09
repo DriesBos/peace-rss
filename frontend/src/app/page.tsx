@@ -95,8 +95,8 @@ function LazyEntryItem({
   onEntryClick,
 }: LazyEntryItemProps) {
   const { ref, inView } = useInView({
-    threshold: 0,
-    rootMargin: '0px', // Load 0px before entering viewport
+    threshold: 0.5,
+    // rootMargin: '0px', // Load 0px before entering viewport
     triggerOnce: true, // Once loaded, stay rendered
   });
 
