@@ -6,10 +6,6 @@
   span
     position: relative
 
-  &:disabled
-    color: var(--color-text-secondary)
-    cursor: not-allowed
-
 .primary
   color: var(--color-text)
   @include font-button
@@ -40,3 +36,11 @@
     @media (hover: hover)
       span::after
         @include underline(var(--color-text))
+
+.button:disabled
+  color: var(--color-text-secondary)
+  cursor: not-allowed
+  &::after
+    @include underline(var(transparent))
+  span::after
+    @include underline(var(transparent))
