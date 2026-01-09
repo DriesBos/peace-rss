@@ -18,16 +18,19 @@
     bottom: 0
     width: 100vw
     max-width: 100%
+    opacity: 0
     background: var(--color-app)
     transition: opacity 0.33s ease
     z-index: var(--index-slidepanel)
     overflow-y: auto
     scrollbar-width: none
     -ms-overflow-style: none
+    pointer-events: none
     &::-webkit-scrollbar
       display: none
     &[data-open="true"]
       opacity: 1
+      pointer-events: auto
 
   &_Content
     position: relative
