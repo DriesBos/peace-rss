@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { SignedIn, SignedOut, RedirectToSignIn } from '@clerk/nextjs';
+import { useInView } from 'react-intersection-observer';
 import styles from './page.module.sass';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { EntryItem } from '@/components/EntryItem/EntryItem';
@@ -11,7 +12,6 @@ import { ModalContainer } from '@/components/ModalContainer/ModalContainer';
 import { SlidePanel } from '@/components/SlidePanel/SlidePanel';
 import { IconMenu } from '@/components/icons/IconMenu';
 import { Footer } from '@/components/Footer/Footer';
-import { IconArrowLeft } from '@/components/icons/IconArrowLeft';
 import { IconArrowShortLeft } from '@/components/icons/IconArrowShortLeft';
 import { IconArrowShortRight } from '@/components/icons/IconArrowShortRight';
 
@@ -78,6 +78,51 @@ function formatDate(value?: string): string {
     month: 'short',
     day: '2-digit',
   });
+}
+
+// Lazy loading wrapper for entry items
+type LazyEntryItemProps = {
+  entry: Entry;
+  selectedEntryId: number | null;
+  feedsById: Map<number, Feed>;
+  onEntryClick: (id: number) => void;
+};
+
+function LazyEntryItem({
+  entry,
+  selectedEntryId,
+  feedsById,
+  onEntryClick,
+}: LazyEntryItemProps) {
+  const { ref, inView } = useInView({
+    threshold: 0,
+    rootMargin: '0px', // Load 0px before entering viewport
+    triggerOnce: true, // Once loaded, stay rendered
+  });
+
+  const isActive = entry.id === selectedEntryId;
+  const feedTitle =
+    entry.feed_title ??
+    entry.feed?.title ??
+    feedsById.get(entry.feed_id)?.title;
+  const published = formatDate(entry.published_at);
+
+  return (
+    <div ref={ref} className={styles.lazyEntryWrapper}>
+      {inView && (
+        <EntryItem
+          title={entry.title}
+          author={entry.author}
+          feedTitle={feedTitle}
+          publishedAt={published}
+          active={isActive}
+          content={entry.content}
+          url={entry.url}
+          onClick={() => onEntryClick(entry.id)}
+        />
+      )}
+    </div>
+  );
 }
 
 type MenuModalProps = {
@@ -1024,27 +1069,15 @@ export default function Home() {
                         : 'No unread entries.'}
                     </div>
                   ) : (
-                    entries.map((e) => {
-                      const isActive = e.id === selectedEntryId;
-                      const feedTitle =
-                        e.feed_title ??
-                        e.feed?.title ??
-                        feedsById.get(e.feed_id)?.title;
-                      const published = formatDate(e.published_at);
-                      return (
-                        <EntryItem
-                          key={e.id}
-                          title={e.title}
-                          author={e.author}
-                          feedTitle={feedTitle}
-                          publishedAt={published}
-                          active={isActive}
-                          content={e.content}
-                          url={e.url}
-                          onClick={() => setSelectedEntryId(e.id)}
-                        />
-                      );
-                    })
+                    entries.map((e) => (
+                      <LazyEntryItem
+                        key={e.id}
+                        entry={e}
+                        selectedEntryId={selectedEntryId}
+                        feedsById={feedsById}
+                        onEntryClick={setSelectedEntryId}
+                      />
+                    ))
                   )}
                   <div className={styles.listFooter}>
                     {canLoadMore && (
@@ -1178,7 +1211,7 @@ export default function Home() {
                           type="button"
                           className={styles.actionsList_Item}
                         >
-                          Mark unread{', '}
+                          Mark unread
                         </Button>
                       )}
                       <Button
@@ -1187,7 +1220,7 @@ export default function Home() {
                         disabled={isLoading}
                         type="button"
                       >
-                        Mark unread{', '}
+                        Mark unread
                       </Button>
                     </div>
                     <div className={styles.prevNextButtons}>
