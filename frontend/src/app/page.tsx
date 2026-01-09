@@ -159,6 +159,24 @@ function convertHtmlToReactNodes(html: string): ReactNode[] {
     );
 }
 
+// Void elements that cannot have children in React
+const VOID_ELEMENTS = new Set([
+  'area',
+  'base',
+  'br',
+  'col',
+  'embed',
+  'hr',
+  'img',
+  'input',
+  'link',
+  'meta',
+  'param',
+  'source',
+  'track',
+  'wbr',
+]);
+
 function transformNodeToReact(node: ChildNode, key: string): ReactNode | null {
   if (node.nodeType === Node.TEXT_NODE) {
     return node.textContent;
@@ -180,6 +198,11 @@ function transformNodeToReact(node: ChildNode, key: string): ReactNode | null {
   }
 
   const props = buildElementProps(element);
+
+  // Void elements must not have children
+  if (VOID_ELEMENTS.has(tagName)) {
+    return createElement(tagName, { ...props, key });
+  }
 
   const children = Array.from(element.childNodes).map((child, childIndex) =>
     transformNodeToReact(child, `${key}-${childIndex}`)
