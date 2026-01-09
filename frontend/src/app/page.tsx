@@ -963,7 +963,7 @@ export default function Home() {
             />
 
             {/* NEWS FEED */}
-            <div className={styles.header}>
+            <header className={styles.header}>
               <div className={styles.header_Menu}>
                 <Button
                   type="button"
@@ -1053,7 +1053,7 @@ export default function Home() {
                           : 'unread'
                       }${selectedFeedTitle ? ` — ${selectedFeedTitle}` : ''}`}
                 </div> */}
-            </div>
+            </header>
 
             {error ? <div className={styles.error}>{error}</div> : null}
 
