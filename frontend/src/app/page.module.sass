@@ -175,7 +175,195 @@
   padding: 4rem var(--space-sides-general)
   display: flex
   flex-direction: column
+  max-height: 90vh
+  overflow-y: auto
   gap: 2rem
+  &::-webkit-scrollbar
+    display: none
+  &[data-open="true"]
+    opacity: 1
+    pointer-events: auto
+
+.sectionTitle
+  @include font-title
+  font-weight: 500
+  margin-bottom: 1.5rem
+
+// Combined Categories & Feeds Structure
+.categoriesFeedsList
+  display: flex
+  flex-direction: column
+  gap: 1.5rem
+  margin-bottom: 2rem
+  padding: 1rem
+  background: var(--color-app)
+  border-radius: 8px
+  border: 1px solid var(--color-border, #e6e6e6)
+
+.categoryGroup
+  display: flex
+  flex-direction: column
+  gap: 0.5rem
+
+.categoryHeader
+  @include font-body
+  display: flex
+  align-items: center
+  justify-content: space-between
+  gap: 0.75rem
+  padding: 0.5rem 0
+  font-weight: 600
+
+.categoryTitle
+  flex: 1
+  font-weight: 600
+
+.feedsUnderCategory
+  display: flex
+  flex-direction: column
+  gap: 0.25rem
+  padding-left: 1.5rem
+  margin-top: 0.25rem
+
+.feedListItem
+  @include font-body
+  display: flex
+  align-items: center
+  justify-content: space-between
+  padding: 0.5rem 0
+  gap: 0.75rem
+  &_Title
+    flex: 1
+    overflow: hidden
+    text-overflow: ellipsis
+    white-space: nowrap
+
+.actionButtons
+  display: flex
+  align-items: center
+  gap: 0.25rem
+  flex-shrink: 0
+
+.editButton, .deleteButton
+  appearance: none
+  background: none
+  border: none
+  padding: 4px
+  cursor: pointer
+  color: var(--color-text-secondary)
+  display: flex
+  align-items: center
+  justify-content: center
+  border-radius: 4px
+  transition: all 0.2s ease
+  flex-shrink: 0
+  &:disabled
+    opacity: 0.5
+    cursor: not-allowed
+
+.editButton
+  &:hover:not(:disabled)
+    background: var(--color-background-secondary, #f7f7f7)
+    color: var(--color-primary, #1976d2)
+
+.deleteButton
+  &:hover:not(:disabled)
+    background: var(--color-background-secondary, #f7f7f7)
+    color: var(--color-error, #d32f2f)
+
+// Forms Section
+.formSection
+  margin-bottom: 1.5rem
+
+.formTitle
+  @include font-body
+  font-weight: 600
+  margin-bottom: 0.75rem
+
+.addForm
+  display: flex
+  flex-direction: column
+  gap: 0.75rem
+
+.muted
+  @include font-body
+  color: var(--color-text-secondary)
+  font-style: italic
+  padding: 0.5rem 0
+
+// Edit Modal
+.editModal
+  padding: 2rem var(--space-sides-general)
+  display: flex
+  flex-direction: column
+  gap: 1.5rem
+  max-width: 500px
+  margin: 0 auto
+  &_Title
+    @include font-title
+    font-weight: 600
+    margin: 0
+
+.editForm
+  display: flex
+  flex-direction: column
+  gap: 1.25rem
+
+.formField
+  display: flex
+  flex-direction: column
+  gap: 0.5rem
+
+.label
+  @include font-body
+  font-weight: 500
+  font-size: 14px
+
+.formActions
+  display: flex
+  gap: 0.75rem
+  justify-content: space-between
+  align-items: center
+  margin-top: 0.5rem
+
+.formActionsRight
+  display: flex
+  gap: 0.75rem
+
+.buttonSecondary
+  appearance: none
+  padding: 8px 16px
+  border: 1px solid var(--color-border, #e6e6e6)
+  border-radius: 6px
+  background: transparent
+  color: var(--color-text-primary)
+  font: inherit
+  font-size: 14px
+  cursor: pointer
+  transition: all 0.2s ease
+  &:hover:not(:disabled)
+    background: var(--color-background-secondary, #f7f7f7)
+  &:disabled
+    opacity: 0.6
+    cursor: not-allowed
+
+.buttonDanger
+  appearance: none
+  padding: 8px 16px
+  border: 1px solid var(--color-error, #d32f2f)
+  border-radius: 6px
+  background: transparent
+  color: var(--color-error, #d32f2f)
+  font: inherit
+  font-size: 14px
+  cursor: pointer
+  transition: all 0.2s ease
+  &:hover:not(:disabled)
+    background: var(--color-error, #d32f2f)
+    color: white
+  &:disabled
+    opacity: 0.6
+    cursor: not-allowed
 
 // HTML TAGS
 .input

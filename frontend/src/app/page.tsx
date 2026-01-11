@@ -22,6 +22,7 @@ import { IconMenu } from '@/components/icons/IconMenu';
 import { Footer } from '@/components/Footer/Footer';
 import { IconArrowShortLeft } from '@/components/icons/IconArrowShortLeft';
 import { IconArrowShortRight } from '@/components/icons/IconArrowShortRight';
+import { IconEdit } from '@/components/icons/IconEdit';
 
 type Category = {
   id: number;
@@ -32,6 +33,7 @@ type Category = {
 type Feed = {
   id: number;
   title: string;
+  feed_url?: string;
   unread_count?: number;
   category?: { id: number; title: string };
 };
@@ -383,6 +385,7 @@ type MenuModalProps = {
   isOpen: boolean;
   onClose: () => void;
   categories: Category[];
+  feeds: Feed[];
   newCategoryTitle: string;
   setNewCategoryTitle: (value: string) => void;
   addCategoryLoading: boolean;
@@ -395,6 +398,7 @@ type MenuModalProps = {
   addFeedLoading: boolean;
   addFeedError: string | null;
   addFeed: (e: React.FormEvent) => void;
+  openEditModal: (type: 'feed' | 'category', item: Feed | Category) => void;
   isLoading: boolean;
 };
 
@@ -418,6 +422,7 @@ function MenuModal({
   isOpen,
   onClose,
   categories,
+  feeds,
   newCategoryTitle,
   setNewCategoryTitle,
   addCategoryLoading,
@@ -430,6 +435,7 @@ function MenuModal({
   addFeedLoading,
   addFeedError,
   addFeed,
+  openEditModal,
   isLoading,
 }: MenuModalProps) {
   useEffect(() => {
@@ -452,70 +458,177 @@ function MenuModal({
     <ModalContainer isOpen={isOpen} onClose={onClose} ariaLabel="Menu">
       <div className={styles.modalMenu}>
         <ThemeSwitcher />
-        <div className={styles.sectionTitle}>Categories</div>
 
-        {/* Add Category Form */}
-        <form onSubmit={addCategory} className={styles.addFeedForm}>
-          <input
-            type="text"
-            value={newCategoryTitle}
-            onChange={(e) => setNewCategoryTitle(e.target.value)}
-            placeholder="Category name"
-            disabled={addCategoryLoading || isLoading}
-            className={styles.input}
-          />
-          <button
-            type="submit"
-            disabled={
-              addCategoryLoading || isLoading || !newCategoryTitle.trim()
-            }
-            className={styles.button}
-          >
-            {addCategoryLoading ? 'Adding...' : 'Add category'}
-          </button>
-          {addCategoryError && (
-            <div className={styles.error}>{addCategoryError}</div>
-          )}
-        </form>
+        {/* Combined Categories & Feeds Section */}
+        <div className={styles.modalMenu_CategoriesFeeds}>
+          <div className={styles.sectionTitle}>Categories & Feeds</div>
 
-        <div className={styles.sectionTitle}>Feeds</div>
+          {/* Categories with nested Feeds */}
+          <div className={styles.categoriesFeedsList}>
+            {categories.length <= 1 && feeds.length === 0 ? (
+              <div className={styles.muted}>No categories or feeds yet.</div>
+            ) : (
+              <>
+                {/* User-created categories (skip "All" category) */}
+                {categories.slice(1).map((cat) => {
+                  const categoryFeeds = feeds.filter(
+                    (feed) => feed.category?.id === cat.id
+                  );
+                  return (
+                    <div key={cat.id} className={styles.categoryGroup}>
+                      {/* Category Header */}
+                      <div className={styles.categoryHeader}>
+                        <span className={styles.categoryTitle}>
+                          {cat.title}
+                        </span>
+                        <button
+                          type="button"
+                          className={styles.editButton}
+                          onClick={() => openEditModal('category', cat)}
+                          disabled={isLoading}
+                          title="Edit category"
+                          aria-label={`Edit category ${cat.title}`}
+                        >
+                          <IconEdit width={14} height={14} />
+                        </button>
+                      </div>
+                      {/* Feeds under this category */}
+                      {categoryFeeds.length > 0 && (
+                        <div className={styles.feedsUnderCategory}>
+                          {categoryFeeds.map((feed) => (
+                            <div key={feed.id} className={styles.feedListItem}>
+                              <span className={styles.feedListItem_Title}>
+                                {feed.title}
+                              </span>
+                              <button
+                                type="button"
+                                className={styles.editButton}
+                                onClick={() => openEditModal('feed', feed)}
+                                disabled={isLoading}
+                                title="Edit feed"
+                                aria-label={`Edit feed ${feed.title}`}
+                              >
+                                <IconEdit width={14} height={14} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
 
-        {/* Add Feed Form */}
-        <form onSubmit={addFeed} className={styles.addFeedForm}>
-          <input
-            type="text"
-            value={newFeedUrl}
-            onChange={(e) => setNewFeedUrl(e.target.value)}
-            placeholder="RSS feed URL"
-            disabled={addFeedLoading || isLoading}
-            className={styles.input}
-          />
-          <select
-            value={newFeedCategoryId ?? ''}
-            onChange={(e) =>
-              setNewFeedCategoryId(
-                e.target.value ? Number(e.target.value) : null
-              )
-            }
-            disabled={addFeedLoading || isLoading}
-            className={styles.select}
-          >
-            <option value="">Select category (optional)</option>
-            {categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.title}
-              </option>
-            ))}
-          </select>
-          <button
-            type="submit"
-            disabled={addFeedLoading || isLoading || !newFeedUrl.trim()}
-            className={styles.button}
-          >
-            {addFeedLoading ? 'Adding...' : 'Add feed'}
-          </button>
-          {addFeedError && <div className={styles.error}>{addFeedError}</div>}
-        </form>
+                {/* Uncategorized Feeds */}
+                {(() => {
+                  const uncategorizedFeeds = feeds.filter(
+                    (feed) =>
+                      !feed.category || feed.category.id === categories[0]?.id
+                  );
+                  if (uncategorizedFeeds.length > 0) {
+                    return (
+                      <div className={styles.categoryGroup}>
+                        <div className={styles.categoryHeader}>
+                          <span className={styles.categoryTitle}>
+                            Uncategorized
+                          </span>
+                        </div>
+                        <div className={styles.feedsUnderCategory}>
+                          {uncategorizedFeeds.map((feed) => (
+                            <div key={feed.id} className={styles.feedListItem}>
+                              <span className={styles.feedListItem_Title}>
+                                {feed.title}
+                              </span>
+                              <button
+                                type="button"
+                                className={styles.editButton}
+                                onClick={() => openEditModal('feed', feed)}
+                                disabled={isLoading}
+                                title="Edit feed"
+                                aria-label={`Edit feed ${feed.title}`}
+                              >
+                                <IconEdit width={14} height={14} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+              </>
+            )}
+          </div>
+
+          {/* Add Category Form */}
+          <div className={styles.formSection}>
+            <div className={styles.formTitle}>Add Category</div>
+            <form onSubmit={addCategory} className={styles.addForm}>
+              <input
+                type="text"
+                value={newCategoryTitle}
+                onChange={(e) => setNewCategoryTitle(e.target.value)}
+                placeholder="Category name"
+                disabled={addCategoryLoading || isLoading}
+                className={styles.input}
+              />
+              <button
+                type="submit"
+                disabled={
+                  addCategoryLoading || isLoading || !newCategoryTitle.trim()
+                }
+                className={styles.button}
+              >
+                {addCategoryLoading ? 'Adding...' : 'Add category'}
+              </button>
+              {addCategoryError && (
+                <div className={styles.error}>{addCategoryError}</div>
+              )}
+            </form>
+          </div>
+
+          {/* Add Feed Form */}
+          <div className={styles.formSection}>
+            <div className={styles.formTitle}>Add Feed</div>
+            <form onSubmit={addFeed} className={styles.addForm}>
+              <input
+                type="text"
+                value={newFeedUrl}
+                onChange={(e) => setNewFeedUrl(e.target.value)}
+                placeholder="RSS feed URL"
+                disabled={addFeedLoading || isLoading}
+                className={styles.input}
+              />
+              <select
+                value={newFeedCategoryId ?? ''}
+                onChange={(e) =>
+                  setNewFeedCategoryId(
+                    e.target.value ? Number(e.target.value) : null
+                  )
+                }
+                disabled={addFeedLoading || isLoading}
+                className={styles.select}
+              >
+                <option value="">Select category (optional)</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.title}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="submit"
+                disabled={addFeedLoading || isLoading || !newFeedUrl.trim()}
+                className={styles.button}
+              >
+                {addFeedLoading ? 'Adding...' : 'Add feed'}
+              </button>
+              {addFeedError && (
+                <div className={styles.error}>{addFeedError}</div>
+              )}
+            </form>
+          </div>
+        </div>
 
         <Footer />
         {/* <div className={styles.feedList}>
@@ -661,8 +774,44 @@ export default function Home() {
   const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
 
+  // Edit modal state
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editType, setEditType] = useState<'feed' | 'category' | null>(null);
+  const [editItemId, setEditItemId] = useState<number | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editFeedUrl, setEditFeedUrl] = useState('');
+  const [editCategoryId, setEditCategoryId] = useState<number | null>(null);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
   const openMenuModal = useCallback(() => setIsMenuModalOpen(true), []);
   const closeMenuModal = useCallback(() => setIsMenuModalOpen(false), []);
+
+  const openEditModal = useCallback(
+    (type: 'feed' | 'category', item: Feed | Category) => {
+      setEditType(type);
+      setEditItemId(item.id);
+      setEditTitle(item.title);
+      if (type === 'feed') {
+        const feed = item as Feed;
+        setEditFeedUrl(feed.feed_url || '');
+        setEditCategoryId(feed.category?.id || null);
+      }
+      setIsEditModalOpen(true);
+      setEditError(null);
+    },
+    []
+  );
+
+  const closeEditModal = useCallback(() => {
+    setIsEditModalOpen(false);
+    setEditType(null);
+    setEditItemId(null);
+    setEditTitle('');
+    setEditFeedUrl('');
+    setEditCategoryId(null);
+    setEditError(null);
+  }, []);
 
   const feedsById = useMemo(() => {
     const map = new Map<number, Feed>();
@@ -994,6 +1143,114 @@ export default function Home() {
     }
   }
 
+  async function deleteCategory(categoryId: number) {
+    if (!confirm('Are you sure you want to delete this category?')) {
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      await fetchJson<{ ok: boolean }>(`/api/categories/${categoryId}`, {
+        method: 'DELETE',
+      });
+
+      // Success: refresh categories and feeds
+      await Promise.all([loadCategories(), loadFeeds()]);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to delete category');
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function deleteFeed(feedId: number) {
+    if (!confirm('Are you sure you want to delete this feed?')) {
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      await fetchJson<{ ok: boolean }>(`/api/feeds/${feedId}`, {
+        method: 'DELETE',
+      });
+
+      // Success: refresh feeds
+      await loadFeeds();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to delete feed');
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function updateCategory(e: React.FormEvent) {
+    e.preventDefault();
+
+    if (!editItemId) return;
+
+    const trimmedTitle = editTitle.trim();
+    if (!trimmedTitle) return;
+
+    setEditLoading(true);
+    setEditError(null);
+
+    try {
+      await fetchJson<{ ok: boolean }>(`/api/categories/${editItemId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: trimmedTitle }),
+      });
+
+      // Success: close modal and refresh categories
+      closeEditModal();
+      await loadCategories();
+    } catch (e) {
+      setEditError(
+        e instanceof Error ? e.message : 'Failed to update category'
+      );
+    } finally {
+      setEditLoading(false);
+    }
+  }
+
+  async function updateFeed(e: React.FormEvent) {
+    e.preventDefault();
+
+    if (!editItemId) return;
+
+    const trimmedTitle = editTitle.trim();
+    const trimmedUrl = editFeedUrl.trim();
+
+    if (!trimmedTitle || !trimmedUrl) return;
+
+    setEditLoading(true);
+    setEditError(null);
+
+    try {
+      await fetchJson<{ ok: boolean }>(`/api/feeds/${editItemId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: trimmedTitle,
+          feed_url: trimmedUrl,
+          category_id: editCategoryId,
+        }),
+      });
+
+      // Success: close modal and refresh feeds
+      closeEditModal();
+      await loadFeeds();
+    } catch (e) {
+      setEditError(e instanceof Error ? e.message : 'Failed to update feed');
+    } finally {
+      setEditLoading(false);
+    }
+  }
+
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
 
@@ -1231,6 +1488,7 @@ export default function Home() {
               isOpen={isMenuModalOpen}
               onClose={closeMenuModal}
               categories={categories}
+              feeds={feeds}
               newCategoryTitle={newCategoryTitle}
               setNewCategoryTitle={setNewCategoryTitle}
               addCategoryLoading={addCategoryLoading}
@@ -1243,8 +1501,191 @@ export default function Home() {
               addFeedLoading={addFeedLoading}
               addFeedError={addFeedError}
               addFeed={addFeed}
+              openEditModal={openEditModal}
               isLoading={isLoading}
             />
+
+            {/* Edit Modal */}
+            <ModalContainer
+              isOpen={isEditModalOpen}
+              onClose={closeEditModal}
+              ariaLabel={editType === 'feed' ? 'Edit Feed' : 'Edit Category'}
+            >
+              <div className={styles.editModal}>
+                <h2 className={styles.editModal_Title}>
+                  {editType === 'feed' ? 'Edit Feed' : 'Edit Category'}
+                </h2>
+
+                {editType === 'category' ? (
+                  <form onSubmit={updateCategory} className={styles.editForm}>
+                    <div className={styles.formField}>
+                      <label
+                        htmlFor="edit-category-title"
+                        className={styles.label}
+                      >
+                        Category Title
+                      </label>
+                      <input
+                        id="edit-category-title"
+                        type="text"
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        placeholder="Category name"
+                        disabled={editLoading}
+                        className={styles.input}
+                      />
+                    </div>
+
+                    <div className={styles.formActions}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (
+                            editItemId &&
+                            confirm(
+                              'Are you sure you want to delete this category?'
+                            )
+                          ) {
+                            deleteCategory(editItemId);
+                            closeEditModal();
+                          }
+                        }}
+                        disabled={editLoading}
+                        className={styles.buttonDanger}
+                      >
+                        Delete
+                      </button>
+                      <div className={styles.formActionsRight}>
+                        <button
+                          type="button"
+                          onClick={closeEditModal}
+                          disabled={editLoading}
+                          className={styles.buttonSecondary}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={editLoading || !editTitle.trim()}
+                          className={styles.button}
+                        >
+                          {editLoading ? 'Saving...' : 'Save Changes'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {editError && (
+                      <div className={styles.error}>{editError}</div>
+                    )}
+                  </form>
+                ) : (
+                  <form onSubmit={updateFeed} className={styles.editForm}>
+                    <div className={styles.formField}>
+                      <label htmlFor="edit-feed-title" className={styles.label}>
+                        Feed Title
+                      </label>
+                      <input
+                        id="edit-feed-title"
+                        type="text"
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        placeholder="Feed title"
+                        disabled={editLoading}
+                        className={styles.input}
+                      />
+                    </div>
+
+                    <div className={styles.formField}>
+                      <label htmlFor="edit-feed-url" className={styles.label}>
+                        Feed URL
+                      </label>
+                      <input
+                        id="edit-feed-url"
+                        type="text"
+                        value={editFeedUrl}
+                        onChange={(e) => setEditFeedUrl(e.target.value)}
+                        placeholder="RSS feed URL"
+                        disabled={editLoading}
+                        className={styles.input}
+                      />
+                    </div>
+
+                    <div className={styles.formField}>
+                      <label
+                        htmlFor="edit-feed-category"
+                        className={styles.label}
+                      >
+                        Category
+                      </label>
+                      <select
+                        id="edit-feed-category"
+                        value={editCategoryId ?? ''}
+                        onChange={(e) =>
+                          setEditCategoryId(
+                            e.target.value ? Number(e.target.value) : null
+                          )
+                        }
+                        disabled={editLoading}
+                        className={styles.select}
+                      >
+                        <option value="">Select category (optional)</option>
+                        {categories.map((cat) => (
+                          <option key={cat.id} value={cat.id}>
+                            {cat.title}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className={styles.formActions}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (
+                            editItemId &&
+                            confirm(
+                              'Are you sure you want to delete this feed?'
+                            )
+                          ) {
+                            deleteFeed(editItemId);
+                            closeEditModal();
+                          }
+                        }}
+                        disabled={editLoading}
+                        className={styles.buttonDanger}
+                      >
+                        Delete
+                      </button>
+                      <div className={styles.formActionsRight}>
+                        <button
+                          type="button"
+                          onClick={closeEditModal}
+                          disabled={editLoading}
+                          className={styles.buttonSecondary}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={
+                            editLoading ||
+                            !editTitle.trim() ||
+                            !editFeedUrl.trim()
+                          }
+                          className={styles.button}
+                        >
+                          {editLoading ? 'Saving...' : 'Save Changes'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {editError && (
+                      <div className={styles.error}>{editError}</div>
+                    )}
+                  </form>
+                )}
+              </div>
+            </ModalContainer>
 
             {/* NEWS FEED */}
             <header className={styles.header}>
