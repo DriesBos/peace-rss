@@ -241,6 +241,12 @@
     background: var(--color-background-secondary, #f7f7f7)
     color: var(--color-primary, #1976d2)
 
+.categoryHeaderButtons
+  display: flex
+  align-items: center
+  gap: 0.5rem
+  flex-shrink: 0
+
 .categoryTitle
   flex: 1
   font-weight: 600
@@ -276,7 +282,7 @@
   gap: 0.25rem
   flex-shrink: 0
 
-.editButton, .deleteButton, .starButton
+.editButton, .deleteButton, .starButton, .toggleCollapseButton
   appearance: none
   background: none
   border: none
@@ -292,6 +298,11 @@
   &:disabled
     opacity: 0.5
     cursor: not-allowed
+
+.toggleCollapseButton
+  &:hover:not(:disabled)
+    background: var(--color-background-secondary, #f7f7f7)
+    color: var(--color-primary, #1976d2)
 
 .editButton
   &:hover:not(:disabled)
