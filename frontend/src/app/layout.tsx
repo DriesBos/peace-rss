@@ -6,7 +6,6 @@ import {
   SignUpButton,
   SignedIn,
   SignedOut,
-  UserButton,
 } from '@clerk/nextjs';
 import '@/styles/vars.sass';
 import '@/styles/reset.css';
@@ -121,9 +120,6 @@ export default function RootLayout({
                   <SignUpButton />
                 </div>
               </SignedOut>
-              <SignedIn>
-                <UserButton />
-              </SignedIn>
             </header>
             <SignedOut>
               <div

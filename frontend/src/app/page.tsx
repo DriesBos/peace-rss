@@ -8,7 +8,12 @@ import {
   useState,
 } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
-import { SignedIn, SignedOut, RedirectToSignIn } from '@clerk/nextjs';
+import {
+  SignedIn,
+  SignedOut,
+  RedirectToSignIn,
+  UserButton,
+} from '@clerk/nextjs';
 import { useInView } from 'react-intersection-observer';
 import IntersectionImage from 'react-intersection-image';
 import styles from './page.module.sass';
@@ -679,6 +684,11 @@ function MenuModal({
             <IconPlus width={16} height={16} />
             <span>Add</span>
           </button>
+
+          {/* User Button */}
+          <div className={styles.userButton}>
+            <UserButton />
+          </div>
         </div>
 
         <Footer />
