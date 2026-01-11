@@ -228,6 +228,18 @@
   gap: 0.75rem
   padding: 0.5rem 0
   font-weight: 600
+  background: none
+  border: none
+  text-align: left
+  width: 100%
+  cursor: pointer
+  border-radius: 4px
+  transition: all 0.2s ease
+  &:hover
+    background: var(--color-background-secondary, #f7f7f7)
+  &Active
+    background: var(--color-background-secondary, #f7f7f7)
+    color: var(--color-primary, #1976d2)
 
 .categoryTitle
   flex: 1
@@ -252,6 +264,11 @@
     overflow: hidden
     text-overflow: ellipsis
     white-space: nowrap
+  &_Actions
+    display: flex
+    align-items: center
+    gap: 0.5rem
+    flex-shrink: 0
 
 .actionButtons
   display: flex
@@ -259,7 +276,7 @@
   gap: 0.25rem
   flex-shrink: 0
 
-.editButton, .deleteButton
+.editButton, .deleteButton, .starButton
   appearance: none
   background: none
   border: none
@@ -285,6 +302,12 @@
   &:hover:not(:disabled)
     background: var(--color-background-secondary, #f7f7f7)
     color: var(--color-error, #d32f2f)
+
+.starButton
+  font-size: 16px
+  &:hover:not(:disabled)
+    background: var(--color-background-secondary, #f7f7f7)
+    transform: scale(1.1)
 
 .addButton
   appearance: none

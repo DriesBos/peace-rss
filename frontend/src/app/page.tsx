@@ -395,6 +395,8 @@ type MenuModalProps = {
   openEditModal: (type: 'feed' | 'category', item: Feed | Category) => void;
   openAddModal: () => void;
   isLoading: boolean;
+  starredEntries: Entry[];
+  onToggleEntryStar: (entryId: number) => Promise<void>;
 };
 
 type AddModalProps = {
@@ -550,6 +552,8 @@ function MenuModal({
   openEditModal,
   openAddModal,
   isLoading,
+  starredEntries,
+  onToggleEntryStar,
 }: MenuModalProps) {
   useEffect(() => {
     if (!isOpen) return;
@@ -574,10 +578,40 @@ function MenuModal({
 
         {/* Combined Categories & Feeds Section */}
         <div className={styles.modalMenu_CategoriesFeeds}>
-          <div className={styles.sectionTitle}>Categories & Feeds</div>
+          <div className={styles.sectionTitle}>Feeds</div>
 
           {/* Categories with nested Feeds */}
           <div className={styles.categoriesFeedsList}>
+            {/* Category with starred entries */}
+            {starredEntries.length > 0 && (
+              <div className={styles.categoryGroup}>
+                <div className={styles.categoryHeader}>
+                  <span className={styles.categoryTitle}>⭐ Starred</span>
+                </div>
+                <div className={styles.feedsUnderCategory}>
+                  {starredEntries.map((entry) => (
+                    <div key={entry.id} className={styles.feedListItem}>
+                      <span className={styles.feedListItem_Title}>
+                        {entry.title}
+                      </span>
+                      <button
+                        type="button"
+                        className={styles.starButton}
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          await onToggleEntryStar(entry.id);
+                        }}
+                        disabled={isLoading}
+                        title="Remove from starred"
+                        aria-label={`Remove ${entry.title} from starred`}
+                      >
+                        ⭐
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             {categories.length <= 1 && feeds.length === 0 ? (
               <div className={styles.muted}>No categories or feeds yet.</div>
             ) : (
@@ -826,6 +860,7 @@ export default function Home() {
   const [addCategoryLoading, setAddCategoryLoading] = useState(false);
   const [addCategoryError, setAddCategoryError] = useState<string | null>(null);
   const [fetchingOriginal, setFetchingOriginal] = useState(false);
+  const [starredEntries, setStarredEntries] = useState<Entry[]>([]);
   const [fetchedEntryIds, setFetchedEntryIds] = useState<Set<number>>(
     new Set()
   );
@@ -835,6 +870,7 @@ export default function Home() {
   const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
+  const [totalStarredCount, setTotalStarredCount] = useState(0);
 
   // Edit modal state
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -932,10 +968,39 @@ export default function Home() {
     }
   }, []);
 
+  const loadStarredCount = useCallback(async () => {
+    try {
+      const data = await fetchJson<EntriesResponse>(
+        '/api/entries?starred=true&limit=1&offset=0'
+      );
+      setTotalStarredCount(data.total ?? 0);
+    } catch (err) {
+      console.error('Failed to load starred count', err);
+    }
+  }, []);
+
   useEffect(() => {
     if (!isProvisioned) return;
     void loadUnreadCounters();
-  }, [isProvisioned, entries, loadUnreadCounters]);
+    void loadStarredCount();
+  }, [isProvisioned, entries, loadUnreadCounters, loadStarredCount]);
+
+  // Load starred entries for the menu
+  const loadStarredEntries = useCallback(async () => {
+    if (!isProvisioned) return;
+    try {
+      const data = await fetchJson<EntriesResponse>(
+        '/api/entries?starred=true&limit=50&offset=0'
+      );
+      setStarredEntries(data.entries);
+    } catch (err) {
+      console.error('Failed to load starred entries', err);
+    }
+  }, [isProvisioned]);
+
+  useEffect(() => {
+    void loadStarredEntries();
+  }, [loadStarredEntries]);
 
   async function loadFeeds() {
     const data = await fetchJson<Feed[]>('/api/feeds');
@@ -1098,6 +1163,22 @@ export default function Home() {
       setIsLoading(false);
     }
   }
+
+  const toggleEntryStar = useCallback(
+    async (entryId: number) => {
+      try {
+        await fetchJson<{ ok: true }>(`/api/entries/${entryId}/bookmark`, {
+          method: 'POST',
+        });
+        // Reload starred entries after toggling
+        await loadStarredEntries();
+        await loadStarredCount();
+      } catch (e) {
+        console.error('Failed to toggle entry star', e);
+      }
+    },
+    [loadStarredEntries, loadStarredCount]
+  );
 
   async function setSelectedStatus(status: 'read' | 'unread') {
     if (!selectedEntry) return;
@@ -1556,6 +1637,8 @@ export default function Home() {
               openEditModal={openEditModal}
               openAddModal={openAddModal}
               isLoading={isLoading}
+              starredEntries={starredEntries}
+              onToggleEntryStar={toggleEntryStar}
             />
 
             <AddModal
@@ -1780,15 +1863,16 @@ export default function Home() {
                   <Button
                     type="button"
                     variant="category"
-                    active={selectedCategoryId === null}
+                    active={selectedCategoryId === null && !isStarredView}
                     className={`${styles.header_CategoryList_Item} ${
-                      selectedCategoryId === null
+                      selectedCategoryId === null && !isStarredView
                         ? styles.categoryItemActive
                         : ''
                     }`}
                     onClick={() => {
                       setSelectedCategoryId(null);
                       setSelectedFeedId(null);
+                      setIsStarredView(false);
                     }}
                     disabled={isLoading}
                   >
@@ -1798,30 +1882,59 @@ export default function Home() {
                     {totalUnreadCount}
                   </div>
                 </li>
-                {categories.slice(1).map((cat) => (
-                  <li key={cat.id}>
-                    <Button
-                      type="button"
-                      variant="category"
-                      active={selectedCategoryId === cat.id}
-                      className={`${styles.header_CategoryList_Item} ${
-                        selectedCategoryId === cat.id
-                          ? styles.categoryItemActive
-                          : ''
-                      }`}
-                      onClick={() => {
-                        setSelectedCategoryId(cat.id);
-                        setSelectedFeedId(null);
-                      }}
-                      disabled={isLoading}
-                    >
-                      {cat.title}
-                    </Button>
-                    <div className={styles.header_CategoryList_Count}>
-                      {categoryUnreadCounts.get(cat.id) ?? 0}
-                    </div>
-                  </li>
-                ))}
+                <li>
+                  <Button
+                    type="button"
+                    variant="category"
+                    active={isStarredView}
+                    className={`${styles.header_CategoryList_Item} ${
+                      isStarredView ? styles.categoryItemActive : ''
+                    }`}
+                    onClick={() => {
+                      setSelectedCategoryId(null);
+                      setSelectedFeedId(null);
+                      setIsStarredView(true);
+                      setSearchMode(false);
+                    }}
+                    disabled={isLoading}
+                  >
+                    ⭐ Starred
+                  </Button>
+                  <div className={styles.header_CategoryList_Count}>
+                    {totalStarredCount}
+                  </div>
+                </li>
+                {categories
+                  .slice(1)
+                  .filter((cat) => {
+                    // Show category if it's currently selected or has unread items
+                    const unreadCount = categoryUnreadCounts.get(cat.id) ?? 0;
+                    return selectedCategoryId === cat.id || unreadCount > 0;
+                  })
+                  .map((cat) => (
+                    <li key={cat.id}>
+                      <Button
+                        type="button"
+                        variant="category"
+                        active={selectedCategoryId === cat.id}
+                        className={`${styles.header_CategoryList_Item} ${
+                          selectedCategoryId === cat.id
+                            ? styles.categoryItemActive
+                            : ''
+                        }`}
+                        onClick={() => {
+                          setSelectedCategoryId(cat.id);
+                          setSelectedFeedId(null);
+                        }}
+                        disabled={isLoading}
+                      >
+                        {cat.title}
+                      </Button>
+                      <div className={styles.header_CategoryList_Count}>
+                        {categoryUnreadCounts.get(cat.id) ?? 0}
+                      </div>
+                    </li>
+                  ))}
               </ul>
               {/* <button
                   className={styles.button}
