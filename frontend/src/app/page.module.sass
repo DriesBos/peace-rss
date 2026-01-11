@@ -184,6 +184,21 @@
     opacity: 1
     pointer-events: auto
 
+// ADD MODAL
+.modalAdd
+  padding: 4rem var(--space-sides-general)
+  display: flex
+  flex-direction: column
+  max-height: 90vh
+  overflow-y: auto
+  gap: 2rem
+  &::-webkit-scrollbar
+    display: none
+  &_Title
+    @include font-title
+    font-weight: 600
+    margin: 0
+
 .sectionTitle
   @include font-title
   font-weight: 500
@@ -270,6 +285,30 @@
   &:hover:not(:disabled)
     background: var(--color-background-secondary, #f7f7f7)
     color: var(--color-error, #d32f2f)
+
+.addButton
+  appearance: none
+  background: none
+  border: 1px solid var(--color-border, #e6e6e6)
+  border-radius: 8px
+  padding: 12px 16px
+  cursor: pointer
+  display: flex
+  align-items: center
+  justify-content: center
+  gap: 8px
+  color: var(--color-text-primary)
+  font: inherit
+  @include font-body
+  font-weight: 500
+  transition: all 0.2s ease
+  margin-top: 1rem
+  &:hover:not(:disabled)
+    background: var(--color-background-secondary, #f7f7f7)
+    border-color: var(--color-text-secondary)
+  &:disabled
+    opacity: 0.5
+    cursor: not-allowed
 
 // Forms Section
 .formSection
@@ -361,6 +400,23 @@
   &:hover:not(:disabled)
     background: var(--color-error, #d32f2f)
     color: white
+  &:disabled
+    opacity: 0.6
+    cursor: not-allowed
+
+.button
+  appearance: none
+  padding: 8px 16px
+  border: 1px solid var(--color-border, #e6e6e6)
+  border-radius: 6px
+  background: var(--color-text-primary, #000)
+  color: var(--color-app, #fff)
+  font: inherit
+  font-size: 14px
+  cursor: pointer
+  transition: all 0.2s ease
+  &:hover:not(:disabled)
+    opacity: 0.85
   &:disabled
     opacity: 0.6
     cursor: not-allowed

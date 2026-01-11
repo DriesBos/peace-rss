@@ -23,6 +23,7 @@ import { Footer } from '@/components/Footer/Footer';
 import { IconArrowShortLeft } from '@/components/icons/IconArrowShortLeft';
 import { IconArrowShortRight } from '@/components/icons/IconArrowShortRight';
 import { IconEdit } from '@/components/icons/IconEdit';
+import { IconPlus } from '@/components/icons/IconPlus';
 
 type Category = {
   id: number;
@@ -386,6 +387,15 @@ type MenuModalProps = {
   onClose: () => void;
   categories: Category[];
   feeds: Feed[];
+  openEditModal: (type: 'feed' | 'category', item: Feed | Category) => void;
+  openAddModal: () => void;
+  isLoading: boolean;
+};
+
+type AddModalProps = {
+  isOpen: boolean;
+  onClose: () => void;
+  categories: Category[];
   newCategoryTitle: string;
   setNewCategoryTitle: (value: string) => void;
   addCategoryLoading: boolean;
@@ -398,7 +408,6 @@ type MenuModalProps = {
   addFeedLoading: boolean;
   addFeedError: string | null;
   addFeed: (e: React.FormEvent) => void;
-  openEditModal: (type: 'feed' | 'category', item: Feed | Category) => void;
   isLoading: boolean;
 };
 
@@ -418,11 +427,10 @@ type MenuModalProps = {
 //   );
 // }
 
-function MenuModal({
+function AddModal({
   isOpen,
   onClose,
   categories,
-  feeds,
   newCategoryTitle,
   setNewCategoryTitle,
   addCategoryLoading,
@@ -435,7 +443,107 @@ function MenuModal({
   addFeedLoading,
   addFeedError,
   addFeed,
+  isLoading,
+}: AddModalProps) {
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
+  return (
+    <ModalContainer isOpen={isOpen} onClose={onClose} ariaLabel="Add">
+      <div className={styles.modalAdd}>
+        <h2 className={styles.modalAdd_Title}>Add Category or Feed</h2>
+
+        {/* Add Category Form */}
+        <div className={styles.formSection}>
+          <div className={styles.formTitle}>Add Category</div>
+          <form onSubmit={addCategory} className={styles.addForm}>
+            <input
+              type="text"
+              value={newCategoryTitle}
+              onChange={(e) => setNewCategoryTitle(e.target.value)}
+              placeholder="Category name"
+              disabled={addCategoryLoading || isLoading}
+              className={styles.input}
+            />
+            <button
+              type="submit"
+              disabled={
+                addCategoryLoading || isLoading || !newCategoryTitle.trim()
+              }
+              className={styles.button}
+            >
+              {addCategoryLoading ? 'Adding...' : 'Add category'}
+            </button>
+            {addCategoryError && (
+              <div className={styles.error}>{addCategoryError}</div>
+            )}
+          </form>
+        </div>
+
+        {/* Add Feed Form */}
+        <div className={styles.formSection}>
+          <div className={styles.formTitle}>Add Feed</div>
+          <form onSubmit={addFeed} className={styles.addForm}>
+            <input
+              type="text"
+              value={newFeedUrl}
+              onChange={(e) => setNewFeedUrl(e.target.value)}
+              placeholder="RSS feed URL"
+              disabled={addFeedLoading || isLoading}
+              className={styles.input}
+            />
+            <select
+              value={newFeedCategoryId ?? ''}
+              onChange={(e) =>
+                setNewFeedCategoryId(
+                  e.target.value ? Number(e.target.value) : null
+                )
+              }
+              disabled={addFeedLoading || isLoading}
+              className={styles.select}
+            >
+              <option value="">Select category (optional)</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.title}
+                </option>
+              ))}
+            </select>
+            <button
+              type="submit"
+              disabled={addFeedLoading || isLoading || !newFeedUrl.trim()}
+              className={styles.button}
+            >
+              {addFeedLoading ? 'Adding...' : 'Add feed'}
+            </button>
+            {addFeedError && <div className={styles.error}>{addFeedError}</div>}
+          </form>
+        </div>
+      </div>
+    </ModalContainer>
+  );
+}
+
+function MenuModal({
+  isOpen,
+  onClose,
+  categories,
+  feeds,
   openEditModal,
+  openAddModal,
   isLoading,
 }: MenuModalProps) {
   useEffect(() => {
@@ -560,74 +668,17 @@ function MenuModal({
             )}
           </div>
 
-          {/* Add Category Form */}
-          <div className={styles.formSection}>
-            <div className={styles.formTitle}>Add Category</div>
-            <form onSubmit={addCategory} className={styles.addForm}>
-              <input
-                type="text"
-                value={newCategoryTitle}
-                onChange={(e) => setNewCategoryTitle(e.target.value)}
-                placeholder="Category name"
-                disabled={addCategoryLoading || isLoading}
-                className={styles.input}
-              />
-              <button
-                type="submit"
-                disabled={
-                  addCategoryLoading || isLoading || !newCategoryTitle.trim()
-                }
-                className={styles.button}
-              >
-                {addCategoryLoading ? 'Adding...' : 'Add category'}
-              </button>
-              {addCategoryError && (
-                <div className={styles.error}>{addCategoryError}</div>
-              )}
-            </form>
-          </div>
-
-          {/* Add Feed Form */}
-          <div className={styles.formSection}>
-            <div className={styles.formTitle}>Add Feed</div>
-            <form onSubmit={addFeed} className={styles.addForm}>
-              <input
-                type="text"
-                value={newFeedUrl}
-                onChange={(e) => setNewFeedUrl(e.target.value)}
-                placeholder="RSS feed URL"
-                disabled={addFeedLoading || isLoading}
-                className={styles.input}
-              />
-              <select
-                value={newFeedCategoryId ?? ''}
-                onChange={(e) =>
-                  setNewFeedCategoryId(
-                    e.target.value ? Number(e.target.value) : null
-                  )
-                }
-                disabled={addFeedLoading || isLoading}
-                className={styles.select}
-              >
-                <option value="">Select category (optional)</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.title}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="submit"
-                disabled={addFeedLoading || isLoading || !newFeedUrl.trim()}
-                className={styles.button}
-              >
-                {addFeedLoading ? 'Adding...' : 'Add feed'}
-              </button>
-              {addFeedError && (
-                <div className={styles.error}>{addFeedError}</div>
-              )}
-            </form>
-          </div>
+          {/* Add Button */}
+          <button
+            type="button"
+            className={styles.addButton}
+            onClick={openAddModal}
+            disabled={isLoading}
+            aria-label="Add category or feed"
+          >
+            <IconPlus width={16} height={16} />
+            <span>Add</span>
+          </button>
         </div>
 
         <Footer />
@@ -772,6 +823,7 @@ export default function Home() {
     new Map()
   );
   const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
 
   // Edit modal state
@@ -786,6 +838,8 @@ export default function Home() {
 
   const openMenuModal = useCallback(() => setIsMenuModalOpen(true), []);
   const closeMenuModal = useCallback(() => setIsMenuModalOpen(false), []);
+  const openAddModal = useCallback(() => setIsAddModalOpen(true), []);
+  const closeAddModal = useCallback(() => setIsAddModalOpen(false), []);
 
   const openEditModal = useCallback(
     (type: 'feed' | 'category', item: Feed | Category) => {
@@ -1489,6 +1543,15 @@ export default function Home() {
               onClose={closeMenuModal}
               categories={categories}
               feeds={feeds}
+              openEditModal={openEditModal}
+              openAddModal={openAddModal}
+              isLoading={isLoading}
+            />
+
+            <AddModal
+              isOpen={isAddModalOpen}
+              onClose={closeAddModal}
+              categories={categories}
               newCategoryTitle={newCategoryTitle}
               setNewCategoryTitle={setNewCategoryTitle}
               addCategoryLoading={addCategoryLoading}
@@ -1501,7 +1564,6 @@ export default function Home() {
               addFeedLoading={addFeedLoading}
               addFeedError={addFeedError}
               addFeed={addFeed}
-              openEditModal={openEditModal}
               isLoading={isLoading}
             />
 
