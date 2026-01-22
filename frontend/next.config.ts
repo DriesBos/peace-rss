@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
+  turbopack: {},
   webpack: (config) => {
     // Add rule for .glsl files
     config.module.rules.push({

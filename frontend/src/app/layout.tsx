@@ -8,11 +8,11 @@ import {
   SignedOut,
 } from '@clerk/nextjs';
 import { Button } from '@/components/Button/Button';
-import KomorebiShader from '@/components/KomorebiShader/KomorebiShaderClient';
 import '@/styles/vars.sass';
 import '@/styles/reset.css';
 import '@/styles/globals.sass';
 import { ThemeProvider } from '@/components/ThemeProvider';
+import KomorebiShader from '@/components/KomorebiShader/KomorebiShader';
 
 const untitledSans = localFont({
   src: [
@@ -126,15 +126,7 @@ export default function RootLayout({
           >
              <main>
             <SignedOut>
-
-              <KomorebiShader 
-                intensity={0.05} 
-                speed={0.1}
-                softness={1}
-                scale1={0.1}
-                scale2={0.1}
-                className="komorebiComplex"
-              />
+              <KomorebiShader opacity={0.1} />
               <div className="landingPage">
                 <div className="landingPage_Content">
                   <div className="landingPage_Intro">
