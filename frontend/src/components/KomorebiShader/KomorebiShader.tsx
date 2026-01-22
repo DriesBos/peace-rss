@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import styles from "./KomorebiShader.module.sass";
 
 type KomorebiAmbienceProps = {
@@ -23,11 +23,7 @@ export default function KomorebiAmbience({
   blurPx = 9,
   displacementScale = 50,
 }: KomorebiAmbienceProps) {
-  const [isSafari, setIsSafari] = useState(false);
-
-  useEffect(() => {
-    setIsSafari(isSafariUA());
-  }, []);
+  const [isSafari] = useState(() => isSafariUA());
 
   const filterValue = useMemo(() => {
     // Safari fallback: avoid url(#komorebi-wind)
