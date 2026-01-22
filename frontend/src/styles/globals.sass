@@ -3,6 +3,7 @@ html, body
   position: relative
   width: 100%
   min-height: 100%
+  overscroll-behavior: none
 
 body
   color: var(--color-text)
@@ -44,14 +45,17 @@ p
 
 .soulSister
   font-family: var(--font-soul-sister), sans-serif
-  letter-spacing: -0.1em
+  letter-spacing: -0.02em
 
 .landingPage
+  position: relative
   display: flex
   flex-direction: column
   align-items: center
   justify-content: center
   min-height: 100vh
+  background: linear-gradient(to bottom right, #fffbeb, #f0fdf4)
+  z-index: 1
   &_Content
     display: flex
     flex-direction: column
