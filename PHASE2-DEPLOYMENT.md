@@ -82,7 +82,7 @@ CLERK_SECRET_KEY=sk_test_...
 MINIFLUX_BASE_URL=http://miniflux:8080/miniflux
 MINIFLUX_ADMIN_USERNAME=admin
 MINIFLUX_ADMIN_PASSWORD=your_admin_password_here
-MINIFLUX_PUBLIC_URL=https://pathanam.xyz/miniflux
+MINIFLUX_PUBLIC_URL=https://komorebi-reader.com/miniflux
 
 # PostgreSQL (existing)
 POSTGRES_USER=miniflux
@@ -96,7 +96,7 @@ Same as above, but ensure:
 
 - Clerk keys are production keys (not test keys)
 - `MINIFLUX_BASE_URL=http://miniflux:8080/miniflux` (internal Docker DNS)
-- `MINIFLUX_PUBLIC_URL=https://pathanam.xyz/miniflux` (public HTTPS URL)
+- `MINIFLUX_PUBLIC_URL=https://komorebi-reader.com/miniflux` (public HTTPS URL)
 
 ## Pre-Deployment Checklist
 
@@ -166,7 +166,7 @@ nano .env
 # - MINIFLUX_ADMIN_USERNAME
 # - MINIFLUX_ADMIN_PASSWORD
 # - MINIFLUX_BASE_URL=http://miniflux:8080/miniflux
-# - MINIFLUX_PUBLIC_URL=https://pathanam.xyz/miniflux
+# - MINIFLUX_PUBLIC_URL=https://komorebi-reader.com/miniflux
 
 # Remove or comment out MINIFLUX_API_TOKEN
 ```
@@ -189,17 +189,17 @@ docker compose logs -f frontend
 
 ```bash
 # Health check
-curl -4 -fsS https://pathanam.xyz/api/health && echo OK
+curl -4 -fsS https://komorebi-reader.com/api/health && echo OK
 
 # This should now require auth (will redirect or return 401)
-curl -i https://pathanam.xyz/api/feeds
+curl -i https://komorebi-reader.com/api/feeds
 ```
 
 ## Verification Steps (In Browser)
 
 ### First User Sign-Up
 
-1. Navigate to `https://pathanam.xyz`
+1. Navigate to `https://komorebi-reader.com`
 2. Click "Sign Up" (top right)
 3. Complete Clerk sign-up flow
 4. Should see "Setting up your account..." briefly

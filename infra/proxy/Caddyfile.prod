@@ -1,4 +1,4 @@
-pathanam.xyz {
+komorebi-reader.com {
 
   @minifluxNoSlash path /miniflux
   redir @minifluxNoSlash /miniflux/ 308

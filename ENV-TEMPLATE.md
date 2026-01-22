@@ -26,7 +26,7 @@ MINIFLUX_ADMIN_USERNAME=admin
 MINIFLUX_ADMIN_PASSWORD=your_secure_admin_password_here
 
 # Public URL (used by Miniflux for links and BASE_URL config)
-MINIFLUX_PUBLIC_URL=https://pathanam.xyz/miniflux
+MINIFLUX_PUBLIC_URL=https://komorebi-reader.com/miniflux
 
 # ============================================
 # PostgreSQL Database
