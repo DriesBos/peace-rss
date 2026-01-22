@@ -41,7 +41,7 @@
   // Safari/fallback mode: no SVG filter; use blur + drift only
   &_LeavesFallback
     filter: blur(9px)
-    animation: komorebi-drift 8s ease-in-out infinite alternate
+    animation: billow-safari 8s linear infinite alternate
 
 @keyframes billow
   0%
@@ -59,7 +59,7 @@
   100%
     transform: perspective(400px) rotateX(0deg) rotateY(0deg) scale(1)
 
-@keyframes komorebi-drift
+@keyframes billow-safari
   0%
     transform: translate3d(-1.5%, -1%, 0) rotateX(0deg) rotateY(0deg) scale(1)
 
@@ -74,8 +74,3 @@
 
   100%
     transform: translate3d(1.5%, 1%, 0) rotateX(0deg) rotateY(0deg) scale(1)
-
-  // 0%
-  //   transform: translate3d(-1.5%, -1%, 0) scale(1.02) rotate(-0.3deg)
-  // 100%
-  //   transform: translate3d(1.5%, 1%, 0) scale(1.02) rotate(0.3deg)
