@@ -1,17 +1,21 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import styles from "./KomorebiShader.module.sass";
 
 type KomorebiAmbienceProps = {
-  /** Controls overall visibility. Good starting range: 0.04–0.12 */
   opacity?: number;
-  /** Path to your leaf mask texture in /public */
   textureUrl?: string;
-  /** Blur radius in px (softens the dapple) */
   blurPx?: number;
-  /** Displacement intensity (wind wobble) */
   displacementScale?: number;
 };
+
+function isSafariUA() {
+  if (typeof navigator === "undefined") return false;
+  const ua = navigator.userAgent;
+  // Safari includes "Safari" but not "Chrome" (Chromium) or "Android"
+  return /Safari/i.test(ua) && !/Chrome|Chromium|Android/i.test(ua);
+}
 
 export default function KomorebiAmbience({
   opacity = 0.1,
@@ -19,18 +23,24 @@ export default function KomorebiAmbience({
   blurPx = 9,
   displacementScale = 50,
 }: KomorebiAmbienceProps) {
+  const [isSafari, setIsSafari] = useState(false);
+
+  useEffect(() => {
+    setIsSafari(isSafariUA());
+  }, []);
+
+  const filterValue = useMemo(() => {
+    // Safari fallback: avoid url(#komorebi-wind)
+    if (isSafari) return `blur(${blurPx}px)`;
+    return `url(#komorebi-wind) blur(${blurPx}px)`;
+  }, [isSafari, blurPx]);
+
   return (
     <div aria-hidden="true" className={styles.komorebi}>
-      {/* SVG filter defs (kept tiny; no layout impact) */}
+      {/* Keep defs for non-Safari */}
       <svg className={styles.komorebi_svg_defs}>
         <defs>
-          <filter
-            id="komorebi-wind"
-            x="-20%"
-            y="-20%"
-            width="140%"
-            height="140%"
-          >
+          <filter id="komorebi-wind" x="-20%" y="-20%" width="140%" height="140%">
             <feTurbulence type="fractalNoise" numOctaves="2" seed="1">
               <animate
                 attributeName="baseFrequency"
@@ -58,15 +68,16 @@ export default function KomorebiAmbience({
         </defs>
       </svg>
 
-      {/* Perspective container for 3D transform */}
       <div className={styles.komorebi_Perspective}>
-        {/* Leaves layer */}
         <div
-          className={styles.komorebi_Leaves}
+          className={[
+            styles.komorebi_Leaves,
+            isSafari ? styles.komorebi_LeavesFallback : "",
+          ].join(" ")}
           style={{
-            opacity: opacity,
+            opacity,
             backgroundImage: `url(${textureUrl})`,
-            filter: `url(#komorebi-wind) blur(${blurPx}px)`,
+            filter: filterValue,
           }}
         />
       </div>

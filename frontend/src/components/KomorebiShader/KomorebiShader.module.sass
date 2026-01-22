@@ -36,7 +36,12 @@
     will-change: filter, transform
     /* Choose blend mode depending on whether you want additive light or shadow */
     mix-blend-mode: multiply
-    animation: billow 8s linear infinite
+    animation: billow 8s linear infinite alternate
+
+  // Safari/fallback mode: no SVG filter; use blur + drift only
+  &_LeavesFallback
+    filter: blur(9px)
+    animation: komorebi-drift 8s ease-in-out infinite alternate
 
 @keyframes billow
   0%
@@ -53,3 +58,24 @@
 
   100%
     transform: perspective(400px) rotateX(0deg) rotateY(0deg) scale(1)
+
+@keyframes komorebi-drift
+  0%
+    transform: translate3d(-1.5%, -1%, 0) rotateX(0deg) rotateY(0deg) scale(1)
+
+  25%
+    transform: translate3d(-1%, -0.5%, 0) rotateX(1deg) rotateY(2deg) scale(1.02)
+
+  50%
+    transform: translate3d(.5%, 0%, 0) rotateX(-4deg) rotateY(-2deg) scale(0.97)
+
+  75%
+    transform: translate3d(1%, 0.5%, 0) rotateX(1deg) rotateY(-1deg) scale(1.04)
+
+  100%
+    transform: translate3d(1.5%, 1%, 0) rotateX(0deg) rotateY(0deg) scale(1)
+
+  // 0%
+  //   transform: translate3d(-1.5%, -1%, 0) scale(1.02) rotate(-0.3deg)
+  // 100%
+  //   transform: translate3d(1.5%, 1%, 0) scale(1.02) rotate(0.3deg)
