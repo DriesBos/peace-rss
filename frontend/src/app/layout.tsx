@@ -7,6 +7,7 @@ import {
   SignedIn,
   SignedOut,
 } from '@clerk/nextjs';
+import { Button } from '@/components/Button/Button';
 import '@/styles/vars.sass';
 import '@/styles/reset.css';
 import '@/styles/globals.sass';
@@ -58,14 +59,30 @@ const untitledSans = localFont({
   variable: '--font-untitled-sans',
 });
 
+const soulSister = localFont({
+  src: [
+    {
+      path: '../fonts/soulsister/soulsister.woff2',
+      weight: '400',
+      style: 'normal',
+    },
+    {
+      path: '../fonts/soulsister/soulsister.ttf',
+      weight: '400',
+      style: 'normal',
+    },
+  ],
+  variable: '--font-soul-sister',
+});
+
 export const metadata: Metadata = {
-  title: 'Peace RSS',
-  description: 'Read your news in peace',
+  title: 'Komorebi Reader',
+  description: 'Enjoy your reading',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Peace RSS',
+    title: 'Komorebi Reader',
   },
   formatDetection: {
     telephone: false,
@@ -98,7 +115,7 @@ export default function RootLayout({
   return (
     <ClerkProvider signInFallbackRedirectUrl="/">
       <html lang="en" suppressHydrationWarning>
-        <body className={`${untitledSans.variable}`}>
+        <body className={`${untitledSans.variable} ${soulSister.variable}`}>
           <ThemeProvider
             attribute="data-theme"
             defaultTheme="light"
@@ -106,39 +123,37 @@ export default function RootLayout({
             enableSystem={true}
             storageKey="peace-rss-theme"
           >
-            <header
-              style={{
-                position: 'absolute',
-                top: '1rem',
-                right: '1rem',
-                zIndex: 1000,
-              }}
-            >
-              <SignedOut>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <SignInButton />
-                  <SignUpButton />
-                </div>
-              </SignedOut>
-            </header>
+             <main>
             <SignedOut>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  minHeight: '100vh',
-                  flexDirection: 'column',
-                  gap: '1rem',
-                }}
-              >
-                <h1>Peace RSS</h1>
-                <p>Please sign in to continue</p>
+              <div className="landingPage">
+                <div className="landingPage_Content">
+                  <div className="landingPage_Intro">
+
+                    <h1 className='soulSister'>Komorebi</h1>
+                    <p>Enjoy your reading</p>
+                  </div>
+                  <ul className="landingPage_Buttons">
+                    <li>
+                    <Button variant="primary">
+                      <SignInButton />
+                    </Button>
+                    </li>
+                    <li>
+                    {'/'}
+                    </li>
+                    <li>
+                    <Button variant="primary">
+                      <SignUpButton />
+                    </Button>
+                    </li>
+                  </ul>
+                </div>
               </div>
             </SignedOut>
             <SignedIn>
-              <main>{children}</main>
+             {children}
             </SignedIn>
+            </main>
           </ThemeProvider>
         </body>
       </html>

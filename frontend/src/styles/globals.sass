@@ -23,7 +23,7 @@ main
   width: 100%
   max-width: 100%
   height: 100%
-  // Safe envs
+  // Safe envs 
   padding-top: env(safe-area-inset-top)
   padding-right: env(safe-area-inset-right)
   padding-bottom: env(safe-area-inset-bottom)
@@ -41,6 +41,40 @@ h1, h2
 p
   font-size: var(--type-body)
   font-weight: 400
+
+.soulSister
+  font-family: var(--font-soul-sister), sans-serif
+  letter-spacing: -0.1em
+
+.landingPage
+  display: flex
+  flex-direction: column
+  align-items: center
+  justify-content: center
+  min-height: 100vh
+  &_Content
+    display: flex
+    flex-direction: column
+    align-items: center
+    justify-content: center
+    gap: 4rem
+  &_Intro
+    display: flex
+    flex-direction: column
+    align-items: center
+    gap: 1rem
+    h1, p
+      text-align: center
+    h1
+      font-size: 3rem
+    p
+      color: var(--color-text-secondary)
+  &_Buttons
+    display: flex
+    align-items: center
+    justify-content: center
+    li
+      padding: 0 0.25rem
 
 // HTML TAGS
 .input
