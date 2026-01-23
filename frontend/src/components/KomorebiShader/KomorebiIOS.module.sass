@@ -1,0 +1,78 @@
+// KomorebiIOS - iOS Safari version
+// Pure 2D transforms only - avoids all iOS rendering issues
+// No SVG filters, no mix-blend-mode, no 3D transforms
+
+.komorebi
+  position: absolute
+  top: 0
+  left: 0
+  width: 100%
+  height: 100%
+  z-index: 999
+  pointer-events: none
+  overflow: hidden
+
+.perspective
+  position: absolute
+  top: -30vh
+  right: 0px
+  width: 80vw
+  height: 130vh
+  transform-origin: right top
+  // Simple 2D skew to simulate depth - reliable on iOS
+  -webkit-transform: skewY(-4deg) scaleX(0.75)
+  transform: skewY(-4deg) scaleX(0.75)
+
+.leaves
+  position: absolute
+  bottom: -20px
+  right: -700px
+  width: 1600px
+  height: 1400px
+  background-repeat: no-repeat
+  background-size: cover
+  // No mix-blend-mode - causes flickering on iOS
+  // Use reduced opacity instead for a subtle effect
+  -webkit-animation: billow-ios 10s ease-in-out infinite alternate
+  animation: billow-ios 10s ease-in-out infinite alternate
+
+// Pure 2D animation - reliable on iOS Safari
+@-webkit-keyframes billow-ios
+  0%
+  -webkit-transform: translate(0, 0) scale(1)
+  transform: translate(0, 0) scale(1)
+  20%
+  -webkit-transform: translate(-0.8%, -0.4%) scale(1.01)
+  transform: translate(-0.8%, -0.4%) scale(1.01)
+  40%
+  -webkit-transform: translate(0.3%, 0.3%) scale(0.99)
+  transform: translate(0.3%, 0.3%) scale(0.99)
+  60%
+  -webkit-transform: translate(0.6%, -0.3%) scale(1.02)
+  transform: translate(0.6%, -0.3%) scale(1.02)
+  80%
+  -webkit-transform: translate(-0.4%, 0.2%) scale(1.005)
+  transform: translate(-0.4%, 0.2%) scale(1.005)
+  100%
+  -webkit-transform: translate(0, 0) scale(1)
+  transform: translate(0, 0) scale(1)
+
+@keyframes billow-ios
+  0%
+    -webkit-transform: translate(0, 0) scale(1)
+    transform: translate(0, 0) scale(1)
+  20%
+    -webkit-transform: translate(-0.8%, -0.4%) scale(1.01)
+    transform: translate(-0.8%, -0.4%) scale(1.01)
+  40%
+    -webkit-transform: translate(0.3%, 0.3%) scale(0.99)
+    transform: translate(0.3%, 0.3%) scale(0.99)
+  60%
+    -webkit-transform: translate(0.6%, -0.3%) scale(1.02)
+    transform: translate(0.6%, -0.3%) scale(1.02)
+  80%
+    -webkit-transform: translate(-0.4%, 0.2%) scale(1.005)
+    transform: translate(-0.4%, 0.2%) scale(1.005)
+  100%
+    -webkit-transform: translate(0, 0) scale(1)
+    transform: translate(0, 0) scale(1)

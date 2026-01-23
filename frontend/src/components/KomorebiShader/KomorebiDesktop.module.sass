@@ -1,0 +1,85 @@
+// KomorebiDesktop - Full effect for Chrome, Firefox, Edge, etc.
+// Uses SVG filters, matrix3d transforms, and mix-blend-mode
+
+.komorebi
+  position: fixed
+  top: 0
+  left: 0
+  width: 100vw
+  height: 100vh
+  z-index: 999
+  pointer-events: none
+  overflow: hidden
+
+.svgDefs
+  width: 0
+  height: 0
+  position: absolute
+
+.perspective
+  position: absolute
+  top: -30vh
+  right: 0px
+  width: 80vw
+  height: 130vh
+  background-blend-mode: darken
+  transform-origin: right top
+  -webkit-transform-style: preserve-3d
+  transform-style: preserve-3d
+  -webkit-transform: matrix3d(0.75, -0.0625, 0, 0.0008, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
+  transform: matrix3d(0.75, -0.0625, 0, 0.0008, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
+  transition: transform 1.7s ease-in-out, opacity 4s ease
+  -webkit-backface-visibility: hidden
+  backface-visibility: hidden
+
+.leaves
+  position: absolute
+  bottom: -20px
+  right: -700px
+  width: 1600px
+  height: 1400px
+  background-repeat: no-repeat
+  background-size: cover
+  will-change: filter, transform, opacity
+  -webkit-backface-visibility: hidden
+  backface-visibility: hidden
+  -webkit-transform: translateZ(0)
+  transform: translateZ(0)
+  mix-blend-mode: multiply
+  -webkit-animation: billow 8s linear infinite alternate
+  animation: billow 8s linear infinite alternate
+
+// Full 3D animation with perspective
+@-webkit-keyframes billow
+  0%
+  -webkit-transform: perspective(400px) rotateX(0deg) rotateY(0deg) scale(1)
+  transform: perspective(400px) rotateX(0deg) rotateY(0deg) scale(1)
+  25%
+  -webkit-transform: perspective(400px) rotateX(1deg) rotateY(2deg) scale(1.02)
+  transform: perspective(400px) rotateX(1deg) rotateY(2deg) scale(1.02)
+  50%
+  -webkit-transform: perspective(400px) rotateX(-4deg) rotateY(-2deg) scale(0.97)
+  transform: perspective(400px) rotateX(-4deg) rotateY(-2deg) scale(0.97)
+  75%
+  -webkit-transform: perspective(400px) rotateX(1deg) rotateY(-1deg) scale(1.04)
+  transform: perspective(400px) rotateX(1deg) rotateY(-1deg) scale(1.04)
+  100%
+  -webkit-transform: perspective(400px) rotateX(0deg) rotateY(0deg) scale(1)
+  transform: perspective(400px) rotateX(0deg) rotateY(0deg) scale(1)
+
+@keyframes billow
+  0%
+    -webkit-transform: perspective(400px) rotateX(0deg) rotateY(0deg) scale(1)
+    transform: perspective(400px) rotateX(0deg) rotateY(0deg) scale(1)
+  25%
+    -webkit-transform: perspective(400px) rotateX(1deg) rotateY(2deg) scale(1.02)
+    transform: perspective(400px) rotateX(1deg) rotateY(2deg) scale(1.02)
+  50%
+    -webkit-transform: perspective(400px) rotateX(-4deg) rotateY(-2deg) scale(0.97)
+    transform: perspective(400px) rotateX(-4deg) rotateY(-2deg) scale(0.97)
+  75%
+    -webkit-transform: perspective(400px) rotateX(1deg) rotateY(-1deg) scale(1.04)
+    transform: perspective(400px) rotateX(1deg) rotateY(-1deg) scale(1.04)
+  100%
+    -webkit-transform: perspective(400px) rotateX(0deg) rotateY(0deg) scale(1)
+    transform: perspective(400px) rotateX(0deg) rotateY(0deg) scale(1)

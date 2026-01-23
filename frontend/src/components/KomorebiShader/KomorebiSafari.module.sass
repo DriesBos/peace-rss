@@ -1,0 +1,80 @@
+// KomorebiSafari - macOS Safari version
+// Uses 3D transforms with perspective, but no SVG filters
+// Still has nice depth effect, just without the wind displacement
+
+.komorebi
+  position: fixed
+  top: 0
+  left: 0
+  width: 100vw
+  height: 100vh
+  z-index: 999
+  pointer-events: none
+  overflow: hidden
+  -webkit-perspective: 1000px
+  perspective: 1000px
+
+.perspective
+  position: absolute
+  top: -30vh
+  right: 0px
+  width: 80vw
+  height: 130vh
+  transform-origin: right top
+  -webkit-transform-style: preserve-3d
+  transform-style: preserve-3d
+  // Simplified matrix - still gives depth but more Safari-friendly
+  -webkit-transform: matrix3d(0.75, -0.0625, 0, 0.0006, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
+  transform: matrix3d(0.75, -0.0625, 0, 0.0006, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
+  -webkit-backface-visibility: hidden
+  backface-visibility: hidden
+
+.leaves
+  position: absolute
+  bottom: -20px
+  right: -700px
+  width: 1600px
+  height: 1400px
+  background-repeat: no-repeat
+  background-size: cover
+  -webkit-backface-visibility: hidden
+  backface-visibility: hidden
+  // Use multiply blend mode - works on macOS Safari
+  mix-blend-mode: multiply
+  -webkit-animation: billow-safari 8s ease-in-out infinite alternate
+  animation: billow-safari 8s ease-in-out infinite alternate
+
+// 3D animation with perspective - works on macOS Safari
+@-webkit-keyframes billow-safari
+  0%
+  -webkit-transform: perspective(400px) rotateX(0deg) rotateY(0deg) scale(1)
+  transform: perspective(400px) rotateX(0deg) rotateY(0deg) scale(1)
+  25%
+  -webkit-transform: perspective(400px) rotateX(0.8deg) rotateY(1.5deg) scale(1.015)
+  transform: perspective(400px) rotateX(0.8deg) rotateY(1.5deg) scale(1.015)
+  50%
+  -webkit-transform: perspective(400px) rotateX(-3deg) rotateY(-1.5deg) scale(0.98)
+  transform: perspective(400px) rotateX(-3deg) rotateY(-1.5deg) scale(0.98)
+  75%
+  -webkit-transform: perspective(400px) rotateX(0.8deg) rotateY(-0.8deg) scale(1.02)
+  transform: perspective(400px) rotateX(0.8deg) rotateY(-0.8deg) scale(1.02)
+  100%
+  -webkit-transform: perspective(400px) rotateX(0deg) rotateY(0deg) scale(1)
+  transform: perspective(400px) rotateX(0deg) rotateY(0deg) scale(1)
+
+@keyframes billow-safari
+  0%
+    -webkit-transform: perspective(400px) rotateX(0deg) rotateY(0deg) scale(1)
+    transform: perspective(400px) rotateX(0deg) rotateY(0deg) scale(1)
+  25%
+    -webkit-transform: perspective(400px) rotateX(0.8deg) rotateY(1.5deg) scale(1.015)
+    transform: perspective(400px) rotateX(0.8deg) rotateY(1.5deg) scale(1.015)
+  50%
+    -webkit-transform: perspective(400px) rotateX(-3deg) rotateY(-1.5deg) scale(0.98)
+    transform: perspective(400px) rotateX(-3deg) rotateY(-1.5deg) scale(0.98)
+  75%
+    -webkit-transform: perspective(400px) rotateX(0.8deg) rotateY(-0.8deg) scale(1.02)
+    transform: perspective(400px) rotateX(0.8deg) rotateY(-0.8deg) scale(1.02)
+  100%
+    -webkit-transform: perspective(400px) rotateX(0deg) rotateY(0deg) scale(1)
+    transform: perspective(400px) rotateX(0deg) rotateY(0deg) scale(1)
