@@ -1,7 +1,7 @@
 {
-  "name": "Peace RSS",
-  "short_name": "Peace RSS",
-  "description": "Read your news in peace",
+  "name": "Komorebi Reader",
+  "short_name": "Komorebi Reader",
+  "description": "Enjoy your reading.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
@@ -12,19 +12,19 @@
   "dir": "ltr",
   "icons": [
     {
-      "src": "/icon-192x192.png",
+      "src": "/images/web-app-manifest-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/icon-512x512.png",
+      "src": "/images/web-app-manifest-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/apple-touch-icon.png",
+      "src": "/images/apple-touch-icon.png",
       "sizes": "180x180",
       "type": "image/png"
     }
@@ -38,7 +38,7 @@
       "url": "/?filter=unread",
       "icons": [
         {
-          "src": "/icon-192x192.png",
+          "src": "/images/web-app-manifest-192x192.png",
           "sizes": "192x192"
         }
       ]
@@ -50,11 +50,10 @@
       "url": "/?filter=bookmarked",
       "icons": [
         {
-          "src": "/icon-192x192.png",
+          "src": "/images/web-app-manifest-192x192.png",
           "sizes": "192x192"
         }
       ]
     }
   ]
 }
-

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Peace RSS - Weekly DB backup (Miniflux Postgres)
+# Komorebi Reader - Weekly DB backup (Miniflux Postgres)
 PROJECT_DIR="/opt/peace-rss"
 BACKUP_DIR="${PROJECT_DIR}/backups"
 ENV_FILE="${PROJECT_DIR}/.env"

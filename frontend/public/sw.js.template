@@ -1,4 +1,4 @@
-// Service Worker Template for Peace RSS
+// Service Worker Template for Komorebi Reader
 // Rename to sw.js to enable offline support
 // Register this in your app by adding to layout.tsx:
 //
@@ -130,7 +130,7 @@ self.addEventListener('push', (event) => {
   };
 
   event.waitUntil(
-    self.registration.showNotification('Peace RSS', options)
+    self.registration.showNotification('Komorebi Reader', options)
   );
 });
 

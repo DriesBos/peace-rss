@@ -101,9 +101,18 @@ export const metadata: Metadata = {
     viewportFit: 'cover',
   },
   icons: {
-    icon: '/favicon.ico',
+    icon: [
+      {
+        url: '/images/favicon-light.png',
+        media: '(prefers-color-scheme: light)',
+      },
+      {
+        url: '/images/favicon-dark.png',
+        media: '(prefers-color-scheme: dark)',
+      },
+    ],
     apple: [
-      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+      { url: '/images/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
     ],
   },
 };
