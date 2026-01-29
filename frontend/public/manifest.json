@@ -1,6 +1,6 @@
 {
-  "name": "Komorebi Reader",
-  "short_name": "Komorebi Reader",
+  "name": "Komorebi",
+  "short_name": "Komorebi",
   "description": "Enjoy your reading.",
   "start_url": "/",
   "display": "standalone",
