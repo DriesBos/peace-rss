@@ -414,10 +414,12 @@ export function EntryPanel({
                 }
                 disabled={isUpdatingStatus}
                 type="button"
-                title={entry.status === 'unread' ? 'Mark read' : 'Mark unread'}
+                title={
+                  entry.status === 'unread' ? 'Mark as read' : 'Mark as unread'
+                }
                 className={styles.actionsList_Item}
               >
-                {entry.status === 'unread' ? 'Mark read' : 'Mark unread'}
+                {entry.status === 'unread' ? 'Mark as read' : 'Mark as unread'}
               </Button>
             </div>
             <div className={styles.prevNextButtons}>
