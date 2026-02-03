@@ -985,6 +985,7 @@ export default function Home() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
   const [totalStarredCount, setTotalStarredCount] = useState(0);
+  const [isOffline, setIsOffline] = useState(false);
 
   // Edit modal state
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -1000,6 +1001,18 @@ export default function Home() {
   const closeMenuModal = useCallback(() => setIsMenuModalOpen(false), []);
   const openAddModal = useCallback(() => setIsAddModalOpen(true), []);
   const closeAddModal = useCallback(() => setIsAddModalOpen(false), []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const updateOnlineStatus = () => setIsOffline(!navigator.onLine);
+    updateOnlineStatus();
+    window.addEventListener('online', updateOnlineStatus);
+    window.addEventListener('offline', updateOnlineStatus);
+    return () => {
+      window.removeEventListener('online', updateOnlineStatus);
+      window.removeEventListener('offline', updateOnlineStatus);
+    };
+  }, []);
 
   const openEditModal = useCallback(
     (type: 'feed' | 'category', item: Feed | Category) => {
@@ -1971,6 +1984,9 @@ export default function Home() {
                   <span>Menu</span>
                 </Button>
               </div>
+              {isOffline && (
+                <div className={styles.header_Offline}>app is offline</div>
+              )}
               {/* Category List */}
               <ul className={styles.header_CategoryList}>
                 <li>
