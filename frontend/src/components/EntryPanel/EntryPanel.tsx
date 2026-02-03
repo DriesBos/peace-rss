@@ -3,7 +3,7 @@
 import { createElement, useMemo } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import IntersectionImage from 'react-intersection-image';
-import styles from '../page.module.sass';
+import styles from './EntryPanel.module.sass';
 import { SlidePanel } from '@/components/SlidePanel/SlidePanel';
 import { FormattedDate } from '@/components/FormattedDate';
 import { Button } from '@/components/Button/Button';

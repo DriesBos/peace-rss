@@ -1,7 +1,7 @@
 'use client';
 
 import { useInView } from 'react-intersection-observer';
-import styles from '../page.module.sass';
+import styles from './EntryList.module.sass';
 import { EntryItem } from '@/components/EntryItem/EntryItem';
 import { Button } from '@/components/Button/Button';
 import type { Entry, Feed } from '@/app/_lib/types';

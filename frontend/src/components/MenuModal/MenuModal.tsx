@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { UserButton } from '@clerk/nextjs';
-import styles from '../page.module.sass';
+import styles from './MenuModal.module.sass';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { ModalContainer } from '@/components/ModalContainer/ModalContainer';
 import { Footer } from '@/components/Footer/Footer';

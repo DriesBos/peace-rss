@@ -3,12 +3,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { SignedIn, SignedOut, RedirectToSignIn } from '@clerk/nextjs';
 import styles from './page.module.sass';
-import { AddModal } from '@/app/_components/AddModal';
-import { EditModal } from '@/app/_components/EditModal';
-import { EntryList } from '@/app/_components/EntryList';
-import { EntryPanel } from '@/app/_components/EntryPanel';
-import { HeaderCategories } from '@/app/_components/HeaderCategories';
-import { MenuModal } from '@/app/_components/MenuModal';
+import { AddModal } from '@/components/AddModal/AddModal';
+import { EditModal } from '@/components/EditModal/EditModal';
+import { EntryList } from '@/components/EntryList/EntryList';
+import { EntryPanel } from '@/components/EntryPanel/EntryPanel';
+import { HeaderCategories } from '@/components/HeaderCategories/HeaderCategories';
+import { MenuModal } from '@/components/MenuModal/MenuModal';
 import { fetchJson } from '@/app/_lib/fetchJson';
 import type {
   Category,

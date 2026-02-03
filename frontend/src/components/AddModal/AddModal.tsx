@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import styles from '../page.module.sass';
+import styles from './AddModal.module.sass';
 import { ModalContainer } from '@/components/ModalContainer/ModalContainer';
 import type { Category } from '@/app/_lib/types';
 

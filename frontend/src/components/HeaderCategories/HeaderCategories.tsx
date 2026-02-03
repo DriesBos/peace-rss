@@ -1,6 +1,6 @@
 'use client';
 
-import styles from '../page.module.sass';
+import styles from './HeaderCategories.module.sass';
 import { Button } from '@/components/Button/Button';
 import { IconMenu } from '@/components/icons/IconMenu';
 import type { Category } from '@/app/_lib/types';
@@ -83,7 +83,7 @@ export function HeaderCategories({
             onClick={onSelectStarred}
             disabled={isLoading}
           >
-            ⭐ Starred
+            Starred
           </Button>
           <div className={styles.header_CategoryList_Count}>
             {totalStarredCount}
