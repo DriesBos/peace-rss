@@ -12,6 +12,7 @@
 
 ## Key Runtime Pieces
 - Next.js App Router UI and API routes live in `frontend/src/app`.
+- UI components live in `frontend/src/components` with co-located `.module.sass` styles.
 - Miniflux runs as a separate container in Docker Compose.
 - Postgres is used only by Miniflux.
 - Service worker (Serwist) provides offline/PWA behavior.

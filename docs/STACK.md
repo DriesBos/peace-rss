@@ -4,7 +4,7 @@
 - Next.js 16 (App Router)
 - React 19
 - TypeScript 5
-- Sass modules
+- Sass modules (one `.module.sass` per component)
 
 ## Auth
 - Clerk (frontend + server-side keys)

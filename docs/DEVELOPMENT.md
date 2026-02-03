@@ -32,3 +32,6 @@ docker compose build frontend
 ```bash
 docker compose up -d frontend
 ```
+
+## Styling Convention
+- Keep component styles in a co-located `.module.sass` next to each component.

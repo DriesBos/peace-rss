@@ -5,6 +5,7 @@ A minimalist RSS reader built on Miniflux, wrapped in a modern Next.js UI with C
 ## What This Repo Contains
 
 - Next.js App Router frontend with API routes for Miniflux proxying
+- UI components in `frontend/src/components`, each with a co-located `.module.sass`
 - Miniflux + Postgres via Docker Compose
 - Caddy reverse proxy for local routing
 
