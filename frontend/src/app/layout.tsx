@@ -13,6 +13,7 @@ import '@/styles/reset.css';
 import '@/styles/globals.sass';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import KomorebiShader from '@/components/KomorebiShader/KomorebiShader';
+import ServiceWorkerRegistration from '@/components/ServiceWorkerRegistration/ServiceWorkerRegistration';
 
 const untitledSans = localFont({
   src: [
@@ -126,6 +127,7 @@ export default function RootLayout({
     <ClerkProvider signInFallbackRedirectUrl="/">
       <html lang="en" suppressHydrationWarning>
         <body className={`${untitledSans.variable} ${soulSister.variable}`}>
+          <ServiceWorkerRegistration />
           <ThemeProvider
             attribute="data-theme"
             defaultTheme="light"
