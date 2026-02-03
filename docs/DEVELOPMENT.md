@@ -35,3 +35,4 @@ docker compose up -d frontend
 
 ## Styling Convention
 - Keep component styles in a co-located `.module.sass` next to each component.
+- Use `frontend/src/styles/vars.sass` as the guide for shared spacing, colors, and typography variables when implementing styling.
