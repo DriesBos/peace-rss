@@ -38,7 +38,7 @@ Updated routes:
 - `frontend/src/app/api/feeds/route.ts`
 - `frontend/src/app/api/entries/route.ts`
 - `frontend/src/app/api/entries/status/route.ts`
-- `frontend/src/app/api/entries/[id]/bookmark/route.ts`
+- `frontend/src/app/api/entries/[id]/star/route.ts`
 
 ### 4. **Frontend Changes**
 

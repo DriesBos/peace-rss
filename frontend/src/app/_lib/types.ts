@@ -24,7 +24,6 @@ export type Entry = {
   published_at?: string;
   status?: 'read' | 'unread';
   starred?: boolean;
-  bookmarked?: boolean;
 };
 
 export type EntriesResponse = {

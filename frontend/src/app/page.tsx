@@ -345,12 +345,9 @@ export default function Home() {
     setIsLoading(true);
     setError(null);
     try {
-      await fetchJson<{ ok: true }>(
-        `/api/entries/${selectedEntry.id}/bookmark`,
-        {
-          method: 'POST',
-        }
-      );
+      await fetchJson<{ ok: true }>(`/api/entries/${selectedEntry.id}/star`, {
+        method: 'POST',
+      });
       // Refresh list + selection state
       await Promise.all([
         loadFeeds(),
@@ -366,7 +363,7 @@ export default function Home() {
   const toggleEntryStar = useCallback(
     async (entryId: number) => {
       try {
-        await fetchJson<{ ok: true }>(`/api/entries/${entryId}/bookmark`, {
+        await fetchJson<{ ok: true }>(`/api/entries/${entryId}/star`, {
           method: 'POST',
         });
         // Reload starred entries after toggling

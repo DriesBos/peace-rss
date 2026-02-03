@@ -14,10 +14,7 @@ export async function POST(_request: NextRequest, context: Ctx) {
     // 1. Require Clerk authentication
     const { userId } = await auth();
     if (!userId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // 2. Get user's Miniflux token from Clerk metadata
@@ -41,8 +38,10 @@ export async function POST(_request: NextRequest, context: Ctx) {
       return NextResponse.json({ error: 'Invalid entry id' }, { status: 400 });
     }
 
-    // 4. Toggle bookmark using per-user token
-    await mfFetchUser<void>(token, `/v1/entries/${entryId}/bookmark`, { method: 'PUT' });
+    // 4. Toggle star using per-user token
+    await mfFetchUser<void>(token, `/v1/entries/${entryId}/bookmark`, {
+      method: 'PUT',
+    });
 
     return NextResponse.json({ ok: true });
   } catch (err) {

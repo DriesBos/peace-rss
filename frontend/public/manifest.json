@@ -44,10 +44,10 @@
       ]
     },
     {
-      "name": "Bookmarks",
-      "short_name": "Bookmarks",
-      "description": "View bookmarked articles",
-      "url": "/?filter=bookmarked",
+      "name": "Starred",
+      "short_name": "Starred",
+      "description": "View starred articles",
+      "url": "/?filter=starred",
       "icons": [
         {
           "src": "/images/web-app-manifest-192x192.png",
