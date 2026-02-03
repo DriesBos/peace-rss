@@ -12,6 +12,7 @@
   padding: 16px 0
   background: var(--color-app)
   z-index: calc(var(--index-newsfeed) + 1)
+  border: 1px solid red
   &_Menu
     padding: 0 var(--space-sides-general)
   &_Offline
@@ -23,20 +24,19 @@
     display: flex
     flex-direction: row
     flex-wrap: nowrap
-    gap: .5rem
+    gap: .66rem
     overflow-x: auto
     scrollbar-width: none
     -ms-overflow-style: none
     margin-left: auto
     padding: 0 var(--space-sides-general)
-    overflow-y: visible !important
+    border: 1px solid blue
     &::-webkit-scrollbar
       display: none
     li
       @include font-nav
       display: flex
       align-items: flex-start
-      gap: 2px
       cursor: pointer
     &_Count
       @include font-count
