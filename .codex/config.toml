@@ -13,5 +13,8 @@ web_search_request = true
 skills = true
 shell_snapshot = true
 
-[projects."/Users/driesbos/Work"]
+# [projects."/Users/driesbos/Work"]
 trust_level = "trusted"
+
+[mcp_servers.figma]
+url = "http://127.0.0.1:3845/mcp"
