@@ -32,7 +32,9 @@ function convertHtmlToReactNodes(html: string): ReactNode[] {
 
   return Array.from(doc.body.childNodes)
     .map((node, index) => transformNodeToReact(node, `entry-node-${index}`))
-    .filter((child): child is ReactNode => child !== null && child !== undefined);
+    .filter(
+      (child): child is ReactNode => child !== null && child !== undefined
+    );
 }
 
 const VOID_ELEMENTS = new Set([
@@ -283,7 +285,7 @@ export function EntryPanel({
   isLoading,
 }: EntryPanelProps) {
   const lazyEntryContent = useLazyEntryContent(entry?.content);
-  const selectedIsStarred = Boolean(entry?.starred ?? entry?.bookmarked);
+  const selectedIsStarred = Boolean(entry?.starred);
 
   return (
     <SlidePanel isOpen={!!entry} onClose={onClose} ariaLabel="Entry details">
@@ -331,7 +333,9 @@ export function EntryPanel({
             )
           ) : (
             <div className={styles.content}>
-              <div className={styles.entry_noContent}>No content available.</div>
+              <div className={styles.entry_noContent}>
+                No content available.
+              </div>
               <div>
                 <a
                   className={styles.link}
@@ -350,10 +354,13 @@ export function EntryPanel({
                 variant="primary"
                 onClick={onToggleStar}
                 disabled={isLoading}
-                title={selectedIsStarred ? 'Unbookmark' : 'Bookmark'}
+                title={selectedIsStarred ? 'Unstar' : 'Star'}
+                aria-pressed={selectedIsStarred}
+                aria-label={selectedIsStarred ? 'Unstar entry' : 'Star entry'}
+                type="button"
                 className={styles.actionsList_Item}
               >
-                {selectedIsStarred ? 'Unbookmark' : 'Bookmark'}
+                {selectedIsStarred ? 'Unstar' : 'Star'}
                 {', '}
               </Button>
               <Button
@@ -405,7 +412,6 @@ export function EntryPanel({
             </div>
             <div className={styles.prevNextButtons}>
               <Button
-                className={styles.button}
                 onClick={onNavigatePrev}
                 disabled={!hasPrev || isLoading}
                 type="button"
@@ -415,7 +421,6 @@ export function EntryPanel({
                 <span>Prev</span>
               </Button>
               <Button
-                className={styles.button}
                 onClick={onNavigateNext}
                 disabled={!hasNext || isLoading}
                 type="button"
