@@ -33,6 +33,8 @@ export default function Home() {
   const [offset, setOffset] = useState(0);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [isTogglingStar, setIsTogglingStar] = useState(false);
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isProvisioned, setIsProvisioned] = useState(false);
   const [provisionError, setProvisionError] = useState<string | null>(null);
@@ -342,7 +344,8 @@ export default function Home() {
 
   async function toggleSelectedStar() {
     if (!selectedEntry) return;
-    setIsLoading(true);
+    if (isTogglingStar) return;
+    setIsTogglingStar(true);
     setError(null);
     try {
       await fetchJson<{ ok: true }>(`/api/entries/${selectedEntry.id}/star`, {
@@ -356,7 +359,7 @@ export default function Home() {
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to toggle star');
     } finally {
-      setIsLoading(false);
+      setIsTogglingStar(false);
     }
   }
 
@@ -378,7 +381,8 @@ export default function Home() {
 
   async function setSelectedStatus(status: 'read' | 'unread') {
     if (!selectedEntry) return;
-    setIsLoading(true);
+    if (isUpdatingStatus) return;
+    setIsUpdatingStatus(true);
     setError(null);
     try {
       await markEntryStatus([selectedEntry.id], status);
@@ -389,7 +393,7 @@ export default function Home() {
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to update status');
     } finally {
-      setIsLoading(false);
+      setIsUpdatingStatus(false);
     }
   }
 
@@ -924,7 +928,8 @@ export default function Home() {
               onNavigateNext={navigateToNext}
               hasPrev={hasPrev}
               hasNext={hasNext}
-              isLoading={isLoading}
+              isTogglingStar={isTogglingStar}
+              isUpdatingStatus={isUpdatingStatus}
             />
           </div>
         )}

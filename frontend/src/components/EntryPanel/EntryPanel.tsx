@@ -268,7 +268,8 @@ export type EntryPanelProps = {
   onNavigateNext: () => void;
   hasPrev: boolean;
   hasNext: boolean;
-  isLoading: boolean;
+  isTogglingStar: boolean;
+  isUpdatingStatus: boolean;
 };
 
 export function EntryPanel({
@@ -283,7 +284,8 @@ export function EntryPanel({
   onNavigateNext,
   hasPrev,
   hasNext,
-  isLoading,
+  isTogglingStar,
+  isUpdatingStatus,
 }: EntryPanelProps) {
   const lazyEntryContent = useLazyEntryContent(entry?.content);
   const selectedIsStarred = Boolean(entry?.starred);
@@ -365,7 +367,7 @@ export function EntryPanel({
               <Button
                 variant="primary"
                 onClick={onToggleStar}
-                disabled={isLoading}
+                disabled={isTogglingStar}
                 title={selectedIsStarred ? 'Unstar' : 'Star'}
                 aria-pressed={selectedIsStarred}
                 aria-label={selectedIsStarred ? 'Unstar entry' : 'Star entry'}
@@ -377,7 +379,7 @@ export function EntryPanel({
               </Button>
               <Button
                 onClick={onFetchOriginal}
-                disabled={isLoading || fetchingOriginal}
+                disabled={fetchingOriginal}
                 title="Link to original article"
                 className={styles.actionsList_Item}
               >
@@ -385,7 +387,7 @@ export function EntryPanel({
               </Button>
               <Button
                 onClick={onFetchOriginal}
-                disabled={isLoading || fetchingOriginal}
+                disabled={fetchingOriginal}
                 title={
                   fetchingOriginal ? 'Fetching...' : 'Fetch original article'
                 }
@@ -397,7 +399,7 @@ export function EntryPanel({
               {entry.status === 'unread' ? (
                 <Button
                   onClick={() => onSetStatus('read')}
-                  disabled={isLoading}
+                  disabled={isUpdatingStatus}
                   type="button"
                   className={styles.actionsList_Item}
                 >
@@ -406,7 +408,7 @@ export function EntryPanel({
               ) : (
                 <Button
                   onClick={() => onSetStatus('unread')}
-                  disabled={isLoading}
+                  disabled={isUpdatingStatus}
                   type="button"
                   className={styles.actionsList_Item}
                 >
@@ -416,7 +418,7 @@ export function EntryPanel({
               <Button
                 className={styles.actionsList_Item}
                 onClick={() => onSetStatus('unread')}
-                disabled={isLoading}
+                disabled={isUpdatingStatus}
                 type="button"
               >
                 Mark unread
@@ -425,7 +427,7 @@ export function EntryPanel({
             <div className={styles.prevNextButtons}>
               <Button
                 onClick={onNavigatePrev}
-                disabled={!hasPrev || isLoading}
+                disabled={!hasPrev}
                 type="button"
                 variant="nav"
               >
@@ -434,7 +436,7 @@ export function EntryPanel({
               </Button>
               <Button
                 onClick={onNavigateNext}
-                disabled={!hasNext || isLoading}
+                disabled={!hasNext}
                 type="button"
                 variant="nav"
               >
