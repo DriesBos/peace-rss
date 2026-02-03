@@ -124,6 +124,11 @@ export default function Home() {
     return entries.find((e) => e.id === selectedEntryId) ?? null;
   }, [entries, selectedEntryId]);
 
+  const hasFetchedOriginal = useMemo(() => {
+    if (!selectedEntry) return false;
+    return fetchedEntryIds.has(selectedEntry.id);
+  }, [selectedEntry, fetchedEntryIds]);
+
   const { selectedIndex, hasPrev, hasNext } = useMemo(() => {
     const index = entries.findIndex((e) => e.id === selectedEntryId);
     return {
@@ -928,6 +933,7 @@ export default function Home() {
               onNavigateNext={navigateToNext}
               hasPrev={hasPrev}
               hasNext={hasNext}
+              hasFetchedOriginal={hasFetchedOriginal}
               isTogglingStar={isTogglingStar}
               isUpdatingStatus={isUpdatingStatus}
             />

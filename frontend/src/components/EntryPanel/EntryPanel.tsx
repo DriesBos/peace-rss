@@ -7,6 +7,7 @@ import styles from './EntryPanel.module.sass';
 import { SlidePanel } from '@/components/SlidePanel/SlidePanel';
 import { FormattedDate } from '@/components/FormattedDate';
 import { Button } from '@/components/Button/Button';
+import buttonStyles from '@/components/Button/Button.module.sass';
 import { IconArrowShortLeft } from '@/components/icons/IconArrowShortLeft';
 import { IconArrowShortRight } from '@/components/icons/IconArrowShortRight';
 import { ScrollToTop } from '@/components/ScrollToTop/ScrollToTop';
@@ -268,6 +269,7 @@ export type EntryPanelProps = {
   onNavigateNext: () => void;
   hasPrev: boolean;
   hasNext: boolean;
+  hasFetchedOriginal: boolean;
   isTogglingStar: boolean;
   isUpdatingStatus: boolean;
 };
@@ -284,6 +286,7 @@ export function EntryPanel({
   onNavigateNext,
   hasPrev,
   hasNext,
+  hasFetchedOriginal,
   isTogglingStar,
   isUpdatingStatus,
 }: EntryPanelProps) {
@@ -377,51 +380,44 @@ export function EntryPanel({
                 {selectedIsStarred ? 'Unstar' : 'Star'}
                 {', '}
               </Button>
-              <Button
-                onClick={onFetchOriginal}
-                disabled={fetchingOriginal}
-                title="Link to original article"
-                className={styles.actionsList_Item}
+              <a
+                href={entry.url}
+                target="_blank"
+                rel="noreferrer"
+                title="Source link"
+                className={`${buttonStyles.button} ${buttonStyles.primary} ${styles.actionsList_Item}`}
               >
-                Link to original article{', '}
-              </Button>
+                Source link
+              </a>
               <Button
                 onClick={onFetchOriginal}
-                disabled={fetchingOriginal}
+                disabled={fetchingOriginal || hasFetchedOriginal}
                 title={
-                  fetchingOriginal ? 'Fetching...' : 'Fetch original article'
+                  fetchingOriginal
+                    ? 'Fetching...'
+                    : hasFetchedOriginal
+                    ? 'Source already fetched'
+                    : 'Fetch source'
                 }
                 className={styles.actionsList_Item}
               >
-                {fetchingOriginal ? 'Fetching...' : 'Fetch original article'}
+                {fetchingOriginal
+                  ? 'Fetching...'
+                  : hasFetchedOriginal
+                  ? 'Source fetched'
+                  : 'Fetch source'}
                 {', '}
               </Button>
-              {entry.status === 'unread' ? (
-                <Button
-                  onClick={() => onSetStatus('read')}
-                  disabled={isUpdatingStatus}
-                  type="button"
-                  className={styles.actionsList_Item}
-                >
-                  Mark read{', '}
-                </Button>
-              ) : (
-                <Button
-                  onClick={() => onSetStatus('unread')}
-                  disabled={isUpdatingStatus}
-                  type="button"
-                  className={styles.actionsList_Item}
-                >
-                  Mark unread
-                </Button>
-              )}
               <Button
-                className={styles.actionsList_Item}
-                onClick={() => onSetStatus('unread')}
+                onClick={() =>
+                  onSetStatus(entry.status === 'unread' ? 'read' : 'unread')
+                }
                 disabled={isUpdatingStatus}
                 type="button"
+                title={entry.status === 'unread' ? 'Mark read' : 'Mark unread'}
+                className={styles.actionsList_Item}
               >
-                Mark unread
+                {entry.status === 'unread' ? 'Mark read' : 'Mark unread'}
               </Button>
             </div>
             <div className={styles.prevNextButtons}>
