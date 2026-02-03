@@ -1,6 +1,6 @@
 'use client';
 
-import { createElement, useMemo } from 'react';
+import { createElement, useMemo, useRef } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import IntersectionImage from 'react-intersection-image';
 import styles from './EntryPanel.module.sass';
@@ -9,6 +9,7 @@ import { FormattedDate } from '@/components/FormattedDate';
 import { Button } from '@/components/Button/Button';
 import { IconArrowShortLeft } from '@/components/icons/IconArrowShortLeft';
 import { IconArrowShortRight } from '@/components/icons/IconArrowShortRight';
+import { ScrollToTop } from '@/components/ScrollToTop/ScrollToTop';
 import type { Entry, Feed } from '@/app/_lib/types';
 
 function useLazyEntryContent(html?: string) {
@@ -286,9 +287,20 @@ export function EntryPanel({
 }: EntryPanelProps) {
   const lazyEntryContent = useLazyEntryContent(entry?.content);
   const selectedIsStarred = Boolean(entry?.starred);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   return (
-    <SlidePanel isOpen={!!entry} onClose={onClose} ariaLabel="Entry details">
+    <SlidePanel
+      isOpen={!!entry}
+      onClose={onClose}
+      ariaLabel="Entry details"
+      scrollContainerRef={scrollContainerRef}
+    >
+      <ScrollToTop
+        containerRef={scrollContainerRef}
+        triggerKey={entry?.id}
+        isActive={!!entry}
+      />
       {entry && (
         <div className={styles.entry_Container}>
           <div className={styles.entry_Header}>

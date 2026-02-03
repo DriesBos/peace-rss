@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import type { RefObject } from 'react';
 import styles from './SlidePanel.module.sass';
 import { Button } from '@/components/Button/Button';
 import { IconArrowLeft } from '@/components/icons/IconArrowLeft';
@@ -9,6 +10,7 @@ type SlidePanelProps = {
   onClose: () => void;
   ariaLabel?: string;
   children: React.ReactNode;
+  scrollContainerRef?: RefObject<HTMLDivElement | null>;
 };
 
 export function SlidePanel({
@@ -16,6 +18,7 @@ export function SlidePanel({
   onClose,
   ariaLabel = 'Detail panel',
   children,
+  scrollContainerRef,
 }: SlidePanelProps) {
   // Disable body scroll when panel is open
   useDisableScroll(isOpen);
@@ -60,6 +63,7 @@ export function SlidePanel({
       {/* Slide panel */}
       <div
         className={styles.slidePanel_Container}
+        ref={scrollContainerRef}
         role="dialog"
         aria-modal="true"
         aria-label={ariaLabel}
