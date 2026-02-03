@@ -1,0 +1,433 @@
+'use client';
+
+import { createElement, useMemo } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
+import IntersectionImage from 'react-intersection-image';
+import styles from '../page.module.sass';
+import { SlidePanel } from '@/components/SlidePanel/SlidePanel';
+import { FormattedDate } from '@/components/FormattedDate';
+import { Button } from '@/components/Button/Button';
+import { IconArrowShortLeft } from '@/components/icons/IconArrowShortLeft';
+import { IconArrowShortRight } from '@/components/icons/IconArrowShortRight';
+import type { Entry, Feed } from '@/app/_lib/types';
+
+function useLazyEntryContent(html?: string) {
+  return useMemo<ReactNode[] | null>(() => {
+    const canUseDom =
+      typeof window !== 'undefined' && typeof window.DOMParser !== 'undefined';
+
+    if (!html || !canUseDom) return null;
+
+    try {
+      return convertHtmlToReactNodes(html);
+    } catch {
+      return null;
+    }
+  }, [html]);
+}
+
+function convertHtmlToReactNodes(html: string): ReactNode[] {
+  const parser = new window.DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+
+  return Array.from(doc.body.childNodes)
+    .map((node, index) => transformNodeToReact(node, `entry-node-${index}`))
+    .filter((child): child is ReactNode => child !== null && child !== undefined);
+}
+
+const VOID_ELEMENTS = new Set([
+  'area',
+  'base',
+  'br',
+  'col',
+  'embed',
+  'hr',
+  'img',
+  'input',
+  'link',
+  'meta',
+  'param',
+  'source',
+  'track',
+  'wbr',
+]);
+
+type ElementProps = Record<string, unknown> & {
+  className?: string;
+  style?: CSSProperties;
+};
+
+function transformNodeToReact(node: ChildNode, key: string): ReactNode | null {
+  if (node.nodeType === Node.TEXT_NODE) {
+    return node.textContent;
+  }
+
+  if (node.nodeType !== Node.ELEMENT_NODE) {
+    return null;
+  }
+
+  const element = node as HTMLElement;
+  const tagName = element.tagName.toLowerCase();
+
+  if (tagName === 'script' || tagName === 'style') {
+    return null;
+  }
+
+  if (tagName === 'img') {
+    return createLazyImageElement(element as HTMLImageElement, key);
+  }
+
+  const props = buildElementProps(element);
+
+  if (VOID_ELEMENTS.has(tagName)) {
+    return createElement(tagName, { ...props, key });
+  }
+
+  const children = Array.from(element.childNodes).map((child, childIndex) =>
+    transformNodeToReact(child, `${key}-${childIndex}`)
+  );
+
+  return createElement(tagName, { ...props, key }, children);
+}
+
+function buildElementProps(
+  element: Element,
+  options: { omit?: string[] } = {}
+): ElementProps {
+  const props: ElementProps = {};
+  const omit = new Set(
+    (options.omit ?? []).map((attrName) => attrName.toLowerCase())
+  );
+
+  Array.from(element.attributes).forEach((attr) => {
+    const lowerName = attr.name.toLowerCase();
+    if (omit.has(lowerName)) {
+      return;
+    }
+
+    if (lowerName.startsWith('on')) {
+      return;
+    }
+
+    if (lowerName === 'style') {
+      const styleObj = styleStringToObject(attr.value);
+      if (styleObj) {
+        props.style = { ...(props.style ?? {}), ...styleObj };
+      }
+      return;
+    }
+
+    const mappedName = mapAttributeName(attr.name);
+
+    if (mappedName === 'className') {
+      props.className = props.className
+        ? `${props.className} ${attr.value}`
+        : attr.value;
+      return;
+    }
+
+    props[mappedName] = attr.value;
+  });
+
+  return props;
+}
+
+function createLazyImageElement(
+  element: HTMLImageElement,
+  key: string
+): ReactNode | null {
+  const src = element.getAttribute('src');
+
+  if (!src) {
+    return null;
+  }
+
+  const baseProps = buildElementProps(element, {
+    omit: ['src', 'srcset', 'sizes'],
+  });
+
+  const {
+    className: htmlClassName,
+    style: htmlStyle,
+    ...restProps
+  } = baseProps;
+
+  const combinedClassName = [styles.lazyEntryImage, htmlClassName]
+    .filter(Boolean)
+    .join(' ')
+    .trim();
+
+  const mergedStyle: CSSProperties = {
+    ...(htmlStyle ?? {}),
+  };
+
+  if (!mergedStyle.transition) {
+    mergedStyle.transition = 'opacity 0.6s ease-in-out';
+  }
+
+  const srcSet = element.getAttribute('srcset');
+  const sizes = element.getAttribute('sizes');
+  const alt = element.getAttribute('alt') ?? '';
+
+  return (
+    <IntersectionImage
+      key={key}
+      {...restProps}
+      src={src}
+      alt={alt}
+      srcSet={srcSet ?? undefined}
+      sizes={sizes ?? undefined}
+      className={combinedClassName || undefined}
+      style={Object.keys(mergedStyle).length ? mergedStyle : {}}
+    />
+  );
+}
+
+function styleStringToObject(value: string): CSSProperties | undefined {
+  const declarations = value
+    .split(';')
+    .map((declaration) => declaration.trim())
+    .filter(Boolean);
+
+  if (declarations.length === 0) {
+    return undefined;
+  }
+
+  const styleObject: Record<string, string> = {};
+
+  declarations.forEach((declaration) => {
+    const separatorIndex = declaration.indexOf(':');
+    if (separatorIndex === -1) {
+      return;
+    }
+
+    const property = declaration.slice(0, separatorIndex).trim();
+    const rawValue = declaration.slice(separatorIndex + 1).trim();
+
+    if (!property || !rawValue) {
+      return;
+    }
+
+    const camelCased = property.startsWith('--')
+      ? property
+      : property.replace(/-([a-z])/g, (_, char) => char.toUpperCase());
+
+    styleObject[camelCased] = rawValue;
+  });
+
+  return Object.keys(styleObject).length
+    ? (styleObject as CSSProperties)
+    : undefined;
+}
+
+function mapAttributeName(name: string): string {
+  const normalized = name.toLowerCase();
+
+  switch (normalized) {
+    case 'class':
+      return 'className';
+    case 'for':
+      return 'htmlFor';
+    case 'http-equiv':
+      return 'httpEquiv';
+    case 'accept-charset':
+      return 'acceptCharset';
+    case 'maxlength':
+      return 'maxLength';
+    case 'tabindex':
+      return 'tabIndex';
+    case 'readonly':
+      return 'readOnly';
+    case 'colspan':
+      return 'colSpan';
+    case 'rowspan':
+      return 'rowSpan';
+    case 'frameborder':
+      return 'frameBorder';
+    case 'allowfullscreen':
+      return 'allowFullScreen';
+    case 'srcset':
+      return 'srcSet';
+    default:
+      return name;
+  }
+}
+
+export type EntryPanelProps = {
+  entry: Entry | null;
+  feedsById: Map<number, Feed>;
+  onClose: () => void;
+  onToggleStar: () => void;
+  onFetchOriginal: () => void;
+  fetchingOriginal: boolean;
+  onSetStatus: (status: 'read' | 'unread') => void;
+  onNavigatePrev: () => void;
+  onNavigateNext: () => void;
+  hasPrev: boolean;
+  hasNext: boolean;
+  isLoading: boolean;
+};
+
+export function EntryPanel({
+  entry,
+  feedsById,
+  onClose,
+  onToggleStar,
+  onFetchOriginal,
+  fetchingOriginal,
+  onSetStatus,
+  onNavigatePrev,
+  onNavigateNext,
+  hasPrev,
+  hasNext,
+  isLoading,
+}: EntryPanelProps) {
+  const lazyEntryContent = useLazyEntryContent(entry?.content);
+  const selectedIsStarred = Boolean(entry?.starred ?? entry?.bookmarked);
+
+  return (
+    <SlidePanel isOpen={!!entry} onClose={onClose} ariaLabel="Entry details">
+      {entry && (
+        <div className={styles.entry_Container}>
+          <div className={styles.entry_Header}>
+            <h1>{entry.title || '(untitled)'}</h1>
+            <div className={styles.entry_Meta}>
+              {(entry.feed_title ??
+                entry.feed?.title ??
+                feedsById.get(entry.feed_id)?.title) ||
+              entry.published_at ||
+              entry.author ? (
+                <>
+                  {entry.published_at && (
+                    <p>
+                      <FormattedDate date={entry.published_at} />
+                    </p>
+                  )}
+                  <p>
+                    From:{' '}
+                    <i>
+                      {entry.author && `By: ${entry.author}, `}
+                      {entry.feed_title ??
+                        entry.feed?.title ??
+                        feedsById.get(entry.feed_id)?.title ??
+                        ''}
+                    </i>
+                  </p>
+                </>
+              ) : null}
+            </div>
+          </div>
+
+          {entry.content ? (
+            lazyEntryContent ? (
+              <div className={styles.entry_Content}>{lazyEntryContent}</div>
+            ) : (
+              <div
+                className={styles.entry_Content}
+                dangerouslySetInnerHTML={{
+                  __html: entry.content,
+                }}
+              />
+            )
+          ) : (
+            <div className={styles.content}>
+              <div className={styles.entry_noContent}>No content available.</div>
+              <div>
+                <a
+                  className={styles.link}
+                  href={entry.url}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Open source
+                </a>
+              </div>
+            </div>
+          )}
+          <div className={styles.entry_Footer}>
+            <div className={styles.actionsList}>
+              <Button
+                variant="primary"
+                onClick={onToggleStar}
+                disabled={isLoading}
+                title={selectedIsStarred ? 'Unbookmark' : 'Bookmark'}
+                className={styles.actionsList_Item}
+              >
+                {selectedIsStarred ? 'Unbookmark' : 'Bookmark'}
+                {', '}
+              </Button>
+              <Button
+                onClick={onFetchOriginal}
+                disabled={isLoading || fetchingOriginal}
+                title="Link to original article"
+                className={styles.actionsList_Item}
+              >
+                Link to original article{', '}
+              </Button>
+              <Button
+                onClick={onFetchOriginal}
+                disabled={isLoading || fetchingOriginal}
+                title={
+                  fetchingOriginal ? 'Fetching...' : 'Fetch original article'
+                }
+                className={styles.actionsList_Item}
+              >
+                {fetchingOriginal ? 'Fetching...' : 'Fetch original article'}
+                {', '}
+              </Button>
+              {entry.status === 'unread' ? (
+                <Button
+                  onClick={() => onSetStatus('read')}
+                  disabled={isLoading}
+                  type="button"
+                  className={styles.actionsList_Item}
+                >
+                  Mark read{', '}
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => onSetStatus('unread')}
+                  disabled={isLoading}
+                  type="button"
+                  className={styles.actionsList_Item}
+                >
+                  Mark unread
+                </Button>
+              )}
+              <Button
+                className={styles.actionsList_Item}
+                onClick={() => onSetStatus('unread')}
+                disabled={isLoading}
+                type="button"
+              >
+                Mark unread
+              </Button>
+            </div>
+            <div className={styles.prevNextButtons}>
+              <Button
+                className={styles.button}
+                onClick={onNavigatePrev}
+                disabled={!hasPrev || isLoading}
+                type="button"
+                variant="nav"
+              >
+                <IconArrowShortLeft />
+                <span>Prev</span>
+              </Button>
+              <Button
+                className={styles.button}
+                onClick={onNavigateNext}
+                disabled={!hasNext || isLoading}
+                type="button"
+                variant="nav"
+              >
+                <span>Next</span>
+                <IconArrowShortRight />
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </SlidePanel>
+  );
+}
