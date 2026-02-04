@@ -430,7 +430,7 @@ export function EntryPanel({
                 type="button"
                 variant="nav"
               >
-                <IconWrapper variant="wide">
+                <IconWrapper>
                   <IconArrowShortLeft />
                 </IconWrapper>
                 <span>Prev</span>
@@ -442,7 +442,7 @@ export function EntryPanel({
                 variant="nav"
               >
                 <span>Next</span>
-                <IconWrapper variant="wide" mirrored>
+                <IconWrapper mirrored>
                   <IconArrowShortRight />
                 </IconWrapper>
               </Button>

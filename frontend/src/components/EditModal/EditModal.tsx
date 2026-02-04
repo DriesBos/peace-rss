@@ -3,7 +3,9 @@
 import styles from './EditModal.module.sass';
 import { ModalContainer } from '@/components/ModalContainer/ModalContainer';
 import { LabeledSelect } from '@/components/LabeledSelect/LabeledSelect';
+import { LabeledInput } from '@/components/LabeledInput/LabeledInput';
 import type { Category } from '@/app/_lib/types';
+import { Button } from '@/components/Button/Button';
 
 export type EditModalProps = {
   isOpen: boolean;
@@ -54,29 +56,26 @@ export function EditModal({
         {editType === 'category' ? (
           <form onSubmit={onUpdateCategory} className={styles.editForm}>
             <div className={styles.formField}>
-              <label htmlFor="edit-category-title" className={styles.label}>
-                Category name
-              </label>
-              <input
+              <LabeledInput
                 id="edit-category-title"
-                type="text"
+                label="Category name"
                 value={editTitle}
-                onChange={(e) => onChangeTitle(e.target.value)}
+                onChange={onChangeTitle as (value: string) => void}
                 placeholder="Category name"
                 disabled={editLoading}
-                className={styles.input}
               />
             </div>
 
             <div className={styles.formActions}>
-              <button
+              <Button
+                variant="primary"
                 type="submit"
                 disabled={editLoading || !editTitle.trim()}
-                className={styles.linkButton}
               >
                 {editLoading ? 'Saving...' : 'Save changes'}
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="primary"
                 type="button"
                 onClick={() => {
                   if (
@@ -88,18 +87,17 @@ export function EditModal({
                   }
                 }}
                 disabled={editLoading}
-                className={styles.linkButton}
               >
                 Delete
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="primary"
                 type="button"
                 onClick={onClose}
                 disabled={editLoading}
-                className={styles.linkButton}
               >
                 Cancel
-              </button>
+              </Button>
             </div>
 
             {editError && <div className={styles.error}>{editError}</div>}
@@ -107,32 +105,24 @@ export function EditModal({
         ) : (
           <form onSubmit={onUpdateFeed} className={styles.editForm}>
             <div className={styles.formField}>
-              <label htmlFor="edit-feed-title" className={styles.label}>
-                Feed name
-              </label>
-              <input
+              <LabeledInput
                 id="edit-feed-title"
-                type="text"
+                label="Feed name"
                 value={editTitle}
-                onChange={(e) => onChangeTitle(e.target.value)}
+                onChange={onChangeTitle as (value: string) => void}
                 placeholder="Feed name"
                 disabled={editLoading}
-                className={styles.input}
               />
             </div>
 
             <div className={styles.formField}>
-              <label htmlFor="edit-feed-url" className={styles.label}>
-                Feed web address
-              </label>
-              <input
+              <LabeledInput
                 id="edit-feed-url"
-                type="text"
+                label="Feed web address"
                 value={editFeedUrl}
-                onChange={(e) => onChangeFeedUrl(e.target.value)}
+                onChange={onChangeFeedUrl as (value: string) => void}
                 placeholder="Feed web address"
                 disabled={editLoading}
-                className={styles.input}
               />
             </div>
 
@@ -152,14 +142,17 @@ export function EditModal({
             />
 
             <div className={styles.formActions}>
-              <button
+              <Button
+                variant="primary"
                 type="submit"
-                disabled={editLoading || !editTitle.trim() || !editFeedUrl.trim()}
-                className={styles.linkButton}
+                disabled={
+                  editLoading || !editTitle.trim() || !editFeedUrl.trim()
+                }
               >
                 {editLoading ? 'Saving...' : 'Save changes'}
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="primary"
                 type="button"
                 onClick={() => {
                   if (
@@ -171,18 +164,17 @@ export function EditModal({
                   }
                 }}
                 disabled={editLoading}
-                className={styles.linkButton}
               >
                 Delete
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="primary"
                 type="button"
                 onClick={onClose}
                 disabled={editLoading}
-                className={styles.linkButton}
               >
                 Cancel
-              </button>
+              </Button>
             </div>
 
             {editError && <div className={styles.error}>{editError}</div>}
