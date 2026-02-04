@@ -220,30 +220,31 @@ export function MenuModal({
                     </IconWrapper>
                     <span>Starred</span>
                   </Button>
-                  {!collapsedCategories.has('starred') && (
-                    <div className={styles.feedsUnderCategory}>
-                      {starredEntries.map((entry) => (
-                        <div key={entry.id} className={styles.feedListItem}>
-                          <span className={styles.feedListItem_Title}>
-                            {entry.title}
-                          </span>
-                          <button
-                            type="button"
-                            className={styles.iconButton}
-                            onClick={async (e) => {
-                              e.stopPropagation();
-                              await onToggleEntryStar(entry.id);
-                            }}
-                            disabled={isLoading}
-                            title="Remove from starred"
-                            aria-label={`Remove ${entry.title} from starred`}
-                          >
-                            ★
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  <div
+                    className={styles.feedsUnderCategory}
+                    data-open={!collapsedCategories.has('starred')}
+                  >
+                    {starredEntries.map((entry) => (
+                      <div key={entry.id} className={styles.feedListItem}>
+                        <span className={styles.feedListItem_Title}>
+                          {entry.title}
+                        </span>
+                        <button
+                          type="button"
+                          className={styles.iconButton}
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            await onToggleEntryStar(entry.id);
+                          }}
+                          disabled={isLoading}
+                          title="Remove from starred"
+                          aria-label={`Remove ${entry.title} from starred`}
+                        >
+                          ★
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -282,8 +283,8 @@ export function MenuModal({
                       </Button>
                     </div>
 
-                    {!isCollapsed && categoryFeeds.length > 0 && (
-                      <div className={styles.feedsUnderCategory}>
+                    {categoryFeeds.length > 0 && (
+                      <div className={styles.feedsUnderCategory} data-open={!isCollapsed}>
                         {categoryFeeds.map((feed) => (
                           <div key={feed.id} className={styles.feedListItem}>
                             <span className={styles.feedListItem_Title}>
@@ -323,28 +324,29 @@ export function MenuModal({
                     </IconWrapper>
                     <span>Uncategorised</span>
                   </Button>
-                  {!collapsedCategories.has('uncategorized') && (
-                    <div className={styles.feedsUnderCategory}>
-                      {uncategorizedFeeds.map((feed) => (
-                        <div key={feed.id} className={styles.feedListItem}>
-                          <span className={styles.feedListItem_Title}>
-                            {feed.title}
-                          </span>
-                          <Button
-                            variant="icon"
-                            type="button"
-                            onClick={() => handleOpenEditModal('feed', feed)}
-                            disabled={isLoading}
-                            aria-label={`Edit feed ${feed.title}`}
-                          >
-                            <IconWrapper>
-                              <IconEdit />
-                            </IconWrapper>
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  <div
+                    className={styles.feedsUnderCategory}
+                    data-open={!collapsedCategories.has('uncategorized')}
+                  >
+                    {uncategorizedFeeds.map((feed) => (
+                      <div key={feed.id} className={styles.feedListItem}>
+                        <span className={styles.feedListItem_Title}>
+                          {feed.title}
+                        </span>
+                        <Button
+                          variant="icon"
+                          type="button"
+                          onClick={() => handleOpenEditModal('feed', feed)}
+                          disabled={isLoading}
+                          aria-label={`Edit feed ${feed.title}`}
+                        >
+                          <IconWrapper>
+                            <IconEdit />
+                          </IconWrapper>
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

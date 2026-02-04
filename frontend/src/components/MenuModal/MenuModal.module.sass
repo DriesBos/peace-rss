@@ -29,8 +29,15 @@
   width: 0.45em
   text-align: center
   opacity: 1
-  &[data-visible="false"]
+  animation: timeColonBlink 1s steps(1, end) infinite
+
+@keyframes timeColonBlink
+  0%
+    opacity: 1
+  50%
     opacity: 0
+  100%
+    opacity: 1
 
 .timePeriod
   @include font-count
@@ -41,12 +48,12 @@
 .count
   @include font-count
   color: var(--color-text-secondary)
-  transform: translateY(-6px)
+  transform: translate(-2px, -6px)
 
 .categoriesFeedsList
   display: flex
   flex-direction: column
-  gap: 24px
+  gap: 8px
 
 .viewFeeds
   display: flex
@@ -80,8 +87,18 @@
 .feedsUnderCategory
   display: flex
   flex-direction: column
-  gap: var(--half-rem)
+  gap: var(--one-rem)
   padding-left: var(--two-rem)
+  height: 0
+  opacity: 0
+  overflow: hidden
+  pointer-events: none
+  transition: height 0.24s ease, opacity 0.2s ease
+
+  &[data-open="true"]
+    height: calc-size(auto, size)
+    opacity: 1
+    pointer-events: auto
 
 .feedListItem
   display: flex
@@ -104,7 +121,7 @@
   margin-top: var(--two-rem)
 
 .themeWheel
-  appearance: none
+  appearance: noneviewLook and viewOther.
   border: 0
   position: relative
   background: radial-gradient(circle at 70% 70%, #ecece5 0, #ecece5 12%, transparent 12%), #424934

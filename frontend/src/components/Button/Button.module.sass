@@ -12,12 +12,12 @@
   span
     position: relative
 
-  .icon
+  .icon, svg, .iconWrapper
     transition: transform 0.165s ease
     transform: rotate(0deg)
 
   &[data-active="true"]
-    .icon
+    .icon, svg, .iconWrapper
       transform: rotate(45deg)
 
 .primary

@@ -24,7 +24,7 @@ export const Button: React.FC<ButtonProps> = ({
       {...props}
     >
       {children}
-      {count && <span className={styles.count}>{count}</span>}
+      {count && count > 0 && <span className={styles.count}>{count}</span>}
     </button>
   );
 };
