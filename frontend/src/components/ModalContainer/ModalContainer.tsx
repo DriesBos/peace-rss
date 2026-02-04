@@ -20,28 +20,29 @@ export function ModalContainer({
 
   return (
     <div
-      className={styles.modal_Overlay}
+      className={styles.modalOverlay}
       role="presentation"
       onClick={onClose}
       aria-hidden={!isOpen}
       data-active={isOpen}
     >
       <div
-        className={styles.modal_Container}
+        className={styles.modalOverlay_Container}
         role="dialog"
         aria-modal="true"
         aria-label={ariaLabel}
         onClick={(event) => event.stopPropagation()}
         data-active={isOpen}
       >
-        <div className={styles.modal_Header}>
-          <Button type="button" onClick={onClose} aria-label="Close menu modal">
-            Close
-          </Button>
+        <div
+          className={styles.modalOverlay_ClosingBar}
+          onClick={onClose}
+          aria-label="Close modal"
+        >
+          <div className={styles.modalOverlay_ClosingBar_Button} />
+          {children}
         </div>
-        {children}
       </div>
-      var
     </div>
   );
 }
