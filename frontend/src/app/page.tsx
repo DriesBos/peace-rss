@@ -57,6 +57,8 @@ export default function Home() {
   );
   const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [returnToMenuAfterSubModal, setReturnToMenuAfterSubModal] =
+    useState(false);
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
   const [totalStarredCount, setTotalStarredCount] = useState(0);
   const [isOffline, setIsOffline] = useState(false);
@@ -71,10 +73,30 @@ export default function Home() {
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
 
-  const openMenuModal = useCallback(() => setIsMenuModalOpen(true), []);
-  const closeMenuModal = useCallback(() => setIsMenuModalOpen(false), []);
-  const openAddModal = useCallback(() => setIsAddModalOpen(true), []);
-  const closeAddModal = useCallback(() => setIsAddModalOpen(false), []);
+  const openMenuModal = useCallback(() => {
+    setIsMenuModalOpen(true);
+    setIsAddModalOpen(false);
+    setIsEditModalOpen(false);
+    setReturnToMenuAfterSubModal(false);
+  }, []);
+
+  const closeMenuModal = useCallback(() => {
+    setIsMenuModalOpen(false);
+    setReturnToMenuAfterSubModal(false);
+  }, []);
+
+  const openAddModal = useCallback(() => {
+    setIsAddModalOpen(true);
+    setIsMenuModalOpen(false);
+    setReturnToMenuAfterSubModal(true);
+  }, []);
+
+  const closeAddModal = useCallback(() => {
+    setIsAddModalOpen(false);
+    if (returnToMenuAfterSubModal) {
+      setIsMenuModalOpen(true);
+    }
+  }, [returnToMenuAfterSubModal]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -99,6 +121,8 @@ export default function Home() {
         setEditCategoryId(feed.category?.id || null);
       }
       setIsEditModalOpen(true);
+      setIsMenuModalOpen(false);
+      setReturnToMenuAfterSubModal(true);
       setEditError(null);
     },
     []
@@ -106,13 +130,16 @@ export default function Home() {
 
   const closeEditModal = useCallback(() => {
     setIsEditModalOpen(false);
+    if (returnToMenuAfterSubModal) {
+      setIsMenuModalOpen(true);
+    }
     setEditType(null);
     setEditItemId(null);
     setEditTitle('');
     setEditFeedUrl('');
     setEditCategoryId(null);
     setEditError(null);
-  }, []);
+  }, [returnToMenuAfterSubModal]);
 
   const feedsById = useMemo(() => {
     const map = new Map<number, Feed>();

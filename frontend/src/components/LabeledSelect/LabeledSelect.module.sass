@@ -1,0 +1,49 @@
+@import '@/styles/vars.sass'
+
+.field
+  display: flex
+  flex-direction: column
+  gap: var(--half-rem)
+  width: 100%
+
+.label
+  @include font-body
+  color: var(--color-text)
+
+.control
+  position: relative
+  display: flex
+  align-items: center
+  width: 100%
+  height: 22px
+  padding: 0 var(--one-rem)
+  border-radius: 4px
+  background: var(--color-text)
+
+.select
+  appearance: none
+  width: 100%
+  height: 100%
+  border: 0
+  background: transparent
+  color: var(--color-app)
+  font: inherit
+  font-size: 16px
+  padding-right: calc(var(--one-rem) * 4)
+  cursor: pointer
+
+.select:focus
+  outline: none
+
+.select:disabled
+  cursor: not-allowed
+  opacity: 0.7
+
+.hint
+  @include font-body
+  color: var(--color-text-secondary)
+  pointer-events: none
+  position: absolute
+  right: var(--one-rem)
+  top: 50%
+  transform: translateY(-50%)

@@ -1,15 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { UserButton } from '@clerk/nextjs';
+import { useTheme } from 'next-themes';
 import styles from './MenuModal.module.sass';
-import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { ModalContainer } from '@/components/ModalContainer/ModalContainer';
-import { Footer } from '@/components/Footer/Footer';
 import { IconEdit } from '@/components/icons/IconEdit';
 import { IconPlus } from '@/components/icons/IconPlus';
-import { IconClose } from '@/components/icons/IconClose';
 import type { Category, Entry, Feed } from '@/app/_lib/types';
+
+type MenuView = 'feeds' | 'look' | 'other';
 
 export type MenuModalProps = {
   isOpen: boolean;
@@ -23,6 +23,24 @@ export type MenuModalProps = {
   onToggleEntryStar: (entryId: number) => Promise<void>;
 };
 
+const THEME_LABELS: Record<string, string> = {
+  light: 'Light',
+  dark: 'Dark',
+  softlight: 'Soft Light',
+  softdark: 'Soft Dark',
+  green: 'Green',
+};
+
+function buildInitialCollapsedCategories(categories: Category[]) {
+  const initialSet = new Set<number | string>();
+  initialSet.add('starred');
+  initialSet.add('uncategorized');
+  categories.slice(1).forEach((cat) => {
+    initialSet.add(cat.id);
+  });
+  return initialSet;
+}
+
 export function MenuModal({
   isOpen,
   onClose,
@@ -34,17 +52,17 @@ export function MenuModal({
   starredEntries,
   onToggleEntryStar,
 }: MenuModalProps) {
+  const [activeView, setActiveView] = useState<MenuView>('feeds');
+  const [timeLabel, setTimeLabel] = useState('');
+  const { theme, setTheme } = useTheme();
+
   const [collapsedCategories, setCollapsedCategories] = useState<
     Set<number | string>
-  >(() => {
-    const initialSet = new Set<number | string>();
-    initialSet.add('starred');
-    initialSet.add('uncategorized');
-    categories.slice(1).forEach((cat) => {
-      initialSet.add(cat.id);
-    });
-    return initialSet;
-  });
+  >(() => buildInitialCollapsedCategories(categories));
+
+  const resetCollapsedCategories = useCallback(() => {
+    setCollapsedCategories(buildInitialCollapsedCategories(categories));
+  }, [categories]);
 
   const toggleCategoryCollapse = useCallback((categoryId: number | string) => {
     setCollapsedCategories((prev) => {
@@ -58,27 +76,18 @@ export function MenuModal({
     });
   }, []);
 
-  const resetCollapsedCategories = useCallback(() => {
-    const initialSet = new Set<number | string>();
-    initialSet.add('starred');
-    initialSet.add('uncategorized');
-    categories.slice(1).forEach((cat) => {
-      initialSet.add(cat.id);
-    });
-    setCollapsedCategories(initialSet);
-  }, [categories]);
-
-  useEffect(() => {
-    if (!isOpen) return;
+  const handleClose = useCallback(() => {
+    setActiveView('feeds');
     resetCollapsedCategories();
-  }, [isOpen, resetCollapsedCategories]);
+    onClose();
+  }, [onClose, resetCollapsedCategories]);
 
   useEffect(() => {
     if (!isOpen) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        onClose();
+        handleClose();
       }
     };
 
@@ -87,219 +96,305 @@ export function MenuModal({
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, handleClose]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const formatter = new Intl.DateTimeFormat([], {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
+
+    const updateClock = () => setTimeLabel(formatter.format(new Date()));
+    updateClock();
+
+    const interval = window.setInterval(updateClock, 30_000);
+    return () => window.clearInterval(interval);
+  }, [isOpen]);
+
+  const uncategorizedFeeds = useMemo(
+    () =>
+      feeds.filter((feed) => !feed.category || feed.category.id === categories[0]?.id),
+    [feeds, categories]
+  );
+
+  const handleOpenAddModal = useCallback(() => {
+    setActiveView('feeds');
+    resetCollapsedCategories();
+    onClose();
+    openAddModal();
+  }, [onClose, openAddModal, resetCollapsedCategories]);
+
+  const handleOpenEditModal = useCallback(
+    (type: 'feed' | 'category', item: Feed | Category) => {
+      setActiveView('feeds');
+      resetCollapsedCategories();
+      onClose();
+      openEditModal(type, item);
+    },
+    [onClose, openEditModal, resetCollapsedCategories]
+  );
 
   return (
-    <ModalContainer isOpen={isOpen} onClose={onClose} ariaLabel="Menu">
+    <ModalContainer isOpen={isOpen} onClose={handleClose} ariaLabel="Menu">
       <div className={styles.modalMenu}>
-        <ThemeSwitcher />
-
-        <div className={styles.modalMenu_CategoriesFeeds}>
-          <div className={styles.sectionTitle}>Feeds</div>
-
-          <div className={styles.categoriesFeedsList}>
-            {starredEntries.length > 0 && (
-              <div className={styles.categoryGroup}>
-                <div className={styles.categoryHeader}>
-                  <span className={styles.categoryTitle}>⭐ Starred</span>
-                  <button
-                    type="button"
-                    className={styles.toggleCollapseButton}
-                    onClick={() => toggleCategoryCollapse('starred')}
-                    disabled={isLoading}
-                    title={
-                      collapsedCategories.has('starred') ? 'Expand' : 'Collapse'
-                    }
-                    aria-label={
-                      collapsedCategories.has('starred')
-                        ? 'Expand starred'
-                        : 'Collapse starred'
-                    }
-                  >
-                    {collapsedCategories.has('starred') ? (
-                      <IconPlus width={14} height={14} />
-                    ) : (
-                      <IconClose width={14} height={14} />
-                    )}
-                  </button>
-                </div>
-                {!collapsedCategories.has('starred') && (
-                  <div className={styles.feedsUnderCategory}>
-                    {starredEntries.map((entry) => (
-                      <div key={entry.id} className={styles.feedListItem}>
-                        <span className={styles.feedListItem_Title}>
-                          {entry.title}
-                        </span>
-                        <button
-                          type="button"
-                          className={styles.starButton}
-                          onClick={async (e) => {
-                            e.stopPropagation();
-                            await onToggleEntryStar(entry.id);
-                          }}
-                          disabled={isLoading}
-                          title="Remove from starred"
-                          aria-label={`Remove ${entry.title} from starred`}
-                        >
-                          ⭐
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-            {categories.length <= 1 && feeds.length === 0 ? (
-              <div className={styles.muted}>No categories or feeds yet.</div>
-            ) : (
-              <>
-                {categories.slice(1).map((cat) => {
-                  const categoryFeeds = feeds.filter(
-                    (feed) => feed.category?.id === cat.id
-                  );
-                  const isCollapsed = collapsedCategories.has(cat.id);
-                  return (
-                    <div key={cat.id} className={styles.categoryGroup}>
-                      <div className={styles.categoryHeader}>
-                        <span className={styles.categoryTitle}>{cat.title}</span>
-                        <div className={styles.categoryHeaderButtons}>
-                          <button
-                            type="button"
-                            className={styles.toggleCollapseButton}
-                            onClick={() => toggleCategoryCollapse(cat.id)}
-                            disabled={isLoading}
-                            title={isCollapsed ? 'Expand' : 'Collapse'}
-                            aria-label={
-                              isCollapsed
-                                ? `Expand ${cat.title}`
-                                : `Collapse ${cat.title}`
-                            }
-                          >
-                            {isCollapsed ? (
-                              <IconPlus width={14} height={14} />
-                            ) : (
-                              <IconClose width={14} height={14} />
-                            )}
-                          </button>
-                          <button
-                            type="button"
-                            className={styles.editButton}
-                            onClick={() => openEditModal('category', cat)}
-                            disabled={isLoading}
-                            title="Edit category"
-                            aria-label={`Edit category ${cat.title}`}
-                          >
-                            <IconEdit width={14} height={14} />
-                          </button>
-                        </div>
-                      </div>
-                      {categoryFeeds.length > 0 && !isCollapsed && (
-                        <div className={styles.feedsUnderCategory}>
-                          {categoryFeeds.map((feed) => (
-                            <div key={feed.id} className={styles.feedListItem}>
-                              <span className={styles.feedListItem_Title}>
-                                {feed.title}
-                              </span>
-                              <button
-                                type="button"
-                                className={styles.editButton}
-                                onClick={() => openEditModal('feed', feed)}
-                                disabled={isLoading}
-                                title="Edit feed"
-                                aria-label={`Edit feed ${feed.title}`}
-                              >
-                                <IconEdit width={14} height={14} />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-
-                {(() => {
-                  const uncategorizedFeeds = feeds.filter(
-                    (feed) =>
-                      !feed.category || feed.category.id === categories[0]?.id
-                  );
-                  if (uncategorizedFeeds.length > 0) {
-                    const isCollapsed =
-                      collapsedCategories.has('uncategorized');
-                    return (
-                      <div className={styles.categoryGroup}>
-                        <div className={styles.categoryHeader}>
-                          <span className={styles.categoryTitle}>
-                            Uncategorized
-                          </span>
-                          <button
-                            type="button"
-                            className={styles.toggleCollapseButton}
-                            onClick={() =>
-                              toggleCategoryCollapse('uncategorized')
-                            }
-                            disabled={isLoading}
-                            title={isCollapsed ? 'Expand' : 'Collapse'}
-                            aria-label={
-                              isCollapsed
-                                ? 'Expand uncategorized'
-                                : 'Collapse uncategorized'
-                            }
-                          >
-                            {isCollapsed ? (
-                              <IconPlus width={14} height={14} />
-                            ) : (
-                              <IconClose width={14} height={14} />
-                            )}
-                          </button>
-                        </div>
-                        {!isCollapsed && (
-                          <div className={styles.feedsUnderCategory}>
-                            {uncategorizedFeeds.map((feed) => (
-                              <div key={feed.id} className={styles.feedListItem}>
-                                <span className={styles.feedListItem_Title}>
-                                  {feed.title}
-                                </span>
-                                <button
-                                  type="button"
-                                  className={styles.editButton}
-                                  onClick={() => openEditModal('feed', feed)}
-                                  disabled={isLoading}
-                                  title="Edit feed"
-                                  aria-label={`Edit feed ${feed.title}`}
-                                >
-                                  <IconEdit width={14} height={14} />
-                                </button>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  }
-                  return null;
-                })()}
-              </>
-            )}
+        <div className={styles.modalMenu_Nav}>
+          <div className={styles.tabs}>
+            <button
+              type="button"
+              className={styles.tab}
+              data-active={activeView === 'feeds'}
+              onClick={() => setActiveView('feeds')}
+            >
+              Feeds
+            </button>
+            <button
+              type="button"
+              className={styles.tab}
+              data-active={activeView === 'look'}
+              onClick={() => setActiveView('look')}
+            >
+              Look
+            </button>
+            <button
+              type="button"
+              className={styles.tab}
+              data-active={activeView === 'other'}
+              onClick={() => setActiveView('other')}
+            >
+              Other
+            </button>
           </div>
-
-          <button
-            type="button"
-            className={styles.addButton}
-            onClick={openAddModal}
-            disabled={isLoading}
-            aria-label="Add category or feed"
-          >
-            <IconPlus width={16} height={16} />
-            <span>Add</span>
-          </button>
-
-          <div className={styles.userButton}>
-            <UserButton />
-          </div>
+          <div className={styles.time}>{timeLabel}</div>
         </div>
 
-        <Footer />
+        {activeView === 'feeds' && (
+          <div className={styles.viewFeeds}>
+            <button
+              type="button"
+              className={styles.addContentButton}
+              onClick={handleOpenAddModal}
+              disabled={isLoading}
+            >
+              <IconPlus width={14} height={14} />
+              <span>Add content</span>
+            </button>
+
+            <div className={styles.sectionHeader}>
+              <span>All feeds</span>
+              <span className={styles.count}>{feeds.length}</span>
+            </div>
+
+            <div className={styles.categoriesFeedsList}>
+              {starredEntries.length > 0 && (
+                <div className={styles.categoryGroup}>
+                  <button
+                    type="button"
+                    className={styles.categoryHeader}
+                    onClick={() => toggleCategoryCollapse('starred')}
+                    disabled={isLoading}
+                  >
+                    <div className={styles.categoryTitleWrap}>
+                      <span className={styles.expandIcon} data-open={!collapsedCategories.has('starred')}>
+                        <IconPlus width={12} height={12} />
+                      </span>
+                      <span className={styles.categoryTitle}>Starred</span>
+                      <span className={styles.count}>{starredEntries.length}</span>
+                    </div>
+                  </button>
+                  {!collapsedCategories.has('starred') && (
+                    <div className={styles.feedsUnderCategory}>
+                      {starredEntries.map((entry) => (
+                        <div key={entry.id} className={styles.feedListItem}>
+                          <span className={styles.feedListItem_Title}>{entry.title}</span>
+                          <button
+                            type="button"
+                            className={styles.iconButton}
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              await onToggleEntryStar(entry.id);
+                            }}
+                            disabled={isLoading}
+                            title="Remove from starred"
+                            aria-label={`Remove ${entry.title} from starred`}
+                          >
+                            ★
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {categories.slice(1).map((cat) => {
+                const categoryFeeds = feeds.filter(
+                  (feed) => feed.category?.id === cat.id
+                );
+                const isCollapsed = collapsedCategories.has(cat.id);
+
+                return (
+                  <div key={cat.id} className={styles.categoryGroup}>
+                    <div className={styles.categoryHeader}>
+                      <button
+                        type="button"
+                        className={styles.categoryToggle}
+                        onClick={() => toggleCategoryCollapse(cat.id)}
+                        disabled={isLoading}
+                      >
+                        <span className={styles.expandIcon} data-open={!isCollapsed}>
+                          <IconPlus width={12} height={12} />
+                        </span>
+                        <span className={styles.categoryTitle}>{cat.title}</span>
+                        <span className={styles.count}>{categoryFeeds.length}</span>
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.iconButton}
+                        onClick={() => handleOpenEditModal('category', cat)}
+                        disabled={isLoading}
+                        aria-label={`Edit category ${cat.title}`}
+                      >
+                        <IconEdit width={16} height={16} />
+                      </button>
+                    </div>
+
+                    {!isCollapsed && categoryFeeds.length > 0 && (
+                      <div className={styles.feedsUnderCategory}>
+                        {categoryFeeds.map((feed) => (
+                          <div key={feed.id} className={styles.feedListItem}>
+                            <span className={styles.feedListItem_Title}>{feed.title}</span>
+                            <button
+                              type="button"
+                              className={styles.iconButton}
+                              onClick={() => handleOpenEditModal('feed', feed)}
+                              disabled={isLoading}
+                              aria-label={`Edit feed ${feed.title}`}
+                            >
+                              <IconEdit width={16} height={16} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {uncategorizedFeeds.length > 0 && (
+                <div className={styles.categoryGroup}>
+                  <button
+                    type="button"
+                    className={styles.categoryHeader}
+                    onClick={() => toggleCategoryCollapse('uncategorized')}
+                    disabled={isLoading}
+                  >
+                    <div className={styles.categoryTitleWrap}>
+                      <span
+                        className={styles.expandIcon}
+                        data-open={!collapsedCategories.has('uncategorized')}
+                      >
+                        <IconPlus width={12} height={12} />
+                      </span>
+                      <span className={styles.categoryTitle}>Uncategorised</span>
+                      <span className={styles.count}>{uncategorizedFeeds.length}</span>
+                    </div>
+                  </button>
+                  {!collapsedCategories.has('uncategorized') && (
+                    <div className={styles.feedsUnderCategory}>
+                      {uncategorizedFeeds.map((feed) => (
+                        <div key={feed.id} className={styles.feedListItem}>
+                          <span className={styles.feedListItem_Title}>{feed.title}</span>
+                          <button
+                            type="button"
+                            className={styles.iconButton}
+                            onClick={() => handleOpenEditModal('feed', feed)}
+                            disabled={isLoading}
+                            aria-label={`Edit feed ${feed.title}`}
+                          >
+                            <IconEdit width={16} height={16} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {activeView === 'look' && (
+          <div className={styles.viewLook}>
+            <button
+              type="button"
+              className={styles.themeWheel}
+              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              aria-label="Toggle theme"
+            >
+              <div className={styles.themeWheel_Indicator} />
+            </button>
+
+            <div className={styles.themeCard}>
+              {Object.entries(THEME_LABELS).map(([themeName, label]) => (
+                <button
+                  type="button"
+                  key={themeName}
+                  className={styles.themeOption}
+                  data-active={theme === themeName}
+                  onClick={() => setTheme(themeName)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              className={styles.lookCard}
+              data-kind="komorebi"
+              onClick={() => setTheme('softlight')}
+            />
+            <button
+              type="button"
+              className={styles.lookCard}
+              data-kind="rain"
+              onClick={() => setTheme('green')}
+            />
+          </div>
+        )}
+
+        {activeView === 'other' && (
+          <div className={styles.viewOther}>
+            <div className={styles.profileRow}>
+              <div className={styles.profileButton}>
+                <UserButton />
+              </div>
+              <span>Profile</span>
+            </div>
+
+            <div className={styles.menuLinks}>
+              <a href="https://peace.blog/about" target="_blank" rel="noreferrer">
+                About
+              </a>
+              <a href="https://peace.blog/news" target="_blank" rel="noreferrer">
+                Updates
+              </a>
+            </div>
+
+            <div className={styles.footerLinks}>
+              <a href="mailto:info@driesbos.com">Feedback</a>
+              <a href="https://peace.blog/newsletter" target="_blank" rel="noreferrer">
+                Newsletter
+              </a>
+              <a href="https://www.instagram.com/dries_bos" target="_blank" rel="noreferrer">
+                IG
+              </a>
+            </div>
+          </div>
+        )}
       </div>
     </ModalContainer>
   );

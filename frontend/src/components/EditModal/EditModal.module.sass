@@ -1,98 +1,47 @@
 @import '@/styles/vars.sass'
 
 .editModal
-  padding: 2rem var(--space-sides-general)
+  padding: var(--three-rem) var(--space-sides-modal)
   display: flex
   flex-direction: column
-  gap: 1.5rem
-  max-width: 500px
-  margin: 0 auto
-  &_Title
-    @include font-title
-    font-weight: 600
-    margin: 0
+  gap: var(--one-rem)
 
 .editForm
   display: flex
   flex-direction: column
-  gap: 1.25rem
+  gap: var(--one-rem)
 
 .formField
   display: flex
   flex-direction: column
-  gap: 0.5rem
+  gap: var(--half-rem)
 
 .label
   @include font-body
-  font-weight: 500
-  font-size: 14px
+  color: var(--color-text)
 
 .formActions
   display: flex
-  gap: 0.75rem
-  justify-content: space-between
   align-items: center
-  margin-top: 0.5rem
+  justify-content: space-between
 
-.formActionsRight
-  display: flex
-  gap: 0.75rem
-
-.buttonSecondary
+.linkButton
   appearance: none
-  padding: 8px 16px
-  border: 1px solid var(--color-border, #e6e6e6)
-  border-radius: 6px
   background: transparent
-  color: var(--color-text-primary)
-  font: inherit
-  font-size: 14px
+  border: 0
+  color: var(--color-text)
+  @include font-body
+  text-decoration: underline
+  text-underline-offset: 2px
+  padding: 0
   cursor: pointer
-  transition: all 0.2s ease
-  &:hover:not(:disabled)
-    background: var(--color-background-secondary, #f7f7f7)
   &:disabled
-    opacity: 0.6
-    cursor: not-allowed
-
-.buttonDanger
-  appearance: none
-  padding: 8px 16px
-  border: 1px solid var(--color-error, #d32f2f)
-  border-radius: 6px
-  background: transparent
-  color: var(--color-error, #d32f2f)
-  font: inherit
-  font-size: 14px
-  cursor: pointer
-  transition: all 0.2s ease
-  &:hover:not(:disabled)
-    background: var(--color-error, #d32f2f)
-    color: white
-  &:disabled
-    opacity: 0.6
-    cursor: not-allowed
-
-.button
-  appearance: none
-  padding: 8px 16px
-  border: 1px solid var(--color-border, #e6e6e6)
-  border-radius: 6px
-  background: var(--color-text-primary, #000)
-  color: var(--color-app, #fff)
-  font: inherit
-  font-size: 14px
-  cursor: pointer
-  transition: all 0.2s ease
-  &:hover:not(:disabled)
-    opacity: 0.85
-  &:disabled
-    opacity: 0.6
+    opacity: var(--disabled-opacity)
     cursor: not-allowed
 
 .error
   padding: 10px 12px
-  border-bottom: 1px solid #e6e6e6
+  border: 1px solid #e6e6e6
   background: #f7f7f7
   color: #333
   font-size: 13px
@@ -102,41 +51,23 @@
 .input
   appearance: none
   width: 100%
-  padding: 6px 8px
-  border: 1px solid #e6e6e6
-  border-radius: 6px
-  background: #fff
+  height: 22px
+  padding: 0 var(--one-rem)
+  border: 1px solid var(--color-text-secondary)
+  border-radius: 4px
+  background: transparent
+  color: var(--color-text)
   font: inherit
   font-size: 16px
 
 .input::placeholder
+  color: var(--color-text-secondary)
   font-size: 16px
 
 .input:focus
   outline: none
-  border-color: var(--color-text-secondary)
+  border-color: var(--color-text)
 
 .input:disabled
-  opacity: 0.6
+  opacity: var(--disabled-opacity)
   cursor: not-allowed
-  background: #f7f7f7
-
-.select
-  appearance: none
-  width: 100%
-  padding: 6px 8px
-  border: 1px solid #e6e6e6
-  border-radius: 6px
-  background: #fff
-  font: inherit
-  font-size: 16px
-  cursor: pointer
-
-.select:focus
-  outline: none
-  border-color: var(--color-text-secondary)
-
-.select:disabled
-  opacity: 0.6
-  cursor: not-allowed
-  background: #f7f7f7

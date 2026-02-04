@@ -1,5 +1,4 @@
 import styles from './ModalContainer.module.sass';
-import { Button } from '@/components/Button/Button';
 import { useDisableScroll } from '@/hooks/useDisableScroll';
 
 type ModalContainerProps = {
@@ -7,6 +6,7 @@ type ModalContainerProps = {
   onClose: () => void;
   ariaLabel?: string;
   children: React.ReactNode;
+  containerClassName?: string;
 };
 
 export function ModalContainer({
@@ -14,6 +14,7 @@ export function ModalContainer({
   onClose,
   ariaLabel,
   children,
+  containerClassName,
 }: ModalContainerProps) {
   // Disable body scroll when modal is open
   useDisableScroll(isOpen);
@@ -27,21 +28,27 @@ export function ModalContainer({
       data-active={isOpen}
     >
       <div
-        className={styles.modalOverlay_Container}
+        className={[
+          styles.modalOverlay_Container,
+          containerClassName ? containerClassName : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
         role="dialog"
         aria-modal="true"
         aria-label={ariaLabel}
         onClick={(event) => event.stopPropagation()}
         data-active={isOpen}
       >
-        <div
+        <button
+          type="button"
           className={styles.modalOverlay_ClosingBar}
           onClick={onClose}
           aria-label="Close modal"
         >
           <div className={styles.modalOverlay_ClosingBar_Button} />
-          {children}
-        </div>
+        </button>
+        {children}
       </div>
     </div>
   );

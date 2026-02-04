@@ -7,7 +7,7 @@
   flex-direction: column
   min-height: 100vh
   width: 100vw
-  padding-top: var(--space-top)
+  padding-top: var(--space-content-top)
   scrollbar-width: none
   -ms-overflow-style: none
   gap: var(--space-headcontent-gap)
@@ -35,7 +35,7 @@
   cursor: pointer
   transition: all 0.2s ease
   &:hover:not(:disabled)
-    opacity: 0.85
+    opacity: var(--hover-opacity)
   &:disabled
-    opacity: 0.6
+    opacity: var(--disabled-opacity)
     cursor: not-allowed

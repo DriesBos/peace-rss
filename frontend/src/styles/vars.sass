@@ -34,17 +34,45 @@ $res-tabled: 745px
     --color-text-secondary: hsla(0, 0%, 72%, 1)
 
   // Spacing
+  --quarter-rem: 4px
+  --half-rem: 8px
+  --one-rem: 16px
+  --two-rem: 32px
+  --three-rem: 48px
+  --four-rem: 64px
+  --eight-rem: 128px
+  // Spacing Content
   --space-sides-general: 8px
   --space-sides-stories: 16px
-  --space-top: 64px
-  --space-bottom: 64px
+  --space-content-top: 128px
+  --space-content-bottom: 64px
   --space-headcontent-gap: 64px
   --space-caption-gap: 6px
   --space-titlemeta-gap: 4px
+  // Spacing Modals
+  --space-sides-modal: 16px
+  --space-top-modal: 48px
+  --space-bottom-modal: 48px
   @media (min-width: $res-tabled)
     --space-sides-general: 16px
     --space-sides-stories: 32px
 
+  // Borders
+  --border-radius-image: 4px
+  --border-radius-buttons: 4px
+  --border-buttons: 1px solid var(--color-text)
+  --border-buttons-inactive: 1px solid var(--color-text-secondary)
+  --border-containers: 1px solid var(--color-text)
+
+  // Buttons
+  --disabled-opacity: 0.5
+  --padding-buttons: 8px 16px
+
+  // Transitions
+  --transition-general: 0.33s ease
+  --transition-theme: 0.33s ease
+  --transition-buttons: 0.25s ease
+  --transition-modal: 0.33s ease-in
   // Type
   --type-body: 14px
   --type-title: 18px
@@ -55,6 +83,7 @@ $res-tabled: 745px
   --type-meta: 12px
   --type-summary: 12px
   --type-count: 9px
+  --type-input: 14px
 
   // Transitions
   --transition-general: 0.33s ease

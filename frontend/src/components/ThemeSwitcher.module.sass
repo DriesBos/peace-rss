@@ -30,15 +30,14 @@
   color: var(--color-text)
   cursor: pointer
   transition: border-color 0.2s ease
-  
+
   &:hover:not(:disabled)
     border-color: var(--color-text)
-  
+
   &:focus
     outline: 2px solid var(--color-text)
     outline-offset: 2px
-  
-  &:disabled
-    opacity: 0.6
-    cursor: not-allowed
 
+  &:disabled
+    opacity: var(--disabled-opacity)
+    cursor: not-allowed
