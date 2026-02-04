@@ -1,49 +1,80 @@
 @import '@/styles/vars.sass'
 
 .button
+  display: inline-flex
+  align-items: center
+  gap: 6px
   position: relative
   cursor: pointer
   transition: color 0.165s ease
   white-space: nowrap
+
   span
     position: relative
+
+  .icon
+    transition: transform 0.165s ease
+    transform: rotate(0deg)
+
+  &[data-active="true"]
+    .icon
+      transform: rotate(45deg)
 
 .primary
   color: var(--color-text)
   @include font-button
+
   &::after
     @include underline(var(--color-text))
 
 .category
   color: var(--color-text)
   @include font-nav
+
   &::after
     @include underline(transparent)
+
   &[data-active="true"]
     &::after
       background: var(--color-text)
+
+.icon
+  display: inline-flex
 
 .nav
   display: flex
   flex-direction: row
   align-items: center
-  gap: 6px
   @include font-nav
-  span::after
+
+  span:last-child::after
     @include underline(transparent)
+    transition: background var(--transition-buttons)
+
   &[data-active="true"]
-    span::after
+    span:last-child::after
       @include underline(var(--color-text))
+
   &:hover
     @media (hover: hover)
-      span::after
+      span:last-child::after
         @include underline(var(--color-text))
 
 .button:disabled
   opacity: var(--disabled-opacity)
   color: var(--color-text-secondary)
   cursor: not-allowed
-  &::after
-    @include underline(transparent)
-  span::after
-    @include underline(transparent)
+
+.button:disabled::after
+  @include underline(transparent)
+
+.button:disabled span::after
+  @include underline(transparent)
+
+.count
+  position: absolute
+  right: 0
+  top: 0
+  transform: translate(-4px, -6px)
+  @include font-count
+  color: var(--color-text-secondary)

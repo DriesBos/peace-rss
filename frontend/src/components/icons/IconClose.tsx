@@ -1,29 +1,14 @@
-import React from 'react';
-
-interface IconCloseProps {
-  width?: number;
-  height?: number;
-  className?: string;
-}
-
-export const IconClose: React.FC<IconCloseProps> = ({
-  width = 16,
-  height = 16,
-  className,
-}) => {
+export const IconClose = ({}) => {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 16 16"
-      width={width}
-      height={height}
-      className={className}
-    >
-      <path
-        fill="currentColor"
-        d="M12.854 3.854L8.707 8l4.147 4.146-.708.708L8 8.707l-4.146 4.147-.708-.708L7.293 8 3.146 3.854l.708-.708L8 7.293l4.146-4.147z"
-      />
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 16 16">
+      <g clipPath="url(#a)">
+        <path
+          fill="currentColor"
+          fillRule="evenodd"
+          d="m1.877.999 6.096 6.096L14.096.972l.905.905L8.878 8 15 14.123l-.905.905-6.123-6.123-6.096 6.096-.905-.905L7.068 8 .972 1.904l.905-.905Z"
+          clipRule="evenodd"
+        />
+      </g>
     </svg>
   );
 };

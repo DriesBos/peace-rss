@@ -1,27 +1,12 @@
-import React from 'react';
-
-interface IconArrowShortRightProps {
-  width?: number;
-  height?: number;
-  className?: string;
-}
-
-export const IconArrowShortRight: React.FC<IconArrowShortRightProps> = ({
-  width = 16,
-  height = 16,
-  className,
-}) => {
+export const IconArrowShortRight = ({}) => {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
       xmlnsXlink="http://www.w3.org/1999/xlink"
       fill="none"
       viewBox="0 0 16 16"
-      width={width}
-      height={height}
-      className={className}
     >
-      <g clip-path="url(#a)">
+      <g clipPath="url(#a)">
         <path
           fill="currentColor"
           fillRule="evenodd"

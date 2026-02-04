@@ -1,25 +1,6 @@
-import React from 'react';
-
-interface IconArrowLeftProps {
-  width?: number;
-  height?: number;
-  className?: string;
-}
-
-export const IconArrowLeft: React.FC<IconArrowLeftProps> = ({
-  width = 32,
-  height = 16,
-  className,
-}) => {
+export const IconArrowLeft = ({}) => {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 32 16"
-      width={width}
-      height={height}
-      className={className}
-    >
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 32 16">
       <g clip-path="url(#a)">
         <path
           fill="currentColor"

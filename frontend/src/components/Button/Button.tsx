@@ -2,10 +2,11 @@ import React from 'react';
 import styles from './Button.module.sass';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'category' | 'nav';
+  variant?: 'primary' | 'category' | 'nav' | 'icon';
   children: React.ReactNode;
   active?: boolean;
   className?: string;
+  count?: number;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -13,6 +14,7 @@ export const Button: React.FC<ButtonProps> = ({
   children,
   className = '',
   active = false,
+  count,
   ...props
 }) => {
   return (
@@ -22,6 +24,7 @@ export const Button: React.FC<ButtonProps> = ({
       {...props}
     >
       {children}
+      {count && <span className={styles.count}>{count}</span>}
     </button>
   );
 };

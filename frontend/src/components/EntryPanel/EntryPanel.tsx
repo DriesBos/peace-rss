@@ -12,6 +12,7 @@ import { IconArrowShortLeft } from '@/components/icons/IconArrowShortLeft';
 import { IconArrowShortRight } from '@/components/icons/IconArrowShortRight';
 import { ScrollToTop } from '@/components/ScrollToTop/ScrollToTop';
 import type { Entry, Feed } from '@/app/_lib/types';
+import { IconWrapper } from '../icons/IconWrapper/IconWrapper';
 
 function useLazyEntryContent(html?: string) {
   return useMemo<ReactNode[] | null>(() => {
@@ -429,7 +430,9 @@ export function EntryPanel({
                 type="button"
                 variant="nav"
               >
-                <IconArrowShortLeft />
+                <IconWrapper variant="wide">
+                  <IconArrowShortLeft />
+                </IconWrapper>
                 <span>Prev</span>
               </Button>
               <Button
@@ -439,7 +442,9 @@ export function EntryPanel({
                 variant="nav"
               >
                 <span>Next</span>
-                <IconArrowShortRight />
+                <IconWrapper variant="wide" mirrored>
+                  <IconArrowShortRight />
+                </IconWrapper>
               </Button>
             </div>
           </div>

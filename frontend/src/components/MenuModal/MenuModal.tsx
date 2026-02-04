@@ -6,7 +6,10 @@ import { useTheme } from 'next-themes';
 import styles from './MenuModal.module.sass';
 import { ModalContainer } from '@/components/ModalContainer/ModalContainer';
 import { IconEdit } from '@/components/icons/IconEdit';
+import { Button } from '@/components/Button/Button';
 import { IconPlus } from '@/components/icons/IconPlus';
+import { IconWrapper } from '@/components/icons/IconWrapper/IconWrapper';
+import { LabelWithCount } from '@/components/LabelWithCount/LabelWithCount';
 import type { Category, Entry, Feed } from '@/app/_lib/types';
 
 type MenuView = 'feeds' | 'look' | 'other';
@@ -53,7 +56,7 @@ export function MenuModal({
   onToggleEntryStar,
 }: MenuModalProps) {
   const [activeView, setActiveView] = useState<MenuView>('feeds');
-  const [timeLabel, setTimeLabel] = useState('');
+  const [nowMs, setNowMs] = useState(() => Date.now());
   const { theme, setTheme } = useTheme();
 
   const [collapsedCategories, setCollapsedCategories] = useState<
@@ -101,22 +104,30 @@ export function MenuModal({
   useEffect(() => {
     if (!isOpen) return;
 
-    const formatter = new Intl.DateTimeFormat([], {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-    });
-
-    const updateClock = () => setTimeLabel(formatter.format(new Date()));
-    updateClock();
-
-    const interval = window.setInterval(updateClock, 30_000);
+    const interval = window.setInterval(() => {
+      setNowMs(Date.now());
+    }, 1_000);
     return () => window.clearInterval(interval);
   }, [isOpen]);
 
+  const timeParts = useMemo(() => {
+    const date = new Date(nowMs);
+    const hours24 = date.getHours();
+    const period = hours24 >= 12 ? 'PM' : 'AM';
+    const hours12 = ((hours24 + 11) % 12) + 1;
+
+    return {
+      hours: String(hours12).padStart(2, '0'),
+      minutes: String(date.getMinutes()).padStart(2, '0'),
+      period,
+    };
+  }, [nowMs]);
+
   const uncategorizedFeeds = useMemo(
     () =>
-      feeds.filter((feed) => !feed.category || feed.category.id === categories[0]?.id),
+      feeds.filter(
+        (feed) => !feed.category || feed.category.id === categories[0]?.id
+      ),
     [feeds, categories]
   );
 
@@ -142,73 +153,80 @@ export function MenuModal({
       <div className={styles.modalMenu}>
         <div className={styles.modalMenu_Nav}>
           <div className={styles.tabs}>
-            <button
+            <Button
+              variant="nav"
               type="button"
               className={styles.tab}
-              data-active={activeView === 'feeds'}
+              active={activeView === 'feeds'}
               onClick={() => setActiveView('feeds')}
             >
               Feeds
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="nav"
               type="button"
               className={styles.tab}
-              data-active={activeView === 'look'}
+              active={activeView === 'look'}
               onClick={() => setActiveView('look')}
             >
               Look
-            </button>
-            <button
+            </Button>
+            <Button
+              variant="nav"
               type="button"
               className={styles.tab}
-              data-active={activeView === 'other'}
+              active={activeView === 'other'}
               onClick={() => setActiveView('other')}
             >
               Other
-            </button>
+            </Button>
           </div>
-          <div className={styles.time}>{timeLabel}</div>
+          <div className={styles.time}>
+            <span>{timeParts.hours}</span>
+            <span className={styles.timeColon}>:</span>
+            <span>{timeParts.minutes}</span>
+            <span className={styles.timePeriod}>{timeParts.period}</span>
+          </div>
         </div>
 
         {activeView === 'feeds' && (
           <div className={styles.viewFeeds}>
-            <button
+            <Button
               type="button"
-              className={styles.addContentButton}
               onClick={handleOpenAddModal}
               disabled={isLoading}
+              variant="nav"
             >
-              <IconPlus width={14} height={14} />
+              <IconWrapper>
+                <IconPlus />
+              </IconWrapper>
               <span>Add content</span>
-            </button>
-
-            <div className={styles.sectionHeader}>
-              <span>All feeds</span>
-              <span className={styles.count}>{feeds.length}</span>
-            </div>
+            </Button>
 
             <div className={styles.categoriesFeedsList}>
+              <LabelWithCount label="All feeds" count={feeds.length} />
               {starredEntries.length > 0 && (
                 <div className={styles.categoryGroup}>
-                  <button
+                  <Button
                     type="button"
-                    className={styles.categoryHeader}
+                    variant="nav"
                     onClick={() => toggleCategoryCollapse('starred')}
                     disabled={isLoading}
+                    active={!collapsedCategories.has('starred')}
+                    count={starredEntries.length}
                   >
-                    <div className={styles.categoryTitleWrap}>
-                      <span className={styles.expandIcon} data-open={!collapsedCategories.has('starred')}>
-                        <IconPlus width={12} height={12} />
-                      </span>
-                      <span className={styles.categoryTitle}>Starred</span>
-                      <span className={styles.count}>{starredEntries.length}</span>
-                    </div>
-                  </button>
+                    <IconWrapper>
+                      <IconPlus />
+                    </IconWrapper>
+                    <span>Starred</span>
+                  </Button>
                   {!collapsedCategories.has('starred') && (
                     <div className={styles.feedsUnderCategory}>
                       {starredEntries.map((entry) => (
                         <div key={entry.id} className={styles.feedListItem}>
-                          <span className={styles.feedListItem_Title}>{entry.title}</span>
+                          <span className={styles.feedListItem_Title}>
+                            {entry.title}
+                          </span>
                           <button
                             type="button"
                             className={styles.iconButton}
@@ -238,43 +256,50 @@ export function MenuModal({
                 return (
                   <div key={cat.id} className={styles.categoryGroup}>
                     <div className={styles.categoryHeader}>
-                      <button
+                      <Button
                         type="button"
-                        className={styles.categoryToggle}
+                        variant="nav"
+                        active={!isCollapsed}
                         onClick={() => toggleCategoryCollapse(cat.id)}
                         disabled={isLoading}
+                        count={categoryFeeds.length}
                       >
-                        <span className={styles.expandIcon} data-open={!isCollapsed}>
-                          <IconPlus width={12} height={12} />
-                        </span>
-                        <span className={styles.categoryTitle}>{cat.title}</span>
-                        <span className={styles.count}>{categoryFeeds.length}</span>
-                      </button>
-                      <button
+                        <IconWrapper>
+                          <IconPlus />
+                        </IconWrapper>
+                        <span>{cat.title}</span>
+                      </Button>
+                      <Button
+                        variant="icon"
                         type="button"
-                        className={styles.iconButton}
                         onClick={() => handleOpenEditModal('category', cat)}
                         disabled={isLoading}
                         aria-label={`Edit category ${cat.title}`}
                       >
-                        <IconEdit width={16} height={16} />
-                      </button>
+                        <IconWrapper>
+                          <IconEdit />
+                        </IconWrapper>
+                      </Button>
                     </div>
 
                     {!isCollapsed && categoryFeeds.length > 0 && (
                       <div className={styles.feedsUnderCategory}>
                         {categoryFeeds.map((feed) => (
                           <div key={feed.id} className={styles.feedListItem}>
-                            <span className={styles.feedListItem_Title}>{feed.title}</span>
-                            <button
+                            <span className={styles.feedListItem_Title}>
+                              {feed.title}
+                            </span>
+                            <Button
+                              variant="icon"
                               type="button"
-                              className={styles.iconButton}
                               onClick={() => handleOpenEditModal('feed', feed)}
                               disabled={isLoading}
                               aria-label={`Edit feed ${feed.title}`}
                             >
-                              <IconEdit width={16} height={16} />
-                            </button>
+                              <IconWrapper>
+                                <IconEdit />
+                              </IconWrapper>
+                            </Button>
                           </div>
                         ))}
                       </div>
@@ -285,37 +310,37 @@ export function MenuModal({
 
               {uncategorizedFeeds.length > 0 && (
                 <div className={styles.categoryGroup}>
-                  <button
+                  <Button
                     type="button"
-                    className={styles.categoryHeader}
+                    variant="nav"
                     onClick={() => toggleCategoryCollapse('uncategorized')}
                     disabled={isLoading}
+                    count={uncategorizedFeeds.length}
+                    active={!collapsedCategories.has('uncategorized')}
                   >
-                    <div className={styles.categoryTitleWrap}>
-                      <span
-                        className={styles.expandIcon}
-                        data-open={!collapsedCategories.has('uncategorized')}
-                      >
-                        <IconPlus width={12} height={12} />
-                      </span>
-                      <span className={styles.categoryTitle}>Uncategorised</span>
-                      <span className={styles.count}>{uncategorizedFeeds.length}</span>
-                    </div>
-                  </button>
+                    <IconWrapper>
+                      <IconPlus />
+                    </IconWrapper>
+                    <span>Uncategorised</span>
+                  </Button>
                   {!collapsedCategories.has('uncategorized') && (
                     <div className={styles.feedsUnderCategory}>
                       {uncategorizedFeeds.map((feed) => (
                         <div key={feed.id} className={styles.feedListItem}>
-                          <span className={styles.feedListItem_Title}>{feed.title}</span>
-                          <button
+                          <span className={styles.feedListItem_Title}>
+                            {feed.title}
+                          </span>
+                          <Button
+                            variant="icon"
                             type="button"
-                            className={styles.iconButton}
                             onClick={() => handleOpenEditModal('feed', feed)}
                             disabled={isLoading}
                             aria-label={`Edit feed ${feed.title}`}
                           >
-                            <IconEdit width={16} height={16} />
-                          </button>
+                            <IconWrapper>
+                              <IconEdit />
+                            </IconWrapper>
+                          </Button>
                         </div>
                       ))}
                     </div>
@@ -376,20 +401,36 @@ export function MenuModal({
             </div>
 
             <div className={styles.menuLinks}>
-              <a href="https://peace.blog/about" target="_blank" rel="noreferrer">
+              <a
+                href="https://peace.blog/about"
+                target="_blank"
+                rel="noreferrer"
+              >
                 About
               </a>
-              <a href="https://peace.blog/news" target="_blank" rel="noreferrer">
+              <a
+                href="https://peace.blog/news"
+                target="_blank"
+                rel="noreferrer"
+              >
                 Updates
               </a>
             </div>
 
             <div className={styles.footerLinks}>
               <a href="mailto:info@driesbos.com">Feedback</a>
-              <a href="https://peace.blog/newsletter" target="_blank" rel="noreferrer">
+              <a
+                href="https://peace.blog/newsletter"
+                target="_blank"
+                rel="noreferrer"
+              >
                 Newsletter
               </a>
-              <a href="https://www.instagram.com/dries_bos" target="_blank" rel="noreferrer">
+              <a
+                href="https://www.instagram.com/dries_bos"
+                target="_blank"
+                rel="noreferrer"
+              >
                 IG
               </a>
             </div>

@@ -3,6 +3,7 @@
 import styles from './HeaderCategories.module.sass';
 import { Button } from '@/components/Button/Button';
 import { IconMenu } from '@/components/icons/IconMenu';
+import { IconWrapper } from '@/components/icons/IconWrapper/IconWrapper';
 import type { Category } from '@/app/_lib/types';
 
 export type HeaderCategoriesProps = {
@@ -47,7 +48,9 @@ export function HeaderCategories({
           aria-expanded={isMenuOpen}
           data-active={isMenuOpen}
         >
-          <IconMenu />
+          <IconWrapper>
+            <IconMenu />
+          </IconWrapper>
           <span>Menu</span>
         </Button>
       </div>

@@ -4,6 +4,7 @@ import styles from './SlidePanel.module.sass';
 import { Button } from '@/components/Button/Button';
 import { IconArrowLeft } from '@/components/icons/IconArrowLeft';
 import { useDisableScroll } from '@/hooks/useDisableScroll';
+import { IconWrapper } from '@/components/icons/IconWrapper/IconWrapper';
 
 type SlidePanelProps = {
   isOpen: boolean;
@@ -77,17 +78,11 @@ export function SlidePanel({
               onClick={onClose}
               aria-label="Close detail panel"
             >
-              <IconArrowLeft />
+              <IconWrapper variant="wide">
+                <IconArrowLeft />
+              </IconWrapper>
               <span>Back</span>
             </Button>
-            {/* <Button
-              type="button"
-              variant="nav"
-              onClick={onClose}
-              aria-label="Close detail panel"
-            >
-              <span>Theme</span>
-            </Button> */}
           </div>
           {children}
         </div>

@@ -4,71 +4,39 @@
   display: flex
   flex-direction: column
   width: 100%
-  padding: var(--space-top-modal) 0 var(--space-bottom-modal)
+  gap: var(--three-rem)
 
   &_Nav
-    position: sticky
-    top: 0
-    z-index: 2
     display: flex
     align-items: center
     gap: var(--one-rem)
     padding: 0 var(--space-sides-modal)
-    background: var(--color-app)
 
 .tabs
   display: flex
-  align-items: center
   gap: var(--one-rem)
   flex: 1
 
-.tab
-  appearance: none
-  border: 0
-  padding: 0
-  background: transparent
-  color: var(--color-text)
-  @include font-nav
-  font-weight: 400
-  cursor: pointer
-  text-decoration: none
-  border-bottom: 1px solid transparent
-  &[data-active="true"]
-    border-bottom-color: currentColor
-
 .time
+  display: inline-flex
+  align-items: baseline
+  gap: 0
   @include font-nav
   color: var(--color-text)
   white-space: nowrap
 
-.viewFeeds
-  display: flex
-  flex-direction: column
-  gap: var(--two-rem)
-  padding: var(--two-rem) var(--space-sides-modal) var(--three-rem)
+.timeColon
+  width: 0.45em
+  text-align: center
+  opacity: 1
+  &[data-visible="false"]
+    opacity: 0
 
-.addContentButton
-  appearance: none
-  background: transparent
-  border: 0
-  padding: 0
-  display: inline-flex
-  align-items: center
-  gap: var(--half-rem)
-  color: var(--color-text)
-  @include font-body
-  cursor: pointer
-  width: fit-content
-  &:disabled
-    opacity: var(--disabled-opacity)
-    cursor: not-allowed
-
-.sectionHeader
-  display: inline-flex
-  align-items: baseline
-  gap: 2px
-  @include font-body
-  color: var(--color-text)
+.timePeriod
+  @include font-count
+  color: var(--color-text-secondary)
+  margin-left: var(--quarter-rem)
+  transform: translateY(-6px)
 
 .count
   @include font-count
@@ -80,16 +48,17 @@
   flex-direction: column
   gap: var(--one-rem)
 
+.viewFeeds
+  display: flex
+  flex-direction: column
+  gap: var(--three-rem)
+  padding: 0 var(--space-sides-modal)
+
 .categoryGroup
   display: flex
   flex-direction: column
   gap: var(--one-rem)
-
-.categoryHeader
-  display: flex
-  align-items: center
-  justify-content: space-between
-  gap: var(--half-rem)
+  padding-left: var(--two-rem)
 
 .categoryToggle
   appearance: none
@@ -103,30 +72,15 @@
   @include font-body
   cursor: pointer
 
-.categoryTitleWrap
-  display: inline-flex
-  align-items: baseline
-  gap: var(--quarter-rem)
-
-.expandIcon
-  display: inline-flex
+.categoryHeader
+  display: flex
   align-items: center
-  justify-content: center
-  margin-right: 2px
-  color: var(--color-text-secondary)
-  transform: rotate(0deg)
-  transition: transform 0.2s ease
-  &[data-open="true"]
-    transform: rotate(45deg)
-
-.categoryTitle
-  @include font-body
-  color: var(--color-text)
+  justify-content: space-between
 
 .feedsUnderCategory
   display: flex
   flex-direction: column
-  gap: var(--one-rem)
+  gap: var(--half-rem)
   padding-left: var(--two-rem)
 
 .feedListItem
@@ -141,20 +95,6 @@
     overflow: hidden
     text-overflow: ellipsis
     white-space: nowrap
-
-.iconButton
-  appearance: none
-  border: 0
-  background: transparent
-  padding: 0
-  color: var(--color-text)
-  display: inline-flex
-  align-items: center
-  justify-content: center
-  cursor: pointer
-  &:disabled
-    opacity: var(--disabled-opacity)
-    cursor: not-allowed
 
 .viewLook
   display: grid

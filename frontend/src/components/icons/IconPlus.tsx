@@ -1,29 +1,14 @@
-import React from 'react';
-
-interface IconPlusProps {
-  width?: number;
-  height?: number;
-  className?: string;
-}
-
-export const IconPlus: React.FC<IconPlusProps> = ({
-  width = 16,
-  height = 16,
-  className,
-}) => {
+export const IconPlus = ({}) => {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      fill="none"
-      viewBox="0 0 16 16"
-      width={width}
-      height={height}
-      className={className}
-    >
-      <path
-        fill="currentColor"
-        d="M8.5 3.5v4h4v1h-4v4h-1v-4h-4v-1h4v-4h1z"
-      />
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 16 16">
+      <g clipPath="url(#a)">
+        <path
+          fill="currentColor"
+          fillRule="evenodd"
+          d="M8.621-1.28v8.62l8.659.001v1.28H8.62l.001 8.659h-1.28V8.62l-8.621.001v-1.28h8.62l.001-8.621h1.28Z"
+          clipRule="evenodd"
+        />
+      </g>
     </svg>
   );
 };
