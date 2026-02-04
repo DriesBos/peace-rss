@@ -47,17 +47,17 @@
   align-items: center
   @include font-nav
 
-  span:last-child::after
+  span:first-child::after
     @include underline(transparent)
     transition: background var(--transition-buttons)
 
   &[data-active="true"]
-    span:last-child::after
+    span:first-child::after
       @include underline(var(--color-text))
 
   &:hover
     @media (hover: hover)
-      span:last-child::after
+      span:first-child::after
         @include underline(var(--color-text))
 
 .button:disabled
