@@ -44,23 +44,29 @@
     padding: 0 var(--space-sides-stories)
     pre
       white-space: pre-wrap
+      border: 1px solid var(--color-text-secondary)
+      line-height: 1.1
+      padding: var(--one-rem) var(--half-rem)
+      border-radius: var(--border-radius-containers)
+    code
+      font-size: var(--type-data)
     h1, h2, h3, h4, h5, h6
       @include font-title
       font-weight: 400
       margin-bottom: 2rem
     p
       margin-bottom: 1rem
-    &:global(h1, h2, h3, h4, h5, h6, pre, code)
+    h1, h2, h3, h4, h5, h6, pre, code
       word-wrap: break-word
       hyphens: auto
-    &:global(picture, figure, iframe, code, pre, video, img)
+    picture, figure, iframe, code, pre, video, img
       width: 100%
       max-width: 100%
       margin-bottom: 1rem
-    &:global(a)
+    a
       color: inherit
       text-decoration: underline
-    &:global(img)
+    img
       max-width: 100%
       width: 100%
   &_noContent
