@@ -1,11 +1,13 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import styles from './HeaderCategories.module.sass';
 import { Button } from '@/components/Button/Button';
 import { IconMenu } from '@/components/icons/IconMenu';
 import { IconWrapper } from '@/components/icons/IconWrapper/IconWrapper';
 import type { Category } from '@/app/_lib/types';
 import { IconStar } from '@/components/icons/IconStar';
+import { IconSearch } from '@/components/icons/IconSearch';
 
 export type HeaderCategoriesProps = {
   isMenuOpen: boolean;
@@ -18,6 +20,10 @@ export type HeaderCategoriesProps = {
   totalUnreadCount: number;
   totalStarredCount: number;
   isLoading: boolean;
+  isSearchOpen: boolean;
+  searchQuery: string;
+  onSearchQueryChange: (value: string) => void;
+  onToggleSearch: () => void;
   onSelectAll: () => void;
   onSelectStarred: () => void;
   onSelectCategory: (categoryId: number) => void;
@@ -34,10 +40,22 @@ export function HeaderCategories({
   totalUnreadCount,
   totalStarredCount,
   isLoading,
+  isSearchOpen,
+  searchQuery,
+  onSearchQueryChange,
+  onToggleSearch,
   onSelectAll,
   onSelectStarred,
   onSelectCategory,
 }: HeaderCategoriesProps) {
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (!isSearchOpen) return;
+    searchInputRef.current?.focus();
+    searchInputRef.current?.select();
+  }, [isSearchOpen]);
+
   return (
     <header className={styles.header}>
       <div className={styles.header_Menu}>
@@ -56,6 +74,33 @@ export function HeaderCategories({
         </Button>
       </div>
       {isOffline && <div className={styles.header_Offline}>app is offline</div>}
+      <div className={styles.header_Search} data-open={isSearchOpen}>
+        <Button
+          type="button"
+          variant="icon"
+          icon="search"
+          onClick={onToggleSearch}
+          aria-expanded={isSearchOpen}
+          aria-controls="header-search-input"
+          aria-label={isSearchOpen ? 'Close search' : 'Open search'}
+        >
+          <IconWrapper>
+            <IconSearch />
+          </IconWrapper>
+        </Button>
+        {isSearchOpen && (
+          <input
+            id="header-search-input"
+            ref={searchInputRef}
+            className={styles.searchInput}
+            type="search"
+            placeholder="Search.."
+            value={searchQuery}
+            onChange={(event) => onSearchQueryChange(event.target.value)}
+            aria-label="Search entries"
+          />
+        )}
+      </div>
       <ul className={styles.header_CategoryList}>
         <li>
           <Button

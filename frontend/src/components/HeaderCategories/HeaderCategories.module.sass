@@ -13,11 +13,16 @@
   background: var(--color-app)
   z-index: calc(var(--index-newsfeed) + 1)
   overflow: visible
+  height: 2rem
   &_Menu
     padding: 0 var(--space-sides-general)
   &_Offline
     @include font-nav
     color: var(--color-text-secondary)
+  &_Search
+    display: inline-flex
+    align-items: center
+    gap: 6px
   &_CategoryList
     list-style: none
     display: flex
@@ -32,3 +37,20 @@
     padding: 0 0 0 var(--space-sides-general)
     &::-webkit-scrollbar
       display: none
+
+.searchInput
+  font-size: var(--type-input)
+  line-height: 1
+  min-width: 3.25rem
+  max-width: 35vw
+  color: var(--color-text)
+  border-bottom: 1px solid transparent
+  transition: border-color 0.165s ease
+  outline: none
+  field-sizing: content
+  height: 2rem
+  &::placeholder
+    color: var(--color-text-secondary)
+  &:focus
+    border-bottom: 1px solid var(--color-text)
+  @include underline(var(--color-text))

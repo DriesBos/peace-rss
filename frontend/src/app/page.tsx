@@ -50,6 +50,7 @@ export default function Home() {
   const [isStarredView, setIsStarredView] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchMode, setSearchMode] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [offset, setOffset] = useState(0);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -707,31 +708,51 @@ export default function Home() {
     }
   }
 
-  async function handleSearch(e: React.FormEvent) {
-    e.preventDefault();
+  const toggleSearch = useCallback(() => {
+    setIsSearchOpen((prev) => {
+      const next = !prev;
+      if (!next) {
+        setSearchQuery('');
+        setSearchMode(false);
+      }
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!isProvisioned || !isSearchOpen) return;
 
     const trimmedQuery = searchQuery.trim();
-    if (!trimmedQuery) return;
-
-    setSearchMode(true);
-    setIsStarredView(false);
-    setSelectedFeedId(null);
-
-    setIsLoading(true);
-    setError(null);
-    try {
-      await loadEntries({ append: false, nextOffset: 0 });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to search');
-    } finally {
-      setIsLoading(false);
+    if (!trimmedQuery) {
+      if (searchMode) {
+        setSearchMode(false);
+      }
+      return;
     }
-  }
 
-  // function clearSearch() {
-  //   setSearchQuery('');
-  //   setSearchMode(false);
-  // }
+    if (!searchMode) {
+      setSearchMode(true);
+      setIsStarredView(false);
+      setSelectedFeedId(null);
+      setSelectedCategoryId(null);
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setIsLoading(true);
+      setError(null);
+      loadEntries({ append: false, nextOffset: 0 })
+        .catch((e) =>
+          setError(e instanceof Error ? e.message : 'Failed to search')
+        )
+        .finally(() => setIsLoading(false));
+    }, 250);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchQuery, isSearchOpen, isProvisioned, searchMode]);
 
   const fetchOriginalArticle = useCallback(
     async (entryId?: number) => {
@@ -1197,6 +1218,10 @@ export default function Home() {
               totalUnreadCount={totalUnreadCount}
               totalStarredCount={totalStarredCount}
               isLoading={isLoading}
+              isSearchOpen={isSearchOpen}
+              searchQuery={searchQuery}
+              onSearchQueryChange={setSearchQuery}
+              onToggleSearch={toggleSearch}
               onSelectAll={() => {
                 setSelectedCategoryId(null);
                 setSelectedFeedId(null);
