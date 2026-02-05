@@ -266,7 +266,7 @@ export function MenuModal({
               active={activeView === 'feeds'}
               onClick={() => setActiveView('feeds')}
             >
-              <span>Organize</span>
+              <span>Organise</span>
             </Button>
             <Button
               variant="nav"
@@ -275,7 +275,7 @@ export function MenuModal({
               active={activeView === 'look'}
               onClick={() => setActiveView('look')}
             >
-              <span>Themes</span>
+              <span>Looks</span>
             </Button>
             <Button
               variant="nav"
@@ -301,6 +301,7 @@ export function MenuModal({
               onClick={handleOpenAddModal}
               disabled={isLoading}
               variant="nav"
+              icon="plus"
             >
               <IconWrapper>
                 <IconPlus />
@@ -398,6 +399,7 @@ export function MenuModal({
                         type="button"
                         variant="nav"
                         active={!isCollapsed}
+                        icon="plus"
                         onClick={() => toggleCategoryCollapse(cat.id)}
                         disabled={isLoading}
                         count={
@@ -424,7 +426,7 @@ export function MenuModal({
                       </Button>
                     </div>
 
-                    {categoryFeeds.length > 0 && (
+                    {categoryFeeds.length > 0 ? (
                       <div
                         className={styles.feedsUnderCategory}
                         data-open={!isCollapsed}
@@ -448,6 +450,8 @@ export function MenuModal({
                           </div>
                         ))}
                       </div>
+                    ) : (
+                      <div className={styles.feedListItem_Empty} />
                     )}
                   </div>
                 );

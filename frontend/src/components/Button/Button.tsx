@@ -3,6 +3,7 @@ import styles from './Button.module.sass';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'category' | 'nav' | 'icon';
+  icon?: 'plus' | 'menu' | 'search' | 'close' | 'star';
   children: React.ReactNode;
   active?: boolean;
   className?: string;
@@ -15,12 +16,14 @@ export const Button: React.FC<ButtonProps> = ({
   className = '',
   active = false,
   count,
+  icon,
   ...props
 }) => {
   return (
     <button
       className={`${styles.button} ${styles[variant]} ${className}`}
       data-active={active}
+      data-icon={icon}
       {...props}
     >
       {children}

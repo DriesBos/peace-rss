@@ -5,6 +5,7 @@ import { Button } from '@/components/Button/Button';
 import { IconMenu } from '@/components/icons/IconMenu';
 import { IconWrapper } from '@/components/icons/IconWrapper/IconWrapper';
 import type { Category } from '@/app/_lib/types';
+import { IconStar } from '@/components/icons/IconStar';
 
 export type HeaderCategoriesProps = {
   isMenuOpen: boolean;
@@ -59,7 +60,7 @@ export function HeaderCategories({
         <li>
           <Button
             type="button"
-            variant="category"
+            variant="nav"
             active={selectedCategoryId === null && !isStarredView}
             className={`${styles.header_CategoryList_Item} ${
               selectedCategoryId === null && !isStarredView
@@ -70,13 +71,13 @@ export function HeaderCategories({
             disabled={isLoading}
             count={totalUnreadCount}
           >
-            All
+            <span>All</span>
           </Button>
         </li>
         <li>
           <Button
             type="button"
-            variant="category"
+            variant="nav"
             active={isStarredView}
             className={`${styles.header_CategoryList_Item} ${
               isStarredView ? styles.categoryItemActive : ''
@@ -85,7 +86,10 @@ export function HeaderCategories({
             disabled={isLoading}
             count={totalStarredCount}
           >
-            Starred
+            <IconWrapper>
+              <IconStar />
+            </IconWrapper>
+            <span>Starred</span>
           </Button>
         </li>
         {categories
@@ -98,7 +102,7 @@ export function HeaderCategories({
             <li key={cat.id}>
               <Button
                 type="button"
-                variant="category"
+                variant="nav"
                 active={selectedCategoryId === cat.id}
                 className={`${styles.header_CategoryList_Item} ${
                   selectedCategoryId === cat.id ? styles.categoryItemActive : ''
@@ -107,7 +111,7 @@ export function HeaderCategories({
                 disabled={isLoading}
                 count={categoryUnreadCounts.get(cat.id) ?? 0}
               >
-                {cat.title}
+                <span>{cat.title}</span>
               </Button>
             </li>
           ))}

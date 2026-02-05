@@ -765,7 +765,7 @@ export default function Home() {
         }
       } catch (e) {
         setError(
-          e instanceof Error ? e.message : 'Failed to fetch original article'
+          e instanceof Error ? e.message : 'Failed to fetch source link'
         );
         // Mark as fetched even on error to avoid retry loops
         setFetchedEntryIds((prev) => new Set(prev).add(targetEntry.id));

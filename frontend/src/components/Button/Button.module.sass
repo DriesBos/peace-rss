@@ -8,17 +8,16 @@
   cursor: pointer
   transition: color 0.165s ease
   white-space: nowrap
-
+  overflow: visible
   span
     position: relative
-
   .icon, svg, .iconWrapper
     transition: transform 0.165s ease
     transform: rotate(0deg)
-
   &[data-active="true"]
-    .icon, svg, .iconWrapper
-      transform: rotate(45deg)
+    &[data-icon="plus"]
+      .icon, svg, .iconWrapper
+        transform: rotate(135deg)
 
 // Has underline
 .primary
@@ -27,24 +26,13 @@
   &::after
     @include underline(var(--color-text))
 
-// Underline on hover + Nav font
-.category
-  color: var(--color-text)
-  @include font-nav
-  &::after
-    @include underline(transparent)
-    transition: background var(--transition-buttons)
-  &[data-active="true"]
-    &::after
-      @include underline(var(--color-text))
-
 // Only icon, no text
 .icon
   display: inline-flex
 
-// Underline on hover + Nav font
+// Underline on hover and active. Has Nav-font
 .nav
-  display: flex
+  display: inline-flex
   flex-direction: row
   align-items: center
   @include font-nav
