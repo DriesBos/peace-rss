@@ -388,7 +388,7 @@ export function EntryPanel({
                 title="Source link"
                 className={`${buttonStyles.button} ${buttonStyles.primary} ${styles.actionsList_Item}`}
               >
-                Source link
+                Source link{', '}
               </a>
               <Button
                 onClick={onFetchOriginal}
