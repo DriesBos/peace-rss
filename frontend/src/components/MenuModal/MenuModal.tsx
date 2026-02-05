@@ -266,7 +266,7 @@ export function MenuModal({
               active={activeView === 'feeds'}
               onClick={() => setActiveView('feeds')}
             >
-              <span>Feeds</span>
+              <span>Organize</span>
             </Button>
             <Button
               variant="nav"
@@ -275,7 +275,7 @@ export function MenuModal({
               active={activeView === 'look'}
               onClick={() => setActiveView('look')}
             >
-              <span>Look</span>
+              <span>Themes</span>
             </Button>
             <Button
               variant="nav"
@@ -284,7 +284,7 @@ export function MenuModal({
               active={activeView === 'other'}
               onClick={() => setActiveView('other')}
             >
-              <span>Other</span>
+              <span>Info</span>
             </Button>
           </div>
           <LabelWithCount count={timeParts.period}>
