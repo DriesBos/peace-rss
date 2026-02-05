@@ -37,6 +37,7 @@
     @include font-meta
     p, i
       @include font-meta
+  // All story markdown is in here
   &_Content
     @include font-body
     display: flex
@@ -44,12 +45,12 @@
     padding: 0 var(--space-sides-stories)
     pre
       white-space: pre-wrap
-      border: 1px solid var(--color-text-secondary)
-      line-height: 1.1
-      padding: var(--one-rem) var(--half-rem)
-      border-radius: var(--border-radius-containers)
+      border: 1px solid var(--color-text-secondary) !important
+      line-height: 1.1 !important
+      padding: var(--one-rem) var(--half-rem) !important
+      border-radius: var(--border-radius-containers) !important
     code
-      font-size: var(--type-data)
+      font-size: var(--type-data) !important
     h1, h2, h3, h4, h5, h6
       @include font-title
       font-weight: 400
