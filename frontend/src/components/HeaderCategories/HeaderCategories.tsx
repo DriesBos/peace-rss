@@ -68,12 +68,10 @@ export function HeaderCategories({
             }`}
             onClick={onSelectAll}
             disabled={isLoading}
+            count={totalUnreadCount}
           >
             All
           </Button>
-          <div className={styles.header_CategoryList_Count}>
-            {totalUnreadCount}
-          </div>
         </li>
         <li>
           <Button
@@ -85,12 +83,10 @@ export function HeaderCategories({
             }`}
             onClick={onSelectStarred}
             disabled={isLoading}
+            count={totalStarredCount}
           >
             Starred
           </Button>
-          <div className={styles.header_CategoryList_Count}>
-            {totalStarredCount}
-          </div>
         </li>
         {categories
           .slice(1)
@@ -109,12 +105,10 @@ export function HeaderCategories({
                 }`}
                 onClick={() => onSelectCategory(cat.id)}
                 disabled={isLoading}
+                count={categoryUnreadCounts.get(cat.id) ?? 0}
               >
                 {cat.title}
               </Button>
-              <div className={styles.header_CategoryList_Count}>
-                {categoryUnreadCounts.get(cat.id) ?? 0}
-              </div>
             </li>
           ))}
       </ul>

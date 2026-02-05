@@ -1,3 +1,7 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import styles from './ModalContainer.module.sass';
 import { useDisableScroll } from '@/hooks/useDisableScroll';
 
@@ -19,7 +23,14 @@ export function ModalContainer({
   // Disable body scroll when modal is open
   useDisableScroll(isOpen);
 
-  return (
+  const [portalTarget, setPortalTarget] = useState<Element | null>(null);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    setPortalTarget(document.getElementById('modal-root') ?? document.body);
+  }, []);
+
+  const modal = (
     <div
       className={styles.modalOverlay}
       role="presentation"
@@ -52,4 +63,7 @@ export function ModalContainer({
       </div>
     </div>
   );
+
+  if (!portalTarget) return null;
+  return createPortal(modal, portalTarget);
 }
