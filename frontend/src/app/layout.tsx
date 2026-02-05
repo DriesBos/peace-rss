@@ -14,6 +14,7 @@ import '@/styles/globals.sass';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import KomorebiShader from '@/components/KomorebiShader/KomorebiShader';
 import ServiceWorkerRegistration from '@/components/ServiceWorkerRegistration/ServiceWorkerRegistration';
+import Notifications from '@/components/Notifications/Notifications';
 
 const untitledSans = localFont({
   src: [
@@ -135,7 +136,8 @@ export default function RootLayout({
             enableSystem={true}
             storageKey="peace-rss-theme"
           >
-             <main>
+            <Notifications />
+            <main>
             <SignedOut>
               <KomorebiShader opacity={0.1} />
               <div className="landingPage">

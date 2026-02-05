@@ -478,6 +478,7 @@ export function MenuModal({
 
             <div className={styles.menuLinks}>
               <Link href="/about">About</Link>
+              <Link href="/notifications">Notifications</Link>
               <Link href="/updates">Updates</Link>
             </div>
 

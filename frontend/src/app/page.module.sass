@@ -11,8 +11,47 @@
   scrollbar-width: none
   -ms-overflow-style: none
   gap: var(--space-headcontent-gap)
+  will-change: transform
   &::-webkit-scrollbar
     display: none
+
+.pullIndicator
+  position: absolute
+  top: env(safe-area-inset-top)
+  left: 0
+  right: 0
+  display: flex
+  align-items: flex-end
+  justify-content: center
+  overflow: hidden
+  height: 0
+  pointer-events: none
+  z-index: var(--index-newsfeed)
+  transition: height 0.2s ease
+
+.pullIndicatorText
+  @include font-caption
+  color: var(--color-text-secondary)
+  letter-spacing: 0.24em
+  text-transform: uppercase
+  padding: 4px 0 6px
+  opacity: 0.8
+
+.pullIndicator[data-state='fetching'] .pullIndicatorText
+  opacity: 1
+  animation: pullPulse 1s ease-in-out infinite
+
+.pullIndicator[data-state='done'] .pullIndicatorText
+  color: var(--color-text)
+  opacity: 1
+
+@keyframes pullPulse
+  0%
+    opacity: 0.55
+  50%
+    opacity: 1
+  100%
+    opacity: 0.55
 
 .error
   padding: 10px 12px

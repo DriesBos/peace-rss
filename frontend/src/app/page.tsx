@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SignedIn, SignedOut, RedirectToSignIn } from '@clerk/nextjs';
 import styles from './page.module.sass';
 import { AddModal } from '@/components/AddModal/AddModal';
@@ -17,6 +17,23 @@ import type {
   Feed,
   FeedCountersResponse,
 } from '@/app/_lib/types';
+
+type PullState = 'idle' | 'pulling' | 'fetching' | 'done';
+
+const PULL_TRIGGER_PX = 70;
+const PULL_MAX_PX = 90;
+const DONE_HOLD_MS = 700;
+const FETCH_INDICATOR_HEIGHT = 32;
+
+function getScrollTop(): number {
+  if (typeof window === 'undefined') return 0;
+  return (
+    window.scrollY ||
+    document.documentElement.scrollTop ||
+    document.body.scrollTop ||
+    0
+  );
+}
 
 export default function Home() {
   const [feeds, setFeeds] = useState<Feed[]>([]);
@@ -62,6 +79,13 @@ export default function Home() {
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
   const [totalStarredCount, setTotalStarredCount] = useState(0);
   const [isOffline, setIsOffline] = useState(false);
+  const [pullState, setPullState] = useState<PullState>('idle');
+  const [pullDistance, setPullDistance] = useState(0);
+  const appRef = useRef<HTMLDivElement | null>(null);
+  const pullDistanceRef = useRef(0);
+  const startYRef = useRef<number | null>(null);
+  const isRefreshingRef = useRef(false);
+  const doneTimeoutRef = useRef<number | null>(null);
 
   // Edit modal state
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -107,6 +131,14 @@ export default function Home() {
     return () => {
       window.removeEventListener('online', updateOnlineStatus);
       window.removeEventListener('offline', updateOnlineStatus);
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (doneTimeoutRef.current) {
+        window.clearTimeout(doneTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -326,22 +358,132 @@ export default function Home() {
     });
   }
 
-  // TODO: Active for feed pull downs
-  // async function refreshAll() {
-  //   setIsLoading(true);
-  //   setError(null);
-  //   try {
-  //     await Promise.all([
-  //       loadFeeds(),
-  //       loadCategories(),
-  //       loadEntries({ append: false, nextOffset: 0 }),
-  //     ]);
-  //   } catch (e) {
-  //     setError(e instanceof Error ? e.message : 'Failed to load');
-  //   } finally {
-  //     setIsLoading(false);
-  //   }
-  // }
+  async function refreshAll() {
+    if (!isProvisioned || isLoading) return;
+    setIsLoading(true);
+    setError(null);
+    try {
+      await Promise.all([
+        loadFeeds(),
+        loadCategories(),
+        loadEntries({ append: false, nextOffset: 0 }),
+      ]);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to load');
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  const indicatorHeight =
+    pullState === 'pulling'
+      ? Math.min(pullDistance, PULL_MAX_PX)
+      : pullState === 'fetching' || pullState === 'done'
+      ? FETCH_INDICATOR_HEIGHT
+      : 0;
+
+  const pullOffset =
+    pullState === 'pulling'
+      ? Math.min(pullDistance, PULL_MAX_PX)
+      : pullState === 'fetching' || pullState === 'done'
+      ? FETCH_INDICATOR_HEIGHT
+      : 0;
+
+  const indicatorLabel =
+    pullState === 'pulling'
+      ? 'pulling'
+      : pullState === 'fetching'
+      ? 'fetching'
+      : pullState === 'done'
+      ? 'done'
+      : '';
+
+  const resetPullState = () => {
+    setPullState('idle');
+    setPullDistance(0);
+    pullDistanceRef.current = 0;
+    startYRef.current = null;
+  };
+
+  const handleTouchStart = useCallback((event: TouchEvent) => {
+    if (!isProvisioned || isLoading) return;
+    if (isRefreshingRef.current) return;
+    if (event.touches.length !== 1) return;
+    if (getScrollTop() > 0) return;
+    if (doneTimeoutRef.current) {
+      window.clearTimeout(doneTimeoutRef.current);
+      doneTimeoutRef.current = null;
+    }
+    startYRef.current = event.touches[0].clientY;
+  }, [isProvisioned, isLoading]);
+
+  const handleTouchMove = useCallback((event: TouchEvent) => {
+    if (!isProvisioned || isLoading) return;
+    if (isRefreshingRef.current) return;
+    const startY = startYRef.current;
+    if (startY === null) return;
+    if (getScrollTop() > 0) {
+      resetPullState();
+      return;
+    }
+    const currentY = event.touches[0].clientY;
+    const distance = Math.max(0, currentY - startY);
+    if (distance <= 0) return;
+
+    event.preventDefault();
+    pullDistanceRef.current = distance;
+    setPullDistance(distance);
+    if (pullState !== 'pulling') setPullState('pulling');
+  }, [isProvisioned, isLoading, pullState]);
+
+  const handleTouchEnd = useCallback(async () => {
+    if (startYRef.current === null) return;
+    startYRef.current = null;
+
+    const distance = pullDistanceRef.current;
+    if (distance >= PULL_TRIGGER_PX && !isRefreshingRef.current) {
+      isRefreshingRef.current = true;
+      setPullState('fetching');
+      setPullDistance(0);
+      pullDistanceRef.current = 0;
+      try {
+        await refreshAll();
+      } finally {
+        setPullState('done');
+        doneTimeoutRef.current = window.setTimeout(() => {
+          setPullState('idle');
+          doneTimeoutRef.current = null;
+        }, DONE_HOLD_MS);
+        isRefreshingRef.current = false;
+      }
+      return;
+    }
+
+    resetPullState();
+  }, [refreshAll]);
+
+  useEffect(() => {
+    const node = appRef.current;
+    if (!node) return;
+
+    const onTouchStart = (event: TouchEvent) => handleTouchStart(event);
+    const onTouchMove = (event: TouchEvent) => handleTouchMove(event);
+    const onTouchEnd = () => {
+      void handleTouchEnd();
+    };
+
+    node.addEventListener('touchstart', onTouchStart, { passive: true });
+    node.addEventListener('touchmove', onTouchMove, { passive: false });
+    node.addEventListener('touchend', onTouchEnd);
+    node.addEventListener('touchcancel', onTouchEnd);
+
+    return () => {
+      node.removeEventListener('touchstart', onTouchStart);
+      node.removeEventListener('touchmove', onTouchMove);
+      node.removeEventListener('touchend', onTouchEnd);
+      node.removeEventListener('touchcancel', onTouchEnd);
+    };
+  }, [handleTouchStart, handleTouchMove, handleTouchEnd]);
 
   async function markEntryStatus(
     entryIds: number[],
@@ -854,7 +996,27 @@ export default function Home() {
             </div>
           </div>
         ) : (
-          <div className={styles.app}>
+          <div
+            className={styles.app}
+            ref={appRef}
+            style={{
+              transform: `translateY(${pullOffset}px)`,
+              transition:
+                pullState === 'pulling' ? 'none' : 'transform 0.2s ease',
+            }}
+          >
+            <div
+              className={styles.pullIndicator}
+              data-state={pullState}
+              style={{ height: indicatorHeight }}
+              aria-live="polite"
+            >
+              {indicatorLabel ? (
+                <span className={styles.pullIndicatorText}>
+                  {indicatorLabel}
+                </span>
+              ) : null}
+            </div>
             <MenuModal
               isOpen={isMenuModalOpen}
               onClose={closeMenuModal}

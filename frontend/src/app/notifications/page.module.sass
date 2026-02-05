@@ -1,0 +1,71 @@
+@import '@/styles/vars.sass'
+
+.notificationsPage
+  position: relative
+  min-height: 100%
+  width: 100%
+  background: var(--color-app)
+  color: var(--color-text)
+
+.content
+  display: flex
+  flex-direction: column
+  gap: var(--space-headcontent-gap)
+  padding-top: var(--space-content-top)
+  padding-bottom: var(--space-content-bottom)
+  min-height: 100%
+
+.backButton
+  display: inline-flex
+  align-items: flex-end
+  gap: 4px
+  padding: 0 var(--space-sides-general)
+  @include font-nav
+  color: var(--color-text)
+
+.textBlock
+  display: flex
+  flex-direction: column
+  gap: var(--one-half-rem)
+  padding: 0 var(--space-sides-stories)
+  width: 100%
+  user-select: text
+  -webkit-user-select: text
+  -moz-user-select: text
+  -ms-user-select: text
+
+.sectionTitle
+  font-size: var(--type-title)
+  font-weight: 400
+
+.lead
+  color: var(--color-text-secondary)
+
+.buttonsGrid
+  display: grid
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr))
+  gap: var(--one-half-rem)
+  margin-top: var(--one-half-rem)
+
+.toastButton
+  justify-content: center
+
+.customToast
+  display: flex
+  flex-direction: column
+  gap: 2px
+
+.toastAction
+  border: none
+  background: transparent
+  color: inherit
+  font: inherit
+  cursor: pointer
+
+.toastCancel
+  border: none
+  background: transparent
+  color: inherit
+  font: inherit
+  cursor: pointer
+  opacity: 0.7
