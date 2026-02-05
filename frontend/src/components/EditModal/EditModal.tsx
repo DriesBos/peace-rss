@@ -23,8 +23,8 @@ export type EditModalProps = {
   onClose: () => void;
   onDeleteCategory: (categoryId: number) => void;
   onDeleteFeed: (feedId: number) => void;
-  onUpdateCategory: (e: React.FormEvent) => void;
-  onUpdateFeed: (e: React.FormEvent) => void;
+  onUpdateCategory: (e: React.FormEvent) => Promise<boolean>;
+  onUpdateFeed: (e: React.FormEvent) => Promise<boolean>;
   onChangeTitle: (value: string) => void;
   onChangeFeedUrl: (value: string) => void;
   onChangeCategoryId: (value: number | null) => void;
@@ -49,17 +49,19 @@ export function EditModal({
   onChangeFeedUrl,
   onChangeCategoryId,
 }: EditModalProps) {
-  const handleSubmitCategory = (event: React.FormEvent) => {
-    onUpdateCategory(event);
-    if (!editLoading) {
+  const handleSubmitCategory = async (event: React.FormEvent) => {
+    const didSucceed = await onUpdateCategory(event);
+    if (didSucceed) {
       toast.success(NOTIFICATION_COPY.app.categoryUpdated);
+      onClose();
     }
   };
 
-  const handleSubmitFeed = (event: React.FormEvent) => {
-    onUpdateFeed(event);
-    if (!editLoading) {
+  const handleSubmitFeed = async (event: React.FormEvent) => {
+    const didSucceed = await onUpdateFeed(event);
+    if (didSucceed) {
       toast.success(NOTIFICATION_COPY.app.feedUpdated);
+      onClose();
     }
   };
 

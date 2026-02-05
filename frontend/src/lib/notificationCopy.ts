@@ -1,7 +1,7 @@
 export const NOTIFICATION_COPY = {
   app: {
-    themeChanged: (label: string) => `Theme set to ${label}.`,
-    starRemoved: (title: string) => `Removed "${title}" from starred.`,
+    themeChanged: (label: string) => `${label} theme set.`,
+    starRemoved: 'Story removed from starred.',
     starRemoveError: 'Could not update starred entry.',
     feedRefreshing: 'Refreshing feeds...',
     categoryUpdated: 'Category updated.',

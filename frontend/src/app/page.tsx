@@ -530,11 +530,11 @@ export default function Home() {
     }
   }
 
-  async function addFeed(e: React.FormEvent) {
+  async function addFeed(e: React.FormEvent): Promise<boolean> {
     e.preventDefault();
 
     const trimmedUrl = newFeedUrl.trim();
-    if (!trimmedUrl) return;
+    if (!trimmedUrl) return false;
 
     setAddFeedLoading(true);
     setAddFeedError(null);
@@ -558,18 +558,20 @@ export default function Home() {
       setNewFeedUrl('');
       setNewFeedCategoryId(null);
       await loadFeeds();
+      return true;
     } catch (e) {
       setAddFeedError(e instanceof Error ? e.message : 'Failed to add feed');
+      return false;
     } finally {
       setAddFeedLoading(false);
     }
   }
 
-  async function addCategory(e: React.FormEvent) {
+  async function addCategory(e: React.FormEvent): Promise<boolean> {
     e.preventDefault();
 
     const trimmedTitle = newCategoryTitle.trim();
-    if (!trimmedTitle) return;
+    if (!trimmedTitle) return false;
 
     setAddCategoryLoading(true);
     setAddCategoryError(null);
@@ -584,10 +586,12 @@ export default function Home() {
       // Success: clear input and refresh categories
       setNewCategoryTitle('');
       await loadCategories();
+      return true;
     } catch (e) {
       setAddCategoryError(
         e instanceof Error ? e.message : 'Failed to add category'
       );
+      return false;
     } finally {
       setAddCategoryLoading(false);
     }
@@ -637,13 +641,13 @@ export default function Home() {
     }
   }
 
-  async function updateCategory(e: React.FormEvent) {
+  async function updateCategory(e: React.FormEvent): Promise<boolean> {
     e.preventDefault();
 
-    if (!editItemId) return;
+    if (!editItemId) return false;
 
     const trimmedTitle = editTitle.trim();
-    if (!trimmedTitle) return;
+    if (!trimmedTitle) return false;
 
     setEditLoading(true);
     setEditError(null);
@@ -655,27 +659,28 @@ export default function Home() {
         body: JSON.stringify({ title: trimmedTitle }),
       });
 
-      // Success: close modal and refresh categories
-      closeEditModal();
+      // Success: refresh categories
       await loadCategories();
+      return true;
     } catch (e) {
       setEditError(
         e instanceof Error ? e.message : 'Failed to update category'
       );
+      return false;
     } finally {
       setEditLoading(false);
     }
   }
 
-  async function updateFeed(e: React.FormEvent) {
+  async function updateFeed(e: React.FormEvent): Promise<boolean> {
     e.preventDefault();
 
-    if (!editItemId) return;
+    if (!editItemId) return false;
 
     const trimmedTitle = editTitle.trim();
     const trimmedUrl = editFeedUrl.trim();
 
-    if (!trimmedTitle || !trimmedUrl) return;
+    if (!trimmedTitle || !trimmedUrl) return false;
 
     setEditLoading(true);
     setEditError(null);
@@ -691,11 +696,12 @@ export default function Home() {
         }),
       });
 
-      // Success: close modal and refresh feeds
-      closeEditModal();
+      // Success: refresh feeds
       await loadFeeds();
+      return true;
     } catch (e) {
       setEditError(e instanceof Error ? e.message : 'Failed to update feed');
+      return false;
     } finally {
       setEditLoading(false);
     }
@@ -1002,13 +1008,13 @@ export default function Home() {
         return;
       }
 
-      // j or ArrowDown = next entry
-      if (e.key === 'j' || e.key === 'ArrowDown') {
+      // ArrowDown = next entry
+      if (e.key === 'ArrowDown') {
         e.preventDefault();
         if (hasNext) navigateToNext();
       }
-      // k or ArrowUp = previous entry
-      else if (e.key === 'k' || e.key === 'ArrowUp') {
+      // ArrowUp = previous entry
+      else if (e.key === 'ArrowUp') {
         e.preventDefault();
         if (hasPrev) navigateToPrev();
       }

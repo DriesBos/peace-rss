@@ -7,8 +7,6 @@ import { EscapeToHome } from '@/components/EscapeToHome/EscapeToHome';
 const TIPS = [
   'Pull down at the top of the page to refresh your feeds.',
   'Press R to refresh your feed.',
-  'Press J to move to the next entry.',
-  'Press K to move to the previous entry.',
   'Press ArrowDown to move to the next entry.',
   'Press ArrowUp to move to the previous entry.',
   'When an entry is open, press ArrowRight for next and ArrowLeft for previous.',

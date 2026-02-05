@@ -8,6 +8,7 @@ import type { Category } from '@/app/_lib/types';
 import { toast } from 'sonner';
 import { NOTIFICATION_COPY } from '@/lib/notificationCopy';
 import { useKeydown } from '@/hooks/useKeydown';
+import { Button } from '@/components/Button/Button';
 
 export type AddModalProps = {
   isOpen: boolean;
@@ -17,14 +18,14 @@ export type AddModalProps = {
   setNewCategoryTitle: (value: string) => void;
   addCategoryLoading: boolean;
   addCategoryError: string | null;
-  addCategory: (e: React.FormEvent) => void;
+  addCategory: (e: React.FormEvent) => Promise<boolean>;
   newFeedUrl: string;
   setNewFeedUrl: (value: string) => void;
   newFeedCategoryId: number | null;
   setNewFeedCategoryId: (value: number | null) => void;
   addFeedLoading: boolean;
   addFeedError: string | null;
-  addFeed: (e: React.FormEvent) => void;
+  addFeed: (e: React.FormEvent) => Promise<boolean>;
   isLoading: boolean;
 };
 
@@ -46,17 +47,19 @@ export function AddModal({
   addFeed,
   isLoading,
 }: AddModalProps) {
-  const handleAddCategory = (event: React.FormEvent) => {
-    addCategory(event);
-    if (!addCategoryLoading) {
+  const handleAddCategory = async (event: React.FormEvent) => {
+    const didSucceed = await addCategory(event);
+    if (didSucceed) {
       toast.success(NOTIFICATION_COPY.app.categoryAdded);
+      onClose();
     }
   };
 
-  const handleAddFeed = (event: React.FormEvent) => {
-    addFeed(event);
-    if (!addFeedLoading) {
+  const handleAddFeed = async (event: React.FormEvent) => {
+    const didSucceed = await addFeed(event);
+    if (didSucceed) {
       toast.success(NOTIFICATION_COPY.app.feedAdded);
+      onClose();
     }
   };
 
@@ -70,7 +73,7 @@ export function AddModal({
     {
       enabled: isOpen,
       target: typeof document !== 'undefined' ? document : null,
-    }
+    },
   );
 
   return (
@@ -85,14 +88,18 @@ export function AddModal({
             placeholder="Category name.."
             disabled={addCategoryLoading || isLoading}
           />
-          <button
+          <Button
             type="submit"
-            disabled={addCategoryLoading || isLoading || !newCategoryTitle.trim()}
-            className={styles.linkButton}
+            variant="primary"
+            disabled={
+              addCategoryLoading || isLoading || !newCategoryTitle.trim()
+            }
           >
             {addCategoryLoading ? 'Adding...' : 'Add category'}
-          </button>
-          {addCategoryError && <div className={styles.error}>{addCategoryError}</div>}
+          </Button>
+          {addCategoryError && (
+            <div className={styles.error}>{addCategoryError}</div>
+          )}
         </form>
 
         <form onSubmit={handleAddFeed} className={styles.formBlock}>

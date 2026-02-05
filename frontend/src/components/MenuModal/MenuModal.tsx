@@ -142,7 +142,7 @@ export function MenuModal({
     {
       enabled: isOpen,
       target: typeof document !== 'undefined' ? document : null,
-    }
+    },
   );
 
   useEffect(() => {
@@ -170,11 +170,11 @@ export function MenuModal({
     if (!container) return;
 
     const panels = Array.from(
-      container.querySelectorAll<HTMLElement>(`.${styles.feedsUnderCategory}`)
+      container.querySelectorAll<HTMLElement>(`.${styles.feedsUnderCategory}`),
     );
     const maxHeight = panels.reduce(
       (max, panel) => Math.max(max, panel.scrollHeight),
-      0
+      0,
     );
 
     setFeedsMaxHeight(maxHeight);
@@ -196,9 +196,9 @@ export function MenuModal({
   const uncategorizedFeeds = useMemo(
     () =>
       feeds.filter(
-        (feed) => !feed.category || feed.category.id === categories[0]?.id
+        (feed) => !feed.category || feed.category.id === categories[0]?.id,
       ),
-    [feeds, categories]
+    [feeds, categories],
   );
 
   const handleOpenAddModal = useCallback(() => {
@@ -215,7 +215,7 @@ export function MenuModal({
       onClose();
       openEditModal(type, item);
     },
-    [onClose, openEditModal, resetCollapsedCategories]
+    [onClose, openEditModal, resetCollapsedCategories],
   );
 
   const queueThemeToast = useCallback((label: string) => {
@@ -235,7 +235,7 @@ export function MenuModal({
       const label = THEME_LABELS[nextTheme] ?? nextTheme;
       queueThemeToast(label);
     },
-    [queueThemeToast, setTheme, theme]
+    [queueThemeToast, setTheme, theme],
   );
 
   const handleRefreshFeeds = useCallback(() => {
@@ -364,16 +364,16 @@ export function MenuModal({
                             e.stopPropagation();
                             try {
                               await onToggleEntryStar(entry.id);
-                              toast(
-                                NOTIFICATION_COPY.app.starRemoved(entry.title)
-                              );
+                              toast(NOTIFICATION_COPY.app.starRemoved);
                             } catch (error) {
-                              toast.error(NOTIFICATION_COPY.app.starRemoveError);
+                              toast.error(
+                                NOTIFICATION_COPY.app.starRemoveError,
+                              );
                             }
                           }}
                           disabled={isLoading}
                           title="Remove from starred"
-                          aria-label={`Remove ${entry.title} from starred`}
+                          aria-label={`Remove story from starred`}
                         >
                           <IconWrapper>
                             <IconStar />
@@ -387,7 +387,7 @@ export function MenuModal({
 
               {categories.slice(1).map((cat) => {
                 const categoryFeeds = feeds.filter(
-                  (feed) => feed.category?.id === cat.id
+                  (feed) => feed.category?.id === cat.id,
                 );
                 const isCollapsed = collapsedCategories.has(cat.id);
 
