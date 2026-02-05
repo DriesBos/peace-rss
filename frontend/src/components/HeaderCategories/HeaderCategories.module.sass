@@ -14,13 +14,14 @@
   z-index: calc(var(--index-newsfeed) + 1)
   overflow: visible
   height: 2rem
+  height: 100%
   &_Menu
     padding: 0 var(--space-sides-general)
   &_Offline
     @include font-nav
     color: var(--color-text-secondary)
   &_Search
-    display: inline-flex
+    display: flex
     align-items: center
     gap: 6px
   &_CategoryList
@@ -42,6 +43,7 @@
   font-size: var(--type-input)
   line-height: 1
   min-width: 3.25rem
+  width: 100px
   max-width: 35vw
   color: var(--color-text)
   border-bottom: 1px solid transparent
