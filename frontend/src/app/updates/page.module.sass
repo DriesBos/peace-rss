@@ -1,0 +1,73 @@
+@import '@/styles/vars.sass'
+
+.updatesPage
+  position: relative
+  min-height: 100%
+  width: 100%
+  background: var(--color-app)
+  color: var(--color-text)
+
+.content
+  display: flex
+  flex-direction: column
+  gap: var(--space-headcontent-gap)
+  padding-top: var(--space-content-top)
+  padding-bottom: var(--space-content-bottom)
+  min-height: 100%
+
+.backButton
+  display: inline-flex
+  align-items: flex-end
+  gap: 4px
+  padding: 0 var(--space-sides-general)
+  @include font-nav
+  color: var(--color-text)
+
+.textBlock
+  display: flex
+  flex-direction: column
+  gap: var(--two-rem)
+  padding: 0 var(--space-sides-stories)
+  width: 100%
+  user-select: text
+  -webkit-user-select: text
+  -moz-user-select: text
+  -ms-user-select: text
+
+.sectionTitle
+  font-size: var(--type-title)
+  font-weight: 400
+  line-height: 1
+  margin: 0
+
+.updateList
+  display: flex
+  flex-direction: column
+  gap: var(--half-rem)
+  padding-bottom: var(--eight-rem)
+
+.updateItem
+  display: flex
+  flex-direction: column
+  gap: var(--half-rem)
+  @include font-body
+
+.updateHeader
+  display: flex
+  align-items: flex-start
+  gap: 4px
+  @include font-body
+
+.updateDate
+  color: var(--color-text-secondary)
+
+.updateDash,
+.updateTitle
+  color: var(--color-text)
+
+.updatePoints
+  margin: 0
+  padding-left: 21px
+  @include font-body
+  li
+    margin: 0

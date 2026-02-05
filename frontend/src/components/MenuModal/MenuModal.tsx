@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  type CSSProperties,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -8,6 +9,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import Link from 'next/link';
 import { UserButton } from '@clerk/nextjs';
 import { useTheme } from 'next-themes';
 import styles from './MenuModal.module.sass';
@@ -67,6 +69,8 @@ export function MenuModal({
   const [nowMs, setNowMs] = useState(() => Date.now());
   const { theme, setTheme } = useTheme();
   const hasUserAdjustedCollapse = useRef(false);
+  const categoriesListRef = useRef<HTMLDivElement | null>(null);
+  const [feedsMaxHeight, setFeedsMaxHeight] = useState(0);
 
   const [collapsedCategories, setCollapsedCategories] = useState<
     Set<number | string>
@@ -141,6 +145,24 @@ export function MenuModal({
     }, 1_000);
     return () => window.clearInterval(interval);
   }, [isOpen]);
+
+  useLayoutEffect(() => {
+    if (!isOpen) return;
+    if (activeView !== 'feeds') return;
+
+    const container = categoriesListRef.current;
+    if (!container) return;
+
+    const panels = Array.from(
+      container.querySelectorAll<HTMLElement>(`.${styles.feedsUnderCategory}`)
+    );
+    const maxHeight = panels.reduce(
+      (max, panel) => Math.max(max, panel.scrollHeight),
+      0
+    );
+
+    setFeedsMaxHeight(maxHeight);
+  }, [isOpen, activeView, feeds, categories, starredEntries]);
 
   const timeParts = useMemo(() => {
     const date = new Date(nowMs);
@@ -234,7 +256,17 @@ export function MenuModal({
               <span>Add content</span>
             </Button>
 
-            <div className={styles.categoriesFeedsList}>
+            <div
+              className={styles.categoriesFeedsList}
+              ref={categoriesListRef}
+              style={
+                feedsMaxHeight > 0
+                  ? ({
+                      '--feeds-max-height': `${feedsMaxHeight}px`,
+                    } as CSSProperties)
+                  : undefined
+              }
+            >
               <LabelWithCount count={feeds.length}>
                 <span>All feeds</span>
               </LabelWithCount>
@@ -445,20 +477,8 @@ export function MenuModal({
             </div>
 
             <div className={styles.menuLinks}>
-              <a
-                href="https://peace.blog/about"
-                target="_blank"
-                rel="noreferrer"
-              >
-                About
-              </a>
-              <a
-                href="https://peace.blog/news"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Updates
-              </a>
+              <Link href="/about">About</Link>
+              <Link href="/updates">Updates</Link>
             </div>
 
             <div className={styles.footerLinks}>
