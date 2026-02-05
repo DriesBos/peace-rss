@@ -1,6 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { UserButton } from '@clerk/nextjs';
 import { useTheme } from 'next-themes';
 import styles from './MenuModal.module.sass';
@@ -8,6 +15,7 @@ import { ModalContainer } from '@/components/ModalContainer/ModalContainer';
 import { IconEdit } from '@/components/icons/IconEdit';
 import { Button } from '@/components/Button/Button';
 import { IconPlus } from '@/components/icons/IconPlus';
+import { IconStar } from '@/components/icons/IconStar';
 import { IconWrapper } from '@/components/icons/IconWrapper/IconWrapper';
 import { LabelWithCount } from '@/components/LabelWithCount/LabelWithCount';
 import type { Category, Entry, Feed } from '@/app/_lib/types';
@@ -58,16 +66,19 @@ export function MenuModal({
   const [activeView, setActiveView] = useState<MenuView>('feeds');
   const [nowMs, setNowMs] = useState(() => Date.now());
   const { theme, setTheme } = useTheme();
+  const hasUserAdjustedCollapse = useRef(false);
 
   const [collapsedCategories, setCollapsedCategories] = useState<
     Set<number | string>
   >(() => buildInitialCollapsedCategories(categories));
 
   const resetCollapsedCategories = useCallback(() => {
+    hasUserAdjustedCollapse.current = false;
     setCollapsedCategories(buildInitialCollapsedCategories(categories));
   }, [categories]);
 
   const toggleCategoryCollapse = useCallback((categoryId: number | string) => {
+    hasUserAdjustedCollapse.current = true;
     setCollapsedCategories((prev) => {
       const updated = new Set(prev);
       if (updated.has(categoryId)) {
@@ -80,10 +91,31 @@ export function MenuModal({
   }, []);
 
   const handleClose = useCallback(() => {
+    hasUserAdjustedCollapse.current = false;
     setActiveView('feeds');
     resetCollapsedCategories();
     onClose();
   }, [onClose, resetCollapsedCategories]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      hasUserAdjustedCollapse.current = false;
+    }
+  }, [isOpen]);
+
+  useLayoutEffect(() => {
+    if (!isOpen) return;
+    if (hasUserAdjustedCollapse.current) return;
+
+    const desired = buildInitialCollapsedCategories(categories);
+    const isSame =
+      desired.size === collapsedCategories.size &&
+      Array.from(desired).every((key) => collapsedCategories.has(key));
+
+    if (!isSame) {
+      setCollapsedCategories(desired);
+    }
+  }, [isOpen, categories, collapsedCategories]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -160,7 +192,7 @@ export function MenuModal({
               active={activeView === 'feeds'}
               onClick={() => setActiveView('feeds')}
             >
-              Feeds
+              <span>Feeds</span>
             </Button>
             <Button
               variant="nav"
@@ -169,7 +201,7 @@ export function MenuModal({
               active={activeView === 'look'}
               onClick={() => setActiveView('look')}
             >
-              Look
+              <span>Look</span>
             </Button>
             <Button
               variant="nav"
@@ -178,15 +210,14 @@ export function MenuModal({
               active={activeView === 'other'}
               onClick={() => setActiveView('other')}
             >
-              Other
+              <span>Other</span>
             </Button>
           </div>
-          <div className={styles.time}>
+          <LabelWithCount count={timeParts.period}>
             <span>{timeParts.hours}</span>
             <span className={styles.timeColon}>:</span>
             <span>{timeParts.minutes}</span>
-            <span className={styles.timePeriod}>{timeParts.period}</span>
-          </div>
+          </LabelWithCount>
         </div>
 
         {activeView === 'feeds' && (
@@ -204,7 +235,9 @@ export function MenuModal({
             </Button>
 
             <div className={styles.categoriesFeedsList}>
-              <LabelWithCount label="All feeds" count={feeds.length} />
+              <LabelWithCount count={feeds.length}>
+                <span>All feeds</span>
+              </LabelWithCount>
               {starredEntries.length > 0 && (
                 <div className={styles.categoryGroup}>
                   <Button
@@ -229,9 +262,9 @@ export function MenuModal({
                         <span className={styles.feedListItem_Title}>
                           {entry.title}
                         </span>
-                        <button
+                        <Button
+                          variant="icon"
                           type="button"
-                          className={styles.iconButton}
                           onClick={async (e) => {
                             e.stopPropagation();
                             await onToggleEntryStar(entry.id);
@@ -240,8 +273,10 @@ export function MenuModal({
                           title="Remove from starred"
                           aria-label={`Remove ${entry.title} from starred`}
                         >
-                          ★
-                        </button>
+                          <IconWrapper>
+                            <IconStar />
+                          </IconWrapper>
+                        </Button>
                       </div>
                     ))}
                   </div>
@@ -263,7 +298,11 @@ export function MenuModal({
                         active={!isCollapsed}
                         onClick={() => toggleCategoryCollapse(cat.id)}
                         disabled={isLoading}
-                        count={categoryFeeds.length}
+                        count={
+                          categoryFeeds.length > 0
+                            ? categoryFeeds.length
+                            : undefined
+                        }
                       >
                         <IconWrapper>
                           <IconPlus />
@@ -284,7 +323,10 @@ export function MenuModal({
                     </div>
 
                     {categoryFeeds.length > 0 && (
-                      <div className={styles.feedsUnderCategory} data-open={!isCollapsed}>
+                      <div
+                        className={styles.feedsUnderCategory}
+                        data-open={!isCollapsed}
+                      >
                         {categoryFeeds.map((feed) => (
                           <div key={feed.id} className={styles.feedListItem}>
                             <span className={styles.feedListItem_Title}>

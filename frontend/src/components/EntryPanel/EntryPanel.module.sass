@@ -50,22 +50,19 @@
       margin-bottom: 2rem
     p
       margin-bottom: 1rem
-    video, img
+    &:global(h1, h2, h3, h4, h5, h6, pre, code)
+      word-wrap: break-word
+      hyphens: auto
+    &:global(picture, figure, iframe, code, pre, video, img)
+      width: 100%
+      max-width: 100%
       margin-bottom: 1rem
-      width: 100%
-      max-width: 100%
-      height: auto
-    picture, figure, iframe
-      width: 100%
-      max-width: 100%
-      height: auto
     &:global(a)
       color: inherit
       text-decoration: underline
     &:global(img)
       max-width: 100%
       width: 100%
-      height: auto
   &_noContent
     @include font-body
     display: flex

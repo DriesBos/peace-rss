@@ -3,20 +3,18 @@
 import styles from './LabelWithCount.module.sass';
 
 type LabelWithCountProps = {
-  label: string;
-  count: number;
-  className?: string;
+  count: number | string;
+  children: React.ReactNode;
 };
 
-export function LabelWithCount({
-  label,
-  count,
-  className,
-}: LabelWithCountProps) {
+export function LabelWithCount({ count, children }: LabelWithCountProps) {
   return (
-    <div className={[styles.root, className].filter(Boolean).join(' ')}>
-      <span>{label}</span>
-      <span className={styles.count}>{count}</span>
+    <div className={styles.labelWithCount}>
+      {children}
+      {(typeof count === 'string' ||
+        (typeof count === 'number' && count > 0)) && (
+        <span className={styles.count}>{count}</span>
+      )}
     </div>
   );
 }

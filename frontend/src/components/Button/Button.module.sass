@@ -20,41 +20,40 @@
     .icon, svg, .iconWrapper
       transform: rotate(45deg)
 
+// Has underline
 .primary
   color: var(--color-text)
   @include font-button
-
   &::after
     @include underline(var(--color-text))
 
+// Underline on hover + Nav font
 .category
   color: var(--color-text)
   @include font-nav
-
   &::after
     @include underline(transparent)
-
+    transition: background var(--transition-buttons)
   &[data-active="true"]
     &::after
-      background: var(--color-text)
+      @include underline(var(--color-text))
 
+// Only icon, no text
 .icon
   display: inline-flex
 
+// Underline on hover + Nav font
 .nav
   display: flex
   flex-direction: row
   align-items: center
   @include font-nav
-
   span:first-child::after
     @include underline(transparent)
     transition: background var(--transition-buttons)
-
   &[data-active="true"]
     span:first-child::after
       @include underline(var(--color-text))
-
   &:hover
     @media (hover: hover)
       span:first-child::after
@@ -63,17 +62,15 @@
 .button:disabled
   color: var(--color-text-secondary)
   cursor: not-allowed
-
-.button:disabled::after
-  @include underline(transparent)
-
-.button:disabled span::after
-  @include underline(transparent)
+  &::after
+    @include underline(transparent)
+  span:first-child::after
+    @include underline(transparent)
 
 .count
   position: absolute
   right: 0
   top: 0
-  transform: translate(-4px, -6px)
   @include font-count
   color: var(--color-text-secondary)
+  transform: translate(-4px, -6px)
