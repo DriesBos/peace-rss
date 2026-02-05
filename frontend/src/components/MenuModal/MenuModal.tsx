@@ -21,6 +21,9 @@ import { IconStar } from '@/components/icons/IconStar';
 import { IconWrapper } from '@/components/icons/IconWrapper/IconWrapper';
 import { LabelWithCount } from '@/components/LabelWithCount/LabelWithCount';
 import type { Category, Entry, Feed } from '@/app/_lib/types';
+import { toast } from 'sonner';
+import { NOTIFICATION_COPY } from '@/lib/notificationCopy';
+import { useKeydown } from '@/hooks/useKeydown';
 
 type MenuView = 'feeds' | 'look' | 'other';
 
@@ -31,6 +34,9 @@ export type MenuModalProps = {
   feeds: Feed[];
   openEditModal: (type: 'feed' | 'category', item: Feed | Category) => void;
   openAddModal: () => void;
+  onRefreshFeeds: () => Promise<void> | void;
+  isRefreshingFeeds: boolean;
+  lastRefreshedAt: number | null;
   isLoading: boolean;
   starredEntries: Entry[];
   onToggleEntryStar: (entryId: number) => Promise<void>;
@@ -43,6 +49,7 @@ const THEME_LABELS: Record<string, string> = {
   softdark: 'Soft Dark',
   green: 'Green',
 };
+const THEME_TOAST_DEBOUNCE_MS = 350;
 
 function buildInitialCollapsedCategories(categories: Category[]) {
   const initialSet = new Set<number | string>();
@@ -61,6 +68,9 @@ export function MenuModal({
   feeds,
   openEditModal,
   openAddModal,
+  onRefreshFeeds,
+  isRefreshingFeeds,
+  lastRefreshedAt,
   isLoading,
   starredEntries,
   onToggleEntryStar,
@@ -71,6 +81,7 @@ export function MenuModal({
   const hasUserAdjustedCollapse = useRef(false);
   const categoriesListRef = useRef<HTMLDivElement | null>(null);
   const [feedsMaxHeight, setFeedsMaxHeight] = useState(0);
+  const themeToastTimeoutRef = useRef<number | null>(null);
 
   const [collapsedCategories, setCollapsedCategories] = useState<
     Set<number | string>
@@ -121,21 +132,18 @@ export function MenuModal({
     }
   }, [isOpen, categories, collapsedCategories]);
 
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
+  useKeydown(
+    (event) => {
       if (event.key === 'Escape') {
+        event.preventDefault();
         handleClose();
       }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isOpen, handleClose]);
+    },
+    {
+      enabled: isOpen,
+      target: typeof document !== 'undefined' ? document : null,
+    }
+  );
 
   useEffect(() => {
     if (!isOpen) return;
@@ -145,6 +153,14 @@ export function MenuModal({
     }, 1_000);
     return () => window.clearInterval(interval);
   }, [isOpen]);
+
+  useEffect(() => {
+    return () => {
+      if (themeToastTimeoutRef.current !== null) {
+        window.clearTimeout(themeToastTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useLayoutEffect(() => {
     if (!isOpen) return;
@@ -202,6 +218,42 @@ export function MenuModal({
     [onClose, openEditModal, resetCollapsedCategories]
   );
 
+  const queueThemeToast = useCallback((label: string) => {
+    if (themeToastTimeoutRef.current !== null) {
+      window.clearTimeout(themeToastTimeoutRef.current);
+    }
+    themeToastTimeoutRef.current = window.setTimeout(() => {
+      toast(NOTIFICATION_COPY.app.themeChanged(label));
+      themeToastTimeoutRef.current = null;
+    }, THEME_TOAST_DEBOUNCE_MS);
+  }, []);
+
+  const handleThemeChange = useCallback(
+    (nextTheme: string) => {
+      if (nextTheme === theme) return;
+      setTheme(nextTheme);
+      const label = THEME_LABELS[nextTheme] ?? nextTheme;
+      queueThemeToast(label);
+    },
+    [queueThemeToast, setTheme, theme]
+  );
+
+  const handleRefreshFeeds = useCallback(() => {
+    if (isLoading) return;
+    toast(NOTIFICATION_COPY.app.feedRefreshing);
+    void onRefreshFeeds();
+  }, [isLoading, onRefreshFeeds]);
+
+  const refreshMeta = useMemo(() => {
+    if (isRefreshingFeeds) return 'Refreshing feeds...';
+    if (!lastRefreshedAt) return 'Not refreshed yet.';
+    const label = new Date(lastRefreshedAt).toLocaleTimeString(undefined, {
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+    return `Last refreshed ${label}`;
+  }, [isRefreshingFeeds, lastRefreshedAt]);
+
   return (
     <ModalContainer isOpen={isOpen} onClose={handleClose} ariaLabel="Menu">
       <div className={styles.modalMenu}>
@@ -255,6 +307,17 @@ export function MenuModal({
               </IconWrapper>
               <span>Add content</span>
             </Button>
+            <Button
+              type="button"
+              onClick={handleRefreshFeeds}
+              disabled={isLoading}
+              variant="nav"
+              className={styles.refreshButton}
+            >
+              <span>Refresh feeds</span>
+              <span className={styles.refreshShortcut}>R</span>
+            </Button>
+            <div className={styles.refreshMeta}>{refreshMeta}</div>
 
             <div
               className={styles.categoriesFeedsList}
@@ -299,7 +362,14 @@ export function MenuModal({
                           type="button"
                           onClick={async (e) => {
                             e.stopPropagation();
-                            await onToggleEntryStar(entry.id);
+                            try {
+                              await onToggleEntryStar(entry.id);
+                              toast(
+                                NOTIFICATION_COPY.app.starRemoved(entry.title)
+                              );
+                            } catch (error) {
+                              toast.error(NOTIFICATION_COPY.app.starRemoveError);
+                            }
                           }}
                           disabled={isLoading}
                           title="Remove from starred"
@@ -432,7 +502,9 @@ export function MenuModal({
             <button
               type="button"
               className={styles.themeWheel}
-              onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              onClick={() =>
+                handleThemeChange(theme === 'dark' ? 'light' : 'dark')
+              }
               aria-label="Toggle theme"
             >
               <div className={styles.themeWheel_Indicator} />
@@ -445,7 +517,7 @@ export function MenuModal({
                   key={themeName}
                   className={styles.themeOption}
                   data-active={theme === themeName}
-                  onClick={() => setTheme(themeName)}
+                  onClick={() => handleThemeChange(themeName)}
                 >
                   {label}
                 </button>
@@ -456,13 +528,13 @@ export function MenuModal({
               type="button"
               className={styles.lookCard}
               data-kind="komorebi"
-              onClick={() => setTheme('softlight')}
+              onClick={() => handleThemeChange('softlight')}
             />
             <button
               type="button"
               className={styles.lookCard}
               data-kind="rain"
-              onClick={() => setTheme('green')}
+              onClick={() => handleThemeChange('green')}
             />
           </div>
         )}
@@ -478,6 +550,7 @@ export function MenuModal({
 
             <div className={styles.menuLinks}>
               <Link href="/about">About</Link>
+              <Link href="/tips">Tips</Link>
               <Link href="/notifications">Notifications</Link>
               <Link href="/updates">Updates</Link>
             </div>

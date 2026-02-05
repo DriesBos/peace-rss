@@ -1,11 +1,13 @@
 'use client';
 
-import { useEffect } from 'react';
 import styles from './AddModal.module.sass';
 import { ModalContainer } from '@/components/ModalContainer/ModalContainer';
 import { LabeledInput } from '@/components/LabeledInput/LabeledInput';
 import { LabeledSelect } from '@/components/LabeledSelect/LabeledSelect';
 import type { Category } from '@/app/_lib/types';
+import { toast } from 'sonner';
+import { NOTIFICATION_COPY } from '@/lib/notificationCopy';
+import { useKeydown } from '@/hooks/useKeydown';
 
 export type AddModalProps = {
   isOpen: boolean;
@@ -44,26 +46,37 @@ export function AddModal({
   addFeed,
   isLoading,
 }: AddModalProps) {
-  useEffect(() => {
-    if (!isOpen) return;
+  const handleAddCategory = (event: React.FormEvent) => {
+    addCategory(event);
+    if (!addCategoryLoading) {
+      toast.success(NOTIFICATION_COPY.app.categoryAdded);
+    }
+  };
 
-    const handleKeyDown = (event: KeyboardEvent) => {
+  const handleAddFeed = (event: React.FormEvent) => {
+    addFeed(event);
+    if (!addFeedLoading) {
+      toast.success(NOTIFICATION_COPY.app.feedAdded);
+    }
+  };
+
+  useKeydown(
+    (event) => {
       if (event.key === 'Escape') {
+        event.preventDefault();
         onClose();
       }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isOpen, onClose]);
+    },
+    {
+      enabled: isOpen,
+      target: typeof document !== 'undefined' ? document : null,
+    }
+  );
 
   return (
     <ModalContainer isOpen={isOpen} onClose={onClose} ariaLabel="Add">
       <div className={styles.modalAdd}>
-        <form onSubmit={addCategory} className={styles.formBlock}>
+        <form onSubmit={handleAddCategory} className={styles.formBlock}>
           <LabeledInput
             id="add-category-title"
             label="Category name"
@@ -82,7 +95,7 @@ export function AddModal({
           {addCategoryError && <div className={styles.error}>{addCategoryError}</div>}
         </form>
 
-        <form onSubmit={addFeed} className={styles.formBlock}>
+        <form onSubmit={handleAddFeed} className={styles.formBlock}>
           <LabeledInput
             id="add-feed-url"
             label="Feed web address"

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import styles from './page.module.sass';
 import { IconArrowLeft } from '@/components/icons/IconArrowLeft';
 import { IconWrapper } from '@/components/icons/IconWrapper/IconWrapper';
+import { EscapeToHome } from '@/components/EscapeToHome/EscapeToHome';
 
 const UPDATE_ITEMS = [
   {
@@ -65,6 +66,7 @@ const UPDATE_ITEMS = [
 export default function UpdatesPage() {
   return (
     <div className={styles.updatesPage}>
+      <EscapeToHome />
       <div className={styles.content}>
         <Link href="/" className={styles.backButton} aria-label="Back to home">
           <IconWrapper variant="wide">

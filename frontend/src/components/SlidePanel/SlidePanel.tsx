@@ -1,10 +1,10 @@
-import { useEffect } from 'react';
 import type { RefObject } from 'react';
 import styles from './SlidePanel.module.sass';
 import { Button } from '@/components/Button/Button';
 import { IconArrowLeft } from '@/components/icons/IconArrowLeft';
 import { useDisableScroll } from '@/hooks/useDisableScroll';
 import { IconWrapper } from '@/components/icons/IconWrapper/IconWrapper';
+import { useKeydown } from '@/hooks/useKeydown';
 
 type SlidePanelProps = {
   isOpen: boolean;
@@ -25,31 +25,18 @@ export function SlidePanel({
   useDisableScroll(isOpen);
 
   // Handle Escape key to close panel
-  useEffect(() => {
-    if (!isOpen) return;
+  useKeydown(
+    (event) => {
+      if (event.key !== 'Escape') return;
 
-    const handleKeyDown = (event: KeyboardEvent) => {
-      // Don't close if user is typing in an input field
-      if (
-        event.target instanceof HTMLInputElement ||
-        event.target instanceof HTMLTextAreaElement ||
-        event.target instanceof HTMLSelectElement
-      ) {
-        return;
-      }
-
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        onClose();
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isOpen, onClose]);
+      event.preventDefault();
+      onClose();
+    },
+    {
+      enabled: isOpen,
+      target: typeof document !== 'undefined' ? document : null,
+    }
+  );
 
   return (
     <>

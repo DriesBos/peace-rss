@@ -53,6 +53,26 @@
   100%
     opacity: 0.55
 
+.refreshBanner
+  position: fixed
+  top: calc(env(safe-area-inset-top) + 32px)
+  left: 0
+  right: 0
+  display: flex
+  justify-content: center
+  pointer-events: none
+  @include font-meta
+  color: var(--color-text-secondary)
+  letter-spacing: 0.18em
+  text-transform: uppercase
+  animation: pullPulse 1s ease-in-out infinite
+
+.refreshStatus
+  @include font-meta
+  color: var(--color-text-secondary)
+  padding: 0 var(--space-sides-general)
+  margin-top: -40px
+
 .error
   padding: 10px 12px
   border-bottom: 1px solid #e6e6e6

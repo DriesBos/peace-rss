@@ -2,6 +2,7 @@ import Link from 'next/link';
 import styles from './page.module.sass';
 import { IconArrowLeft } from '@/components/icons/IconArrowLeft';
 import { IconWrapper } from '@/components/icons/IconWrapper/IconWrapper';
+import { EscapeToHome } from '@/components/EscapeToHome/EscapeToHome';
 
 const VALUES = [
   'Take (back) control of your news feed — We pull news from sites that abuse attention and reformat it.',
@@ -12,6 +13,7 @@ const VALUES = [
 export default function AboutPage() {
   return (
     <div className={styles.aboutPage}>
+      <EscapeToHome />
       <div className={styles.content}>
         <Link href="/" className={styles.backButton} aria-label="Back to home">
           <IconWrapper variant="wide">

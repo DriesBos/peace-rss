@@ -6,6 +6,8 @@ import styles from './page.module.sass';
 import { IconArrowLeft } from '@/components/icons/IconArrowLeft';
 import { IconWrapper } from '@/components/icons/IconWrapper/IconWrapper';
 import { Button } from '@/components/Button/Button';
+import { NOTIFICATION_COPY } from '@/lib/notificationCopy';
+import { EscapeToHome } from '@/components/EscapeToHome/EscapeToHome';
 
 type ToastButton = {
   id: string;
@@ -17,41 +19,41 @@ const TOAST_BUTTONS: ToastButton[] = [
   {
     id: 'default',
     label: 'Default',
-    onClick: () => toast('Saved to reading list.'),
+    onClick: () => toast(NOTIFICATION_COPY.demo.defaultToast),
   },
   {
     id: 'description',
     label: 'With description',
     onClick: () =>
-      toast('Feed refreshed.', {
-        description: 'Fetched 12 new items.',
+      toast(NOTIFICATION_COPY.demo.descriptionTitle, {
+        description: NOTIFICATION_COPY.demo.descriptionBody,
       }),
   },
   {
     id: 'success',
     label: 'Success',
-    onClick: () => toast.success('Category renamed.'),
+    onClick: () => toast.success(NOTIFICATION_COPY.demo.successToast),
   },
   {
     id: 'error',
     label: 'Error',
     onClick: () =>
-      toast.error('Could not save.', {
-        description: 'Please try again.',
+      toast.error(NOTIFICATION_COPY.demo.errorTitle, {
+        description: NOTIFICATION_COPY.demo.errorBody,
       }),
   },
   {
     id: 'action',
     label: 'Action',
     onClick: () =>
-      toast('Feed removed.', {
+      toast(NOTIFICATION_COPY.demo.actionTitle, {
         action: (
           <button
             type="button"
             className={styles.toastAction}
-            onClick={() => toast('Undo complete.')}
+            onClick={() => toast(NOTIFICATION_COPY.demo.actionUndoResult)}
           >
-            Undo
+            {NOTIFICATION_COPY.demo.actionUndoLabel}
           </button>
         ),
       }),
@@ -60,14 +62,14 @@ const TOAST_BUTTONS: ToastButton[] = [
     id: 'cancel',
     label: 'Cancel',
     onClick: () =>
-      toast('Discard changes?', {
+      toast(NOTIFICATION_COPY.demo.cancelTitle, {
         cancel: (
           <button
             type="button"
             className={styles.toastCancel}
-            onClick={() => toast('Kept editing.')}
+            onClick={() => toast(NOTIFICATION_COPY.demo.cancelResult)}
           >
-            Keep editing
+            {NOTIFICATION_COPY.demo.cancelLabel}
           </button>
         ),
       }),
@@ -76,9 +78,9 @@ const TOAST_BUTTONS: ToastButton[] = [
     id: 'loading',
     label: 'Loading',
     onClick: () => {
-      const toastId = toast.loading('Refreshing feeds...');
+      const toastId = toast.loading(NOTIFICATION_COPY.demo.loadingTitle);
       window.setTimeout(() => {
-        toast.success('Refresh complete.', { id: toastId });
+        toast.success(NOTIFICATION_COPY.demo.loadingSuccess, { id: toastId });
       }, 1200);
     },
   },
@@ -87,13 +89,16 @@ const TOAST_BUTTONS: ToastButton[] = [
     label: 'Promise',
     onClick: () => {
       const syncPromise = new Promise<string>((resolve) => {
-        window.setTimeout(() => resolve('Sync complete.'), 1400);
+        window.setTimeout(
+          () => resolve(NOTIFICATION_COPY.demo.promiseSuccess),
+          1400
+        );
       });
 
       toast.promise(syncPromise, {
-        loading: 'Syncing library...',
+        loading: NOTIFICATION_COPY.demo.promiseLoading,
         success: (message) => message,
-        error: 'Sync failed.',
+        error: NOTIFICATION_COPY.demo.promiseError,
       });
     },
   },
@@ -103,8 +108,8 @@ const TOAST_BUTTONS: ToastButton[] = [
     onClick: () =>
       toast(
         <div className={styles.customToast}>
-          <strong>Saved</strong>
-          <span>Added to your "Read later" list.</span>
+          <strong>{NOTIFICATION_COPY.demo.customTitle}</strong>
+          <span>{NOTIFICATION_COPY.demo.customBody}</span>
         </div>
       ),
   },
@@ -113,6 +118,7 @@ const TOAST_BUTTONS: ToastButton[] = [
 export default function NotificationsPage() {
   return (
     <div className={styles.notificationsPage}>
+      <EscapeToHome />
       <div className={styles.content}>
         <Link href="/" className={styles.backButton} aria-label="Back to home">
           <IconWrapper variant="wide">

@@ -6,6 +6,9 @@ import { LabeledSelect } from '@/components/LabeledSelect/LabeledSelect';
 import { LabeledInput } from '@/components/LabeledInput/LabeledInput';
 import type { Category } from '@/app/_lib/types';
 import { Button } from '@/components/Button/Button';
+import { toast } from 'sonner';
+import { NOTIFICATION_COPY } from '@/lib/notificationCopy';
+import { useKeydown } from '@/hooks/useKeydown';
 
 export type EditModalProps = {
   isOpen: boolean;
@@ -46,6 +49,33 @@ export function EditModal({
   onChangeFeedUrl,
   onChangeCategoryId,
 }: EditModalProps) {
+  const handleSubmitCategory = (event: React.FormEvent) => {
+    onUpdateCategory(event);
+    if (!editLoading) {
+      toast.success(NOTIFICATION_COPY.app.categoryUpdated);
+    }
+  };
+
+  const handleSubmitFeed = (event: React.FormEvent) => {
+    onUpdateFeed(event);
+    if (!editLoading) {
+      toast.success(NOTIFICATION_COPY.app.feedUpdated);
+    }
+  };
+
+  useKeydown(
+    (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose();
+      }
+    },
+    {
+      enabled: isOpen,
+      target: typeof document !== 'undefined' ? document : null,
+    }
+  );
+
   return (
     <ModalContainer
       isOpen={isOpen}
@@ -54,7 +84,7 @@ export function EditModal({
     >
       <div className={styles.editModal}>
         {editType === 'category' ? (
-          <form onSubmit={onUpdateCategory} className={styles.editForm}>
+          <form onSubmit={handleSubmitCategory} className={styles.editForm}>
             <div className={styles.formField}>
               <LabeledInput
                 id="edit-category-title"
@@ -83,6 +113,7 @@ export function EditModal({
                     confirm('Are you sure you want to delete this category?')
                   ) {
                     onDeleteCategory(editItemId);
+                    toast(NOTIFICATION_COPY.app.categoryDeleted);
                     onClose();
                   }
                 }}
@@ -103,7 +134,7 @@ export function EditModal({
             {editError && <div className={styles.error}>{editError}</div>}
           </form>
         ) : (
-          <form onSubmit={onUpdateFeed} className={styles.editForm}>
+          <form onSubmit={handleSubmitFeed} className={styles.editForm}>
             <div className={styles.formField}>
               <LabeledInput
                 id="edit-feed-title"
@@ -160,6 +191,7 @@ export function EditModal({
                     confirm('Are you sure you want to delete this feed?')
                   ) {
                     onDeleteFeed(editItemId);
+                    toast(NOTIFICATION_COPY.app.feedDeleted);
                     onClose();
                   }
                 }}

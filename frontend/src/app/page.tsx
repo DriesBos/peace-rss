@@ -9,6 +9,7 @@ import { EntryList } from '@/components/EntryList/EntryList';
 import { EntryPanel } from '@/components/EntryPanel/EntryPanel';
 import { HeaderCategories } from '@/components/HeaderCategories/HeaderCategories';
 import { MenuModal } from '@/components/MenuModal/MenuModal';
+import { useKeydown } from '@/hooks/useKeydown';
 import { fetchJson } from '@/app/_lib/fetchJson';
 import type {
   Category,
@@ -24,6 +25,8 @@ const PULL_TRIGGER_PX = 70;
 const PULL_MAX_PX = 90;
 const DONE_HOLD_MS = 700;
 const FETCH_INDICATOR_HEIGHT = 32;
+const SWIPE_THRESHOLD_PX = 60;
+const SWIPE_MAX_VERTICAL_PX = 50;
 
 function getScrollTop(): number {
   if (typeof window === 'undefined') return 0;
@@ -79,11 +82,15 @@ export default function Home() {
   const [totalUnreadCount, setTotalUnreadCount] = useState(0);
   const [totalStarredCount, setTotalStarredCount] = useState(0);
   const [isOffline, setIsOffline] = useState(false);
+  const [isRefreshingFeeds, setIsRefreshingFeeds] = useState(false);
+  const [lastRefreshedAt, setLastRefreshedAt] = useState<number | null>(null);
   const [pullState, setPullState] = useState<PullState>('idle');
   const [pullDistance, setPullDistance] = useState(0);
   const appRef = useRef<HTMLDivElement | null>(null);
   const pullDistanceRef = useRef(0);
   const startYRef = useRef<number | null>(null);
+  const startXRef = useRef<number | null>(null);
+  const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const isRefreshingRef = useRef(false);
   const doneTimeoutRef = useRef<number | null>(null);
 
@@ -361,6 +368,7 @@ export default function Home() {
   async function refreshAll() {
     if (!isProvisioned || isLoading) return;
     setIsLoading(true);
+    setIsRefreshingFeeds(true);
     setError(null);
     try {
       await Promise.all([
@@ -368,9 +376,11 @@ export default function Home() {
         loadCategories(),
         loadEntries({ append: false, nextOffset: 0 }),
       ]);
+      setLastRefreshedAt(Date.now());
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load');
     } finally {
+      setIsRefreshingFeeds(false);
       setIsLoading(false);
     }
   }
@@ -398,92 +408,13 @@ export default function Home() {
       ? 'done'
       : '';
 
-  const resetPullState = () => {
-    setPullState('idle');
-    setPullDistance(0);
-    pullDistanceRef.current = 0;
-    startYRef.current = null;
-  };
-
-  const handleTouchStart = useCallback((event: TouchEvent) => {
-    if (!isProvisioned || isLoading) return;
-    if (isRefreshingRef.current) return;
-    if (event.touches.length !== 1) return;
-    if (getScrollTop() > 0) return;
-    if (doneTimeoutRef.current) {
-      window.clearTimeout(doneTimeoutRef.current);
-      doneTimeoutRef.current = null;
-    }
-    startYRef.current = event.touches[0].clientY;
-  }, [isProvisioned, isLoading]);
-
-  const handleTouchMove = useCallback((event: TouchEvent) => {
-    if (!isProvisioned || isLoading) return;
-    if (isRefreshingRef.current) return;
-    const startY = startYRef.current;
-    if (startY === null) return;
-    if (getScrollTop() > 0) {
-      resetPullState();
-      return;
-    }
-    const currentY = event.touches[0].clientY;
-    const distance = Math.max(0, currentY - startY);
-    if (distance <= 0) return;
-
-    event.preventDefault();
-    pullDistanceRef.current = distance;
-    setPullDistance(distance);
-    if (pullState !== 'pulling') setPullState('pulling');
-  }, [isProvisioned, isLoading, pullState]);
-
-  const handleTouchEnd = useCallback(async () => {
-    if (startYRef.current === null) return;
-    startYRef.current = null;
-
-    const distance = pullDistanceRef.current;
-    if (distance >= PULL_TRIGGER_PX && !isRefreshingRef.current) {
-      isRefreshingRef.current = true;
-      setPullState('fetching');
-      setPullDistance(0);
-      pullDistanceRef.current = 0;
-      try {
-        await refreshAll();
-      } finally {
-        setPullState('done');
-        doneTimeoutRef.current = window.setTimeout(() => {
-          setPullState('idle');
-          doneTimeoutRef.current = null;
-        }, DONE_HOLD_MS);
-        isRefreshingRef.current = false;
-      }
-      return;
-    }
-
-    resetPullState();
-  }, [refreshAll]);
-
-  useEffect(() => {
-    const node = appRef.current;
-    if (!node) return;
-
-    const onTouchStart = (event: TouchEvent) => handleTouchStart(event);
-    const onTouchMove = (event: TouchEvent) => handleTouchMove(event);
-    const onTouchEnd = () => {
-      void handleTouchEnd();
-    };
-
-    node.addEventListener('touchstart', onTouchStart, { passive: true });
-    node.addEventListener('touchmove', onTouchMove, { passive: false });
-    node.addEventListener('touchend', onTouchEnd);
-    node.addEventListener('touchcancel', onTouchEnd);
-
-    return () => {
-      node.removeEventListener('touchstart', onTouchStart);
-      node.removeEventListener('touchmove', onTouchMove);
-      node.removeEventListener('touchend', onTouchEnd);
-      node.removeEventListener('touchcancel', onTouchEnd);
-    };
-  }, [handleTouchStart, handleTouchMove, handleTouchEnd]);
+  const lastRefreshedLabel = useMemo(() => {
+    if (!lastRefreshedAt) return null;
+    return new Date(lastRefreshedAt).toLocaleTimeString(undefined, {
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  }, [lastRefreshedAt]);
 
   async function markEntryStatus(
     entryIds: number[],
@@ -869,6 +800,152 @@ export default function Home() {
     }
   }, [hasNext, selectedIndex, entries, handleEntrySelect]);
 
+  const resetPullState = () => {
+    setPullState('idle');
+    setPullDistance(0);
+    pullDistanceRef.current = 0;
+    startYRef.current = null;
+    startXRef.current = null;
+  };
+
+  const canSwipe =
+    selectedEntryId !== null &&
+    !isMenuModalOpen &&
+    !isAddModalOpen &&
+    !isEditModalOpen;
+
+  const handleTouchStart = useCallback(
+    (event: TouchEvent) => {
+      if (event.touches.length !== 1) return;
+      const touch = event.touches[0];
+      swipeStartRef.current = canSwipe
+        ? { x: touch.clientX, y: touch.clientY }
+        : null;
+
+      if (!isProvisioned || isLoading) return;
+      if (isRefreshingRef.current) return;
+      if (getScrollTop() > 0) return;
+      if (doneTimeoutRef.current) {
+        window.clearTimeout(doneTimeoutRef.current);
+        doneTimeoutRef.current = null;
+      }
+      startXRef.current = touch.clientX;
+      startYRef.current = touch.clientY;
+    },
+    [canSwipe, isProvisioned, isLoading]
+  );
+
+  const handleTouchMove = useCallback(
+    (event: TouchEvent) => {
+      if (!isProvisioned || isLoading) return;
+      if (isRefreshingRef.current) return;
+      const startY = startYRef.current;
+      const startX = startXRef.current;
+      if (startY === null || startX === null) return;
+      if (getScrollTop() > 0) {
+        resetPullState();
+        return;
+      }
+      const touch = event.touches[0];
+      const currentY = touch.clientY;
+      const currentX = touch.clientX;
+      const deltaY = currentY - startY;
+      const deltaX = currentX - startX;
+      if (deltaY <= 0) {
+        resetPullState();
+        return;
+      }
+      if (Math.abs(deltaY) < Math.abs(deltaX)) {
+        resetPullState();
+        return;
+      }
+
+      event.preventDefault();
+      swipeStartRef.current = null;
+      pullDistanceRef.current = deltaY;
+      setPullDistance(deltaY);
+      if (pullState !== 'pulling') setPullState('pulling');
+    },
+    [isProvisioned, isLoading, pullState]
+  );
+
+  const handleTouchEnd = useCallback(
+    async (event?: TouchEvent) => {
+      const pullStart = startYRef.current;
+      const pullDistanceValue = pullDistanceRef.current;
+      const swipeStart = swipeStartRef.current;
+      startYRef.current = null;
+      startXRef.current = null;
+      swipeStartRef.current = null;
+
+      if (pullStart !== null) {
+        if (pullDistanceValue >= PULL_TRIGGER_PX && !isRefreshingRef.current) {
+          isRefreshingRef.current = true;
+          setPullState('fetching');
+          setPullDistance(0);
+          pullDistanceRef.current = 0;
+          try {
+            await refreshAll();
+          } finally {
+            setPullState('done');
+            doneTimeoutRef.current = window.setTimeout(() => {
+              setPullState('idle');
+              doneTimeoutRef.current = null;
+            }, DONE_HOLD_MS);
+            isRefreshingRef.current = false;
+          }
+          return;
+        }
+
+        resetPullState();
+      }
+
+      if (!canSwipe) return;
+      if (!swipeStart) return;
+      const touch = event?.changedTouches?.[0];
+      if (!touch) return;
+
+      const deltaX = touch.clientX - swipeStart.x;
+      const deltaY = touch.clientY - swipeStart.y;
+      if (
+        Math.abs(deltaX) < SWIPE_THRESHOLD_PX ||
+        Math.abs(deltaY) > SWIPE_MAX_VERTICAL_PX
+      ) {
+        return;
+      }
+
+      if (deltaX < 0 && hasNext) {
+        navigateToNext();
+      } else if (deltaX > 0 && hasPrev) {
+        navigateToPrev();
+      }
+    },
+    [canSwipe, hasNext, hasPrev, navigateToNext, navigateToPrev, refreshAll]
+  );
+
+  useEffect(() => {
+    const node = appRef.current;
+    if (!node) return;
+
+    const onTouchStart = (event: TouchEvent) => handleTouchStart(event);
+    const onTouchMove = (event: TouchEvent) => handleTouchMove(event);
+    const onTouchEnd = (event: TouchEvent) => {
+      void handleTouchEnd(event);
+    };
+
+    node.addEventListener('touchstart', onTouchStart, { passive: true });
+    node.addEventListener('touchmove', onTouchMove, { passive: false });
+    node.addEventListener('touchend', onTouchEnd);
+    node.addEventListener('touchcancel', onTouchEnd);
+
+    return () => {
+      node.removeEventListener('touchstart', onTouchStart);
+      node.removeEventListener('touchmove', onTouchMove);
+      node.removeEventListener('touchend', onTouchEnd);
+      node.removeEventListener('touchcancel', onTouchEnd);
+    };
+  }, [handleTouchStart, handleTouchMove, handleTouchEnd]);
+
   // Bootstrap on mount
   useEffect(() => {
     void bootstrap();
@@ -896,15 +973,32 @@ export default function Home() {
     isProvisioned,
   ]);
 
+  const isEditableTarget = useCallback((target: EventTarget | null) => {
+    if (!(target instanceof HTMLElement)) return false;
+    if (target.isContentEditable) return true;
+    const tagName = target.tagName;
+    if (tagName === 'INPUT' || tagName === 'TEXTAREA' || tagName === 'SELECT') {
+      return true;
+    }
+    if (target.getAttribute('role') === 'textbox') return true;
+    return false;
+  }, []);
+
   // Keyboard shortcuts for navigation
-  useEffect(() => {
-    function handleKeyDown(e: KeyboardEvent) {
+  useKeydown(
+    (e) => {
       // Don't trigger shortcuts if user is typing in an input
       if (
-        e.target instanceof HTMLInputElement ||
-        e.target instanceof HTMLTextAreaElement ||
-        e.target instanceof HTMLSelectElement
+        isEditableTarget(e.target) ||
+        isEditableTarget(document.activeElement)
       ) {
+        return;
+      }
+
+      // r or R = refresh all feeds
+      if (e.key === 'r' || e.key === 'R') {
+        e.preventDefault();
+        void refreshAll();
         return;
       }
 
@@ -918,11 +1012,21 @@ export default function Home() {
         e.preventDefault();
         if (hasPrev) navigateToPrev();
       }
-    }
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [hasPrev, hasNext, navigateToNext, navigateToPrev]);
+      // ArrowRight = next entry (when entry is open)
+      else if (e.key === 'ArrowRight') {
+        if (!selectedEntry) return;
+        e.preventDefault();
+        if (hasNext) navigateToNext();
+      }
+      // ArrowLeft = previous entry (when entry is open)
+      else if (e.key === 'ArrowLeft') {
+        if (!selectedEntry) return;
+        e.preventDefault();
+        if (hasPrev) navigateToPrev();
+      }
+    },
+    { target: typeof window !== 'undefined' ? window : null }
+  );
 
   // Console log entries data
   useEffect(() => {
@@ -1017,6 +1121,11 @@ export default function Home() {
                 </span>
               ) : null}
             </div>
+            {isRefreshingFeeds && (
+              <div className={styles.refreshBanner} aria-live="polite">
+                Refreshing feeds...
+              </div>
+            )}
             <MenuModal
               isOpen={isMenuModalOpen}
               onClose={closeMenuModal}
@@ -1024,6 +1133,9 @@ export default function Home() {
               feeds={feeds}
               openEditModal={openEditModal}
               openAddModal={openAddModal}
+              onRefreshFeeds={() => refreshAll()}
+              isRefreshingFeeds={isRefreshingFeeds}
+              lastRefreshedAt={lastRefreshedAt}
               isLoading={isLoading}
               starredEntries={starredEntries}
               onToggleEntryStar={toggleEntryStar}
@@ -1095,6 +1207,12 @@ export default function Home() {
                 setSelectedFeedId(null);
               }}
             />
+
+            {!isRefreshingFeeds && lastRefreshedLabel ? (
+              <div className={styles.refreshStatus}>
+                Last refreshed {lastRefreshedLabel}
+              </div>
+            ) : null}
 
             {error ? <div className={styles.error}>{error}</div> : null}
 
