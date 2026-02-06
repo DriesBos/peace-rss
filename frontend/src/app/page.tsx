@@ -11,13 +11,11 @@ import { HeaderCategories } from '@/components/HeaderCategories/HeaderCategories
 import { MenuModal } from '@/components/MenuModal/MenuModal';
 import { useKeydown } from '@/hooks/useKeydown';
 import { fetchJson } from '@/app/_lib/fetchJson';
-import type {
-  Category,
-  Entry,
-  EntriesResponse,
-  Feed,
-  FeedCountersResponse,
-} from '@/app/_lib/types';
+import type { Category, Entry, Feed } from '@/app/_lib/types';
+import { useReaderData } from '@/hooks/useReaderData';
+import { useUnreadCounters } from '@/hooks/useUnreadCounters';
+import { fetchStarredEntries } from '@/lib/readerApi';
+import { INITIAL_ENTRIES_LIMIT } from '@/lib/entriesQuery';
 
 type PullState = 'idle' | 'pulling' | 'fetching' | 'done';
 
@@ -62,9 +60,6 @@ function getScrollTop(): number {
 }
 
 export default function Home() {
-  const [feeds, setFeeds] = useState<Feed[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [entries, setEntries] = useState<Entry[]>([]);
   const [selectedEntryId, setSelectedEntryId] = useState<number | null>(null);
   const [selectedFeedId, setSelectedFeedId] = useState<number | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
@@ -75,12 +70,8 @@ export default function Home() {
   const [searchMode, setSearchMode] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isCategoriesOpen, setIsCategoriesOpen] = useState(false);
-  const [offset, setOffset] = useState(0);
-  const [total, setTotal] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
   const [isTogglingStar, setIsTogglingStar] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [isProvisioned, setIsProvisioned] = useState(false);
   const [provisionError, setProvisionError] = useState<string | null>(null);
   const [newFeedUrl, setNewFeedUrl] = useState('');
@@ -97,18 +88,11 @@ export default function Home() {
   const [fetchedEntryIds, setFetchedEntryIds] = useState<Set<number>>(
     new Set()
   );
-  const [categoryCounts, setCategoryCounts] = useState<Map<number, number>>(
-    new Map()
-  );
   const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [returnToMenuAfterSubModal, setReturnToMenuAfterSubModal] =
     useState(false);
-  const [totalUnreadCount, setTotalUnreadCount] = useState(0);
-  const [totalStarredCount, setTotalStarredCount] = useState(0);
   const [isOffline, setIsOffline] = useState(false);
-  const [isRefreshingFeeds, setIsRefreshingFeeds] = useState(false);
-  const [lastRefreshedAt, setLastRefreshedAt] = useState<number | null>(null);
   const [pullState, setPullState] = useState<PullState>('idle');
   const [pullDistance, setPullDistance] = useState(0);
   const appRef = useRef<HTMLDivElement | null>(null);
@@ -118,6 +102,7 @@ export default function Home() {
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const isRefreshingRef = useRef(false);
   const doneTimeoutRef = useRef<number | null>(null);
+  const hasInitialLoadRef = useRef(false);
 
   // Edit modal state
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -128,6 +113,45 @@ export default function Home() {
   const [editCategoryId, setEditCategoryId] = useState<number | null>(null);
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+
+  const view = useMemo(
+    () => ({
+      searchMode,
+      searchQuery,
+      isStarredView,
+      selectedFeedId,
+      selectedCategoryId,
+    }),
+    [searchMode, searchQuery, isStarredView, selectedFeedId, selectedCategoryId]
+  );
+
+  const {
+    feeds,
+    categories,
+    entries,
+    total,
+    isLoading,
+    isRefreshingFeeds,
+    error,
+    lastRefreshedAt,
+    setEntries,
+    setIsLoading,
+    setError,
+    loadFeeds,
+    loadCategories,
+    loadEntries,
+    resetEntries,
+    loadMore: loadMoreEntries,
+    refreshAll,
+  } = useReaderData({ isProvisioned, view });
+
+  const {
+    totalUnreadCount,
+    totalStarredCount,
+    categoryUnreadCounts,
+    refreshUnreadCounters,
+    refreshStarredCount,
+  } = useUnreadCounters({ isProvisioned, feeds });
 
   const openMenuModal = useCallback(() => {
     setIsMenuModalOpen(true);
@@ -220,6 +244,9 @@ export default function Home() {
 
   const hasFetchedOriginal = useMemo(() => {
     if (!selectedEntry) return false;
+    if (selectedEntry.content && selectedEntry.content.trim().length > 0) {
+      return true;
+    }
     return fetchedEntryIds.has(selectedEntry.id);
   }, [selectedEntry, fetchedEntryIds]);
 
@@ -232,186 +259,58 @@ export default function Home() {
     };
   }, [entries, selectedEntryId]);
 
-  // Calculate unread count per category
-  // First try from stored categoryCounts (from entries API), fallback to summing feed unread_count
-  const categoryUnreadCounts = useMemo(() => {
-    const counts = new Map<number, number>(categoryCounts);
-
-    // Fill in any missing counts by summing feed unread_count
-    for (const feed of feeds) {
-      const categoryId = feed.category?.id;
-      const unreadCount = feed.unread_count;
-
-      if (categoryId && typeof unreadCount === 'number') {
-        // Only use feed count if we don't already have a stored count for this category
-        if (!counts.has(categoryId)) {
-          const current = counts.get(categoryId) ?? 0;
-          counts.set(categoryId, current + unreadCount);
-        }
-      }
-    }
-    return counts;
-  }, [feeds, categoryCounts]);
-
-  const loadUnreadCounters = useCallback(async () => {
-    try {
-      const counters = await fetchJson<FeedCountersResponse>(
-        '/api/feeds/counters'
-      );
-      const totalUnread = Object.values(counters.unreads ?? {}).reduce(
-        (sum, value) => sum + value,
-        0
-      );
-      setTotalUnreadCount(totalUnread);
-    } catch (err) {
-      console.error('Failed to load unread counters', err);
-    }
-  }, []);
-
-  const loadStarredCount = useCallback(async () => {
-    try {
-      const data = await fetchJson<EntriesResponse>(
-        '/api/entries?starred=true&limit=1&offset=0'
-      );
-      setTotalStarredCount(data.total ?? 0);
-    } catch (err) {
-      console.error('Failed to load starred count', err);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!isProvisioned) return;
-    void loadUnreadCounters();
-    void loadStarredCount();
-  }, [isProvisioned, entries, loadUnreadCounters, loadStarredCount]);
-
   // Load starred entries for the menu
   const loadStarredEntries = useCallback(async () => {
     if (!isProvisioned) return;
     try {
-      const data = await fetchJson<EntriesResponse>(
-        '/api/entries?starred=true&limit=50&offset=0'
-      );
+      const data = await fetchStarredEntries(50);
       setStarredEntries(data.entries);
     } catch (err) {
       console.error('Failed to load starred entries', err);
     }
   }, [isProvisioned]);
 
-  useEffect(() => {
-    void loadStarredEntries();
-  }, [loadStarredEntries]);
-
-  async function loadFeeds() {
-    const data = await fetchJson<Feed[]>('/api/feeds');
-    setFeeds(data);
-  }
-
-  async function loadCategories() {
-    const data = await fetchJson<Category[]>('/api/categories');
-    setCategories(data);
-
-    // Fetch unread counts for all categories
-    const counts = new Map<number, number>();
-    await Promise.all(
-      data.map(async (cat) => {
-        try {
-          const entriesData = await fetchJson<EntriesResponse>(
-            `/api/entries?status=unread&category_id=${cat.id}&limit=1&offset=0`
-          );
-          counts.set(cat.id, entriesData.total ?? 0);
-        } catch (e) {
-          // Ignore errors, count will remain 0
-          console.error(`Failed to load count for category ${cat.id}:`, e);
-        }
-      })
+  const syncSelection = useCallback((nextEntries: Entry[]) => {
+    setSelectedEntryId((prev) =>
+      prev && nextEntries.some((entry) => entry.id === prev) ? prev : null
     );
-    setCategoryCounts(counts);
-  }
+  }, []);
 
-  function entriesUrl(nextOffset: number) {
-    const qs = new URLSearchParams({
-      limit: '50',
-      offset: String(nextOffset),
-      order: 'published_at',
-      direction: 'desc',
-    });
-
-    if (searchMode && searchQuery.trim()) {
-      // For search mode, search all entries
-      qs.set('search', searchQuery.trim());
-    } else if (isStarredView) {
-      // For starred view, fetch starred entries (any status)
-      qs.set('starred', 'true');
-    } else {
-      // For normal view, fetch unread entries
-      qs.set('status', 'unread');
+  const refreshAllData = useCallback(async () => {
+    const data = await refreshAll(() => [
+      refreshUnreadCounters(),
+      refreshStarredCount(),
+      loadStarredEntries(),
+    ]);
+    if (data?.entries) {
+      syncSelection(data.entries);
     }
+  }, [
+    refreshAll,
+    refreshUnreadCounters,
+    refreshStarredCount,
+    loadStarredEntries,
+    syncSelection,
+  ]);
 
-    if (selectedFeedId && !searchMode)
-      qs.set('feed_id', String(selectedFeedId));
+  const reloadCurrentEntries = useCallback(async () => {
+    const limit = Math.max(entries.length, INITIAL_ENTRIES_LIMIT);
+    const data = await loadEntries({ append: false, offset: 0, limit });
+    syncSelection(data.entries);
+    return data;
+  }, [entries.length, loadEntries, syncSelection]);
 
-    if (selectedCategoryId !== null && !searchMode)
-      qs.set('category_id', String(selectedCategoryId));
-
-    return `/api/entries?${qs.toString()}`;
-  }
-
-  async function loadEntries(opts?: { append?: boolean; nextOffset?: number }) {
-    const append = Boolean(opts?.append);
-    const nextOffset = opts?.nextOffset ?? 0;
-
-    const data = await fetchJson<EntriesResponse>(entriesUrl(nextOffset));
-    setTotal(data.total ?? 0);
-    setOffset(nextOffset);
-
-    // Store category count when loading entries for a specific category
-    if (
-      selectedCategoryId !== null &&
-      !searchMode &&
-      !isStarredView &&
-      nextOffset === 0
-    ) {
-      setCategoryCounts((prev) => {
-        const updated = new Map(prev);
-        updated.set(selectedCategoryId, data.total ?? 0);
-        return updated;
-      });
-    }
-
-    if (append) {
-      setEntries((prev) => [...prev, ...data.entries]);
-      return;
-    }
-
-    setEntries(data.entries);
-    // Only keep selection if the previously selected entry still exists
-    // Don't auto-select the first entry on initial load
-    setSelectedEntryId((prev) => {
-      if (prev && data.entries.some((e) => e.id === prev)) return prev;
-      return null;
-    });
-  }
-
-  async function refreshAll() {
-    if (!isProvisioned || isLoading) return;
+  const handleLoadMore = useCallback(async () => {
     setIsLoading(true);
-    setIsRefreshingFeeds(true);
     setError(null);
     try {
-      await Promise.all([
-        loadFeeds(),
-        loadCategories(),
-        loadEntries({ append: false, nextOffset: 0 }),
-      ]);
-      setLastRefreshedAt(Date.now());
+      await loadMoreEntries();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load');
+      setError(e instanceof Error ? e.message : 'Failed to load more');
     } finally {
-      setIsRefreshingFeeds(false);
       setIsLoading(false);
     }
-  }
+  }, [loadMoreEntries, setIsLoading, setError]);
 
   const indicatorHeight =
     pullState === 'pulling'
@@ -466,7 +365,8 @@ export default function Home() {
       );
       await Promise.all([
         loadFeeds(),
-        loadEntries({ append: false, nextOffset: 0 }),
+        refreshUnreadCounters(),
+        reloadCurrentEntries(),
       ]);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to mark page read');
@@ -484,10 +384,11 @@ export default function Home() {
       await fetchJson<{ ok: true }>(`/api/entries/${selectedEntry.id}/star`, {
         method: 'POST',
       });
-      // Refresh list + selection state
+      // Refresh list + star metadata
       await Promise.all([
-        loadFeeds(),
-        loadEntries({ append: false, nextOffset: offset }),
+        reloadCurrentEntries(),
+        refreshStarredCount(),
+        loadStarredEntries(),
       ]);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to toggle star');
@@ -504,12 +405,15 @@ export default function Home() {
         });
         // Reload starred entries after toggling
         await loadStarredEntries();
-        await loadStarredCount();
+        await refreshStarredCount();
+        if (isStarredView) {
+          await reloadCurrentEntries();
+        }
       } catch (e) {
         console.error('Failed to toggle entry star', e);
       }
     },
-    [loadStarredEntries, loadStarredCount]
+    [loadStarredEntries, refreshStarredCount, isStarredView, reloadCurrentEntries]
   );
 
   async function setSelectedStatus(status: 'read' | 'unread') {
@@ -521,24 +425,13 @@ export default function Home() {
       await markEntryStatus([selectedEntry.id], status);
       await Promise.all([
         loadFeeds(),
-        loadEntries({ append: false, nextOffset: 0 }),
+        refreshUnreadCounters(),
+        reloadCurrentEntries(),
       ]);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to update status');
     } finally {
       setIsUpdatingStatus(false);
-    }
-  }
-
-  async function loadMore() {
-    setIsLoading(true);
-    setError(null);
-    try {
-      await loadEntries({ append: true, nextOffset: offset + 50 });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load more');
-    } finally {
-      setIsLoading(false);
     }
   }
 
@@ -585,7 +478,7 @@ export default function Home() {
       // Success: clear input and refresh feeds
       setNewFeedUrl('');
       setNewFeedCategoryId(null);
-      await loadFeeds();
+      await Promise.all([loadFeeds(), refreshUnreadCounters()]);
       return true;
     } catch (e) {
       setAddFeedError(e instanceof Error ? e.message : 'Failed to add feed');
@@ -639,7 +532,12 @@ export default function Home() {
       });
 
       // Success: refresh categories and feeds
-      await Promise.all([loadCategories(), loadFeeds()]);
+      await Promise.all([loadCategories(), loadFeeds(), refreshUnreadCounters()]);
+      if (selectedCategoryId === categoryId) {
+        setSelectedCategoryId(null);
+        setSelectedFeedId(null);
+        await reloadCurrentEntries();
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to delete category');
     } finally {
@@ -661,7 +559,11 @@ export default function Home() {
       });
 
       // Success: refresh feeds
-      await loadFeeds();
+      await Promise.all([loadFeeds(), refreshUnreadCounters()]);
+      if (selectedFeedId === feedId) {
+        setSelectedFeedId(null);
+        await reloadCurrentEntries();
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to delete feed');
     } finally {
@@ -725,7 +627,7 @@ export default function Home() {
       });
 
       // Success: refresh feeds
-      await loadFeeds();
+      await Promise.all([loadFeeds(), refreshUnreadCounters()]);
       return true;
     } catch (e) {
       setEditError(e instanceof Error ? e.message : 'Failed to update feed');
@@ -774,7 +676,8 @@ export default function Home() {
     const timeoutId = win.setTimeout(() => {
       setIsLoading(true);
       setError(null);
-      loadEntries({ append: false, nextOffset: 0 })
+      setSelectedEntryId(null);
+      loadEntries({ append: false, offset: 0, limit: INITIAL_ENTRIES_LIMIT })
         .catch((e) =>
           setError(e instanceof Error ? e.message : 'Failed to search')
         )
@@ -794,6 +697,10 @@ export default function Home() {
         : selectedEntry;
 
       if (!targetEntry || !isProvisioned) return;
+
+      if (targetEntry.content && targetEntry.content.trim().length > 0) {
+        return;
+      }
 
       // Skip if we've already attempted to fetch this entry
       if (fetchedEntryIds.has(targetEntry.id)) return;
@@ -838,9 +745,10 @@ export default function Home() {
       const entry = entries.find((e) => e.id === entryId);
       if (!entry) return;
 
-      // Always attempt to fetch if not already fetched, regardless of content length
-      // This ensures we get the full article content when available
-      if (!fetchedEntryIds.has(entryId) && isProvisioned) {
+      const hasContent = Boolean(entry.content && entry.content.trim().length > 0);
+
+      // Only attempt to fetch if content is missing and we haven't fetched already
+      if (!hasContent && !fetchedEntryIds.has(entryId) && isProvisioned) {
         // Trigger fetch with the entry ID immediately
         void fetchOriginalArticle(entryId);
       }
@@ -948,7 +856,7 @@ export default function Home() {
           setPullDistance(0);
           pullDistanceRef.current = 0;
           try {
-            await refreshAll();
+            await refreshAllData();
           } finally {
             setPullState('done');
             const win = getBrowserWindow();
@@ -988,7 +896,7 @@ export default function Home() {
         navigateToPrev();
       }
     },
-    [canSwipe, hasNext, hasPrev, navigateToNext, navigateToPrev, refreshAll]
+    [canSwipe, hasNext, hasPrev, navigateToNext, navigateToPrev, refreshAllData]
   );
 
   useEffect(() => {
@@ -1019,26 +927,33 @@ export default function Home() {
     void bootstrap();
   }, []);
 
-  // Load feeds/entries after provisioning
+  // Initial load after provisioning
   useEffect(() => {
-    if (!isProvisioned) return;
+    if (!isProvisioned || hasInitialLoadRef.current) return;
+    void refreshAllData().finally(() => {
+      hasInitialLoadRef.current = true;
+    });
+  }, [isProvisioned, refreshAllData]);
 
+  // Reset entries when switching views (category/feed/starred)
+  useEffect(() => {
+    if (!isProvisioned || !hasInitialLoadRef.current) return;
+    if (searchMode) return;
     setIsLoading(true);
     setError(null);
-    Promise.all([
-      loadFeeds(),
-      loadCategories(),
-      loadEntries({ append: false, nextOffset: 0 }),
-    ])
+    setSelectedEntryId(null);
+    resetEntries()
       .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load'))
       .finally(() => setIsLoading(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     selectedFeedId,
     selectedCategoryId,
     isStarredView,
     searchMode,
     isProvisioned,
+    resetEntries,
+    setIsLoading,
+    setError,
   ]);
 
   const isEditableTarget = useCallback((target: EventTarget | null) => {
@@ -1066,7 +981,7 @@ export default function Home() {
       // r or R = refresh all feeds
       if (e.key === 'r' || e.key === 'R') {
         e.preventDefault();
-        void refreshAll();
+        void refreshAllData();
         return;
       }
 
@@ -1107,6 +1022,10 @@ export default function Home() {
   // This useEffect acts as a fallback in case handleEntrySelect didn't trigger
   useEffect(() => {
     if (!selectedEntry || fetchingOriginal || !isProvisioned) return;
+
+    if (selectedEntry.content && selectedEntry.content.trim().length > 0) {
+      return;
+    }
 
     // Skip if we've already attempted to fetch this entry
     if (fetchedEntryIds.has(selectedEntry.id)) return;
@@ -1201,7 +1120,7 @@ export default function Home() {
               feeds={feeds}
               openEditModal={openEditModal}
               openAddModal={openAddModal}
-              onRefreshFeeds={() => refreshAll()}
+              onRefreshFeeds={() => refreshAllData()}
               isRefreshingFeeds={isRefreshingFeeds}
               lastRefreshedAt={lastRefreshedAt}
               isLoading={isLoading}
@@ -1297,7 +1216,7 @@ export default function Home() {
               onEntrySelect={handleEntrySelect}
               canLoadMore={canLoadMore}
               isLoading={isLoading}
-              onLoadMore={() => void loadMore()}
+              onLoadMore={handleLoadMore}
               searchMode={searchMode}
               isStarredView={isStarredView}
             />
