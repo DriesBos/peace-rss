@@ -28,12 +28,35 @@ const FETCH_INDICATOR_HEIGHT = 32;
 const SWIPE_THRESHOLD_PX = 60;
 const SWIPE_MAX_VERTICAL_PX = 50;
 
+const getBrowserWindow = (): any => {
+  if (typeof globalThis === 'undefined') return null;
+  return (globalThis as any).window ?? null;
+};
+
+const getBrowserDocument = (): any => {
+  if (typeof globalThis === 'undefined') return null;
+  return (globalThis as any).document ?? null;
+};
+
+const getBrowserNavigator = (): any => {
+  if (typeof globalThis === 'undefined') return null;
+  return (globalThis as any).navigator ?? null;
+};
+
 function getScrollTop(): number {
-  if (typeof window === 'undefined') return 0;
+  const win = getBrowserWindow();
+  const doc = getBrowserDocument();
+  if (!win || !doc) return 0;
+
+  // Some TS build setups end up missing DOM lib typings (Document/Window become empty interfaces).
+  // We access these fields defensively to keep runtime behavior and keep typecheck happy.
+  const winScrollY = (win as any).scrollY as unknown;
+  const docElScrollTop = (doc as any).documentElement?.scrollTop as unknown;
+  const docBodyScrollTop = (doc as any).body?.scrollTop as unknown;
   return (
-    window.scrollY ||
-    document.documentElement.scrollTop ||
-    document.body.scrollTop ||
+    (typeof winScrollY === 'number' ? winScrollY : 0) ||
+    (typeof docElScrollTop === 'number' ? docElScrollTop : 0) ||
+    (typeof docBodyScrollTop === 'number' ? docBodyScrollTop : 0) ||
     0
   );
 }
@@ -132,21 +155,24 @@ export default function Home() {
   }, [returnToMenuAfterSubModal]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const updateOnlineStatus = () => setIsOffline(!navigator.onLine);
+    const win = getBrowserWindow();
+    const nav = getBrowserNavigator();
+    if (!win || !nav) return;
+    const updateOnlineStatus = () => setIsOffline(!nav.onLine);
     updateOnlineStatus();
-    window.addEventListener('online', updateOnlineStatus);
-    window.addEventListener('offline', updateOnlineStatus);
+    win.addEventListener('online', updateOnlineStatus);
+    win.addEventListener('offline', updateOnlineStatus);
     return () => {
-      window.removeEventListener('online', updateOnlineStatus);
-      window.removeEventListener('offline', updateOnlineStatus);
+      win.removeEventListener('online', updateOnlineStatus);
+      win.removeEventListener('offline', updateOnlineStatus);
     };
   }, []);
 
   useEffect(() => {
+    const win = getBrowserWindow();
     return () => {
-      if (doneTimeoutRef.current) {
-        window.clearTimeout(doneTimeoutRef.current);
+      if (doneTimeoutRef.current && win) {
+        win.clearTimeout(doneTimeoutRef.current);
       }
     };
   }, []);
@@ -743,7 +769,9 @@ export default function Home() {
       return;
     }
 
-    const timeoutId = window.setTimeout(() => {
+    const win = getBrowserWindow();
+    if (!win) return;
+    const timeoutId = win.setTimeout(() => {
       setIsLoading(true);
       setError(null);
       loadEntries({ append: false, nextOffset: 0 })
@@ -754,7 +782,7 @@ export default function Home() {
     }, 250);
 
     return () => {
-      window.clearTimeout(timeoutId);
+      win.clearTimeout(timeoutId);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchQuery, isSearchOpen, isProvisioned, searchMode]);
@@ -858,7 +886,10 @@ export default function Home() {
       if (isRefreshingRef.current) return;
       if (getScrollTop() > 0) return;
       if (doneTimeoutRef.current) {
-        window.clearTimeout(doneTimeoutRef.current);
+        const win = getBrowserWindow();
+        if (win) {
+          win.clearTimeout(doneTimeoutRef.current);
+        }
         doneTimeoutRef.current = null;
       }
       startXRef.current = touch.clientX;
@@ -920,10 +951,15 @@ export default function Home() {
             await refreshAll();
           } finally {
             setPullState('done');
-            doneTimeoutRef.current = window.setTimeout(() => {
-              setPullState('idle');
+            const win = getBrowserWindow();
+            if (win) {
+              doneTimeoutRef.current = win.setTimeout(() => {
+                setPullState('idle');
+                doneTimeoutRef.current = null;
+              }, DONE_HOLD_MS);
+            } else {
               doneTimeoutRef.current = null;
-            }, DONE_HOLD_MS);
+            }
             isRefreshingRef.current = false;
           }
           return;
@@ -1057,7 +1093,7 @@ export default function Home() {
         if (hasPrev) navigateToPrev();
       }
     },
-    { target: typeof window !== 'undefined' ? window : null }
+    { target: getBrowserWindow() }
   );
 
   // Console log entries data

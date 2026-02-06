@@ -1,4 +1,4 @@
-@import '@/styles/vars.sass'
+@use '@/styles/vars' as *
 
 .header
   position: sticky
@@ -19,40 +19,85 @@
     flex: 0 0 auto
     background: var(--color-app)
     height: 2rem
+    border-right: 1px solid transparent
+    transition: border-color var(--transition-header-toggle)
   &[data-categories-open="true"] &_Left
     border-right: var(--border-containers)
   &_Menu
     padding: 0 var(--space-sides-general)
+    padding-right: 6px
     width: auto
-    transition: width .33s ease-in
+    transition: width var(--transition-header-toggle)
+
   &_Search
     display: flex
+    flex-wrap: nowrap
     align-items: center
     gap: 4px
-    padding: 0 var(--space-sides-general)
+    padding: 0 6px
     width: auto
-    transition: width 2s ease-in
+    transition: width var(--transition-header-toggle)
+    .searchInput
+      position: relative
+      font-size: var(--type-input)
+      line-height: 1
+      color: var(--color-text)
+      outline: none
+      field-sizing: content
+      height: 20px
+      border-bottom: 1px solid var(--color-text-secondary)
+      transition: border-color var(--transition-buttons)
+      width: 0
+      min-width: 0
+      max-width: 0
+      transition: width var(--transition-buttons)
+      &::placeholder
+        color: var(--color-text-secondary)
+      &:focus
+        border-bottom: 1px solid var(--color-text)
+    &[data-open="true"]
+      height: 20px
+      .searchInput
+        width: auto
+        min-width: 150px
+        max-width: 35vw
+
   &_Offline
     @include font-nav
     color: var(--color-text-secondary)
     padding: 0 var(--space-sides-general)
   &_Categories
     opacity: 1
-    width: auto
     padding: 0 var(--space-sides-general)
-    transition: width var(--transition-header-toggle), padding var(--transition-header-toggle)
+    transition: opacity 0.165s ease-in
   &[data-categories-open="true"]
     .header
       &_Categories
-        width: 0
         opacity: 0
-        padding: 0
         pointer-events: none
+      &_CategoryList
+        opacity: 1
   &_isCategoriesOpen
     display: flex
     align-items: center
 
+  &_ScrollContainer
+    display: flex
+    flex-direction: row
+    align-items: center
+    justify-content: flex-start
+    gap: 12px
+    overflow-x: auto
+    scrollbar-width: none
+    flex: 1 1 auto
+    height: 2rem
+    width: 100%
+    &::-webkit-scrollbar
+      display: none
+
   &_CategoryList
+    opacity: 0
+    transition: opacity 0.165s ease-in 0.165s
     list-style: none
     display: flex
     flex-direction: row
@@ -60,33 +105,12 @@
     align-items: center
     justify-content: flex-start
     gap: 12px
-    overflow-x: auto
     scrollbar-width: none
     -ms-overflow-style: none
     flex: 1 1 auto
     padding: 0 var(--space-sides-general)
-    height: 2rem
-    width: 100%
     &::-webkit-scrollbar
       display: none
 
 .categoryItemActive
   color: var(--color-text)
-
-.searchInput
-  font-size: var(--type-input)
-  line-height: 1
-  min-width: 3.25rem
-  width: 100px
-  max-width: 35vw
-  color: var(--color-text)
-  border-bottom: 1px solid transparent
-  transition: border-color 0.165s ease
-  outline: none
-  field-sizing: content
-  height: 2rem
-  &::placeholder
-    color: var(--color-text-secondary)
-  &:focus
-    border-bottom: 1px solid var(--color-text)
-  @include underline(var(--color-text))

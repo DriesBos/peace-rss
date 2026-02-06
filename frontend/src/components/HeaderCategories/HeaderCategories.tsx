@@ -8,6 +8,7 @@ import { IconWrapper } from '@/components/icons/IconWrapper/IconWrapper';
 import type { Category } from '@/app/_lib/types';
 import { IconSearch } from '@/components/icons/IconSearch';
 import { IconCategories } from '../icons/IconCategories';
+import { IconStar } from '../icons/IconStar';
 
 export type HeaderCategoriesProps = {
   isMenuOpen: boolean;
@@ -96,92 +97,100 @@ export function HeaderCategories({
             </IconWrapper>
             <span>Search</span>
           </Button>
-          {isSearchOpen && (
-            <input
-              id="header-search-input"
-              ref={searchInputRef}
-              className={styles.searchInput}
-              type="search"
-              placeholder="Search.."
-              value={searchQuery}
-              onChange={(event) => onSearchQueryChange(event.target.value)}
-              aria-label="Search entries"
-            />
-          )}
+          <input
+            id="header-search-input"
+            ref={searchInputRef}
+            className={styles.searchInput}
+            type="search"
+            placeholder="Search.."
+            value={searchQuery}
+            onChange={(event) => onSearchQueryChange(event.target.value)}
+            aria-label="Search entries"
+          />
         </div>
-        {/* {!isCategoriesOpen && ( */}
-        <div className={styles.header_Categories}>
-          <Button
-            type="button"
-            variant="nav"
-            icon="categories"
-            onClick={onToggleCategories}
-            aria-expanded={isCategoriesOpen}
-            aria-controls="header-categories-list"
-            aria-label="Toggle categories"
-          >
-            <IconWrapper>
-              <IconCategories />
-            </IconWrapper>
-            <span>Categories</span>
-          </Button>
-        </div>
-        {/* )} */}
       </div>
-      {isOffline && <div className={styles.header_Offline}>app is offline</div>}
-      {isCategoriesOpen && (
-        <ul className={styles.header_CategoryList} id="header-categories-list">
-          <li>
+      <div className={styles.header_ScrollContainer}>
+        {!isCategoriesOpen && (
+          <div className={styles.header_Categories}>
             <Button
               type="button"
               variant="nav"
-              active={selectedCategoryId === null && !isStarredView}
-              className={`${styles.header_CategoryList_Item} ${
-                selectedCategoryId === null && !isStarredView
-                  ? styles.categoryItemActive
-                  : ''
-              }`}
-              onClick={onSelectAll}
-              disabled={isLoading}
-              count={totalUnreadCount}
+              icon="categories"
+              onClick={onToggleCategories}
+              aria-expanded={isCategoriesOpen}
+              aria-controls="header-categories-list"
+              aria-label="Toggle categories"
             >
-              <span>All</span>
+              <IconWrapper>
+                <IconCategories />
+              </IconWrapper>
+              <span>Categories</span>
             </Button>
-          </li>
-          <li>
-            <Button
-              type="button"
-              variant="nav"
-              active={isStarredView}
-              className={`${styles.header_CategoryList_Item} ${
-                isStarredView ? styles.categoryItemActive : ''
-              }`}
-              onClick={onSelectStarred}
-              disabled={isLoading}
-              count={totalStarredCount}
-            >
-              <span>Starred</span>
-            </Button>
-          </li>
-          {categories.map((cat) => (
-            <li key={cat.id}>
+          </div>
+        )}
+        {isCategoriesOpen && (
+          <ul
+            className={styles.header_CategoryList}
+            id="header-categories-list"
+          >
+            <li>
               <Button
                 type="button"
                 variant="nav"
-                active={selectedCategoryId === cat.id}
+                active={selectedCategoryId === null && !isStarredView}
                 className={`${styles.header_CategoryList_Item} ${
-                  selectedCategoryId === cat.id ? styles.categoryItemActive : ''
+                  selectedCategoryId === null && !isStarredView
+                    ? styles.categoryItemActive
+                    : ''
                 }`}
-                onClick={() => onSelectCategory(cat.id)}
+                onClick={onSelectAll}
                 disabled={isLoading}
-                count={categoryUnreadCounts.get(cat.id) ?? 0}
+                count={totalUnreadCount}
               >
-                <span>{cat.title}</span>
+                <span>All</span>
               </Button>
             </li>
-          ))}
-        </ul>
-      )}
+            <li>
+              <Button
+                type="button"
+                variant="nav"
+                active={isStarredView}
+                className={`${styles.header_CategoryList_Item} ${
+                  isStarredView ? styles.categoryItemActive : ''
+                }`}
+                onClick={onSelectStarred}
+                disabled={isLoading}
+                count={totalStarredCount}
+              >
+                <IconWrapper>
+                  <IconStar />
+                </IconWrapper>
+                <span>Starred</span>
+              </Button>
+            </li>
+            {categories.map((cat) => (
+              <li key={cat.id}>
+                <Button
+                  type="button"
+                  variant="nav"
+                  active={selectedCategoryId === cat.id}
+                  className={`${styles.header_CategoryList_Item} ${
+                    selectedCategoryId === cat.id
+                      ? styles.categoryItemActive
+                      : ''
+                  }`}
+                  onClick={() => onSelectCategory(cat.id)}
+                  disabled={isLoading}
+                  count={categoryUnreadCounts.get(cat.id) ?? 0}
+                >
+                  <span>{cat.title}</span>
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      {isOffline && <div className={styles.header_Offline}>app is offline</div>}
     </header>
   );
 }

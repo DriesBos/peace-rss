@@ -1,4 +1,4 @@
-@import '@/styles/vars.sass'
+@use '@/styles/vars' as *
 
 .button
   display: inline-flex
@@ -18,6 +18,9 @@
     &[data-icon="plus"]
       .icon, svg, .iconWrapper
         transform: rotate(135deg)
+  &[data-collapse="true"]
+    span:first-child
+      width: 0px !important
 
 // Has underline
 .primary
@@ -39,8 +42,10 @@
   flex-direction: row
   align-items: center
   @include font-nav
-  span:first-child
+  transition: gap var(--transition-buttons)
+  span
     width: auto
+    overflow: hidden
     transition: width var(--transition-header-toggle)
   span:first-child::after
     @include underline(transparent)
@@ -53,8 +58,9 @@
       span:first-child::after
         @include underline(var(--color-text))
   &[data-collapse="true"]
-    span:first-child
-      width: 0
+    gap: 0 !important
+    span
+      width: 0 !important
 
 .button:disabled
   color: var(--color-text-secondary)

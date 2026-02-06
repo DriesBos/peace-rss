@@ -79,7 +79,7 @@ const TOAST_BUTTONS: ToastButton[] = [
     label: 'Loading',
     onClick: () => {
       const toastId = toast.loading(NOTIFICATION_COPY.demo.loadingTitle);
-      window.setTimeout(() => {
+      setTimeout(() => {
         toast.success(NOTIFICATION_COPY.demo.loadingSuccess, { id: toastId });
       }, 1200);
     },
@@ -89,7 +89,7 @@ const TOAST_BUTTONS: ToastButton[] = [
     label: 'Promise',
     onClick: () => {
       const syncPromise = new Promise<string>((resolve) => {
-        window.setTimeout(
+        setTimeout(
           () => resolve(NOTIFICATION_COPY.demo.promiseSuccess),
           1400
         );

@@ -1,6 +1,8 @@
+/// <reference no-default-lib="true" />
+/// <reference lib="esnext" />
 /// <reference lib="webworker" />
 
-import { defaultCache } from "@serwist/next/worker";
+import { defaultCache } from "@serwist/turbopack/worker";
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
 import {
   CacheableResponsePlugin,
@@ -9,10 +11,13 @@ import {
   Serwist,
 } from "serwist";
 
-declare const self: ServiceWorkerGlobalScope &
-  SerwistGlobalConfig & {
+declare global {
+  interface WorkerGlobalScope extends SerwistGlobalConfig {
     __SW_MANIFEST: Array<PrecacheEntry | string>;
-  };
+  }
+}
+
+declare const self: ServiceWorkerGlobalScope;
 
 const apiRuntimeCache = {
   matcher: ({

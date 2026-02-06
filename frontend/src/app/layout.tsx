@@ -13,7 +13,7 @@ import '@/styles/reset.css';
 import '@/styles/globals.sass';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import KomorebiShader from '@/components/KomorebiShader/KomorebiShader';
-import ServiceWorkerRegistration from '@/components/ServiceWorkerRegistration/ServiceWorkerRegistration';
+import { SerwistProvider } from './serwist';
 import Notifications from '@/components/Notifications/Notifications';
 
 const untitledSans = localFont({
@@ -128,48 +128,44 @@ export default function RootLayout({
     <ClerkProvider signInFallbackRedirectUrl="/">
       <html lang="en" suppressHydrationWarning>
         <body className={`${untitledSans.variable} ${soulSister.variable}`}>
-          <ServiceWorkerRegistration />
-          <ThemeProvider
-            attribute="data-theme"
-            defaultTheme="light"
-            themes={['light', 'dark', 'softlight', 'softdark', 'green']}
-            enableSystem={true}
-            storageKey="peace-rss-theme"
-          >
-            <Notifications />
-            <main>
-            <SignedOut>
-              <KomorebiShader opacity={0.1} />
-              <div className="landingPage">
-                <div className="landingPage_Content">
-                  <div className="landingPage_Intro">
-
-                    <h1 className='soulSister'>Komorebi</h1>
-                    <p>Enjoy your reading</p>
+          <SerwistProvider>
+            <ThemeProvider
+              attribute="data-theme"
+              defaultTheme="light"
+              themes={['light', 'dark', 'softlight', 'softdark', 'green']}
+              enableSystem={true}
+              storageKey="peace-rss-theme"
+            >
+              <Notifications />
+              <main>
+                <SignedOut>
+                  <KomorebiShader opacity={0.1} />
+                  <div className="landingPage">
+                    <div className="landingPage_Content">
+                      <div className="landingPage_Intro">
+                        <h1 className="soulSister">Komorebi</h1>
+                        <p>Enjoy your reading</p>
+                      </div>
+                      <ul className="landingPage_Buttons">
+                        <li>
+                          <Button variant="primary">
+                            <SignInButton />
+                          </Button>
+                        </li>
+                        <li>/</li>
+                        <li>
+                          <Button variant="primary">
+                            <SignUpButton />
+                          </Button>
+                        </li>
+                      </ul>
+                    </div>
                   </div>
-                  <ul className="landingPage_Buttons">
-                    <li>
-                    <Button variant="primary">
-                      <SignInButton />
-                    </Button>
-                    </li>
-                    <li>
-                    {'/'}
-                    </li>
-                    <li>
-                    <Button variant="primary">
-                      <SignUpButton />
-                    </Button>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </SignedOut>
-            <SignedIn>
-             {children}
-            </SignedIn>
-            </main>
-          </ThemeProvider>
+                </SignedOut>
+                <SignedIn>{children}</SignedIn>
+              </main>
+            </ThemeProvider>
+          </SerwistProvider>
         </body>
       </html>
     </ClerkProvider>
