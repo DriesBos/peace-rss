@@ -27,62 +27,54 @@
   display: inline-flex
   flex-direction: row
   align-items: flex-start
-  gap: 4px
+  gap: var(--space-buttons-gap)
   transition: gap var(--transition-buttons)
-  span
+  overflow: visible
+  span:first-child
     width: auto
-    overflow: hidden
     display: inline-block
-    padding-bottom: 2px
     transition: width var(--transition-header-toggle)
     &::after
       @include underline(var(--color-text))
       transition: background var(--transition-buttons)
   &[data-collapse="true"]
     gap: 0 !important
-    span
+    span:first-child
       width: 0 !important
 
 // Only icon, no text
 .icon
   display: inline-flex
-  svg
-    width: 16px
-    height: 16px
 
 // Underline on hover and active. Has Nav-font
 .nav
   display: inline-flex
   flex-direction: row
   align-items: flex-start
-  gap: 4px
+  gap: var(--space-buttons-gap)
   @include font-nav
   transition: gap var(--transition-buttons)
-  span
+  span:first-child
     width: auto
-    overflow: hidden
     display: inline-block
-    padding-bottom: 2px
     transition: width var(--transition-header-toggle)
     &::after
       @include underline(transparent)
       transition: background var(--transition-buttons)
   &[data-active="true"]
-    span
-      text-decoration: underline
+    span:first-child
       &::after
         @include underline(var(--color-text))
   &:hover
     @media (hover: hover)
-      span
-        text-decoration: underline
+      span:first-child
         &::after
           @include underline(var(--color-text))
   &[data-collapse="true"]
     gap: 0 !important
     span
       width: 0 !important
-    span::after
+    span:first-child::after
       @include underline(var(--color-text))
 
 .button:disabled
@@ -90,7 +82,7 @@
   cursor: not-allowed
   &::after
     @include underline(transparent)
-  span::after
+  span:first-child::after
     @include underline(transparent)
 
 .count
@@ -101,4 +93,4 @@
   color: var(--color-text-secondary)
   transform: translate(-5px, -6px)
   &::after
-    @include underline(transparent)
+    @include underline(transparent) !important

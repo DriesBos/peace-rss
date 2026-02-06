@@ -55,6 +55,8 @@ $res-tabled: 745px
   --space-sides-modal: 16px
   --space-top-modal: 48px
   --space-bottom-modal: 48px
+  // Spacing btns
+  --space-buttons-gap: 6px
   @media (min-width: $res-tabled)
     --space-sides-general: 16px
     --space-sides-stories: 32px
@@ -145,7 +147,7 @@ $res-tabled: 745px
 @mixin underline($color, $height: 1px)
   content: ''
   position: absolute
-  bottom: 0
+  bottom: -2px
   left: 0
   display: block
   width: 100%

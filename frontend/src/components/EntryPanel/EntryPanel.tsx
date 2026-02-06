@@ -1,6 +1,6 @@
 'use client';
 
-import { createElement, useMemo, useRef } from 'react';
+import { createElement, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import IntersectionImage from 'react-intersection-image';
 import styles from './EntryPanel.module.sass';
@@ -19,6 +19,11 @@ import {
 import { IconWrapper } from '../icons/IconWrapper/IconWrapper';
 import { IconStar } from '../icons/IconStar';
 import { IconExit } from '../icons/IconExit';
+
+type LazyEntryContent = {
+  nodes: ReactNode[];
+  leadImageUrl: string | null;
+};
 
 type YouTubeInlineProps = {
   videoId: string;
@@ -82,25 +87,61 @@ function resolveSrcSet(value: string, baseUrl?: string): string {
     .join(', ');
 }
 
+function extractLeadImageUrl(doc: Document, baseUrl?: string): string | null {
+  const blocks = Array.from(doc.body.children).slice(0, 4);
+
+  for (const block of blocks) {
+    const img =
+      block.tagName.toLowerCase() === 'img'
+        ? (block as HTMLImageElement)
+        : (block.querySelector('img') as HTMLImageElement | null);
+
+    if (img) {
+      const src =
+        img.getAttribute('src') ||
+        img.getAttribute('data-src') ||
+        img.getAttribute('data-lazy-src') ||
+        img.getAttribute('data-original') ||
+        '';
+      const trimmed = src.trim();
+      if (trimmed) return resolveUrl(trimmed, baseUrl);
+    }
+
+    const video =
+      block.tagName.toLowerCase() === 'video'
+        ? (block as HTMLVideoElement)
+        : (block.querySelector('video[poster]') as HTMLVideoElement | null);
+    if (video) {
+      const poster = video.getAttribute('poster')?.trim();
+      if (poster) return resolveUrl(poster, baseUrl);
+    }
+  }
+
+  return null;
+}
+
 function useLazyEntryContent(html?: string, baseUrl?: string) {
-  return useMemo<ReactNode[] | null>(() => {
+  return useMemo<LazyEntryContent | null>(() => {
     const canUseDom =
       typeof window !== 'undefined' && typeof window.DOMParser !== 'undefined';
 
     if (!html || !canUseDom) return null;
 
     try {
-      return convertHtmlToReactNodes(html, baseUrl);
+      const parser = new window.DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      const leadImageUrl = extractLeadImageUrl(doc, baseUrl);
+      return {
+        nodes: convertDocToReactNodes(doc, baseUrl),
+        leadImageUrl,
+      };
     } catch {
       return null;
     }
   }, [html, baseUrl]);
 }
 
-function convertHtmlToReactNodes(html: string, baseUrl?: string): ReactNode[] {
-  const parser = new window.DOMParser();
-  const doc = parser.parseFromString(html, 'text/html');
-
+function convertDocToReactNodes(doc: Document, baseUrl?: string): ReactNode[] {
   return Array.from(doc.body.childNodes)
     .map((node, index) =>
       transformNodeToReact(node, `entry-node-${index}`, baseUrl),
@@ -412,9 +453,28 @@ export function EntryPanel({
   isTogglingStar,
   isUpdatingStatus,
 }: EntryPanelProps) {
-  const lazyEntryContent = useLazyEntryContent(entry?.content, entry?.url);
+  const lazy = useLazyEntryContent(entry?.content, entry?.url);
   const selectedIsStarred = Boolean(entry?.starred);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+
+  const [stableLeadImageUrl, setStableLeadImageUrl] = useState<string | null>(
+    null,
+  );
+
+  useEffect(() => {
+    setStableLeadImageUrl(null);
+  }, [entry?.id]);
+
+  useEffect(() => {
+    if (!entry) return;
+    if (stableLeadImageUrl) return;
+    if (!lazy?.leadImageUrl) return;
+    setStableLeadImageUrl(lazy.leadImageUrl);
+  }, [entry, lazy?.leadImageUrl, stableLeadImageUrl]);
+
+  const leadImageUrl = lazy?.leadImageUrl ?? null;
+  const fallbackLeadImageUrl =
+    leadImageUrl ? null : stableLeadImageUrl ?? null;
 
   return (
     <SlidePanel
@@ -460,8 +520,19 @@ export function EntryPanel({
           </div>
 
           {entry.content ? (
-            lazyEntryContent ? (
-              <div className={styles.entry_Content}>{lazyEntryContent}</div>
+            lazy ? (
+              <div className={styles.entry_Content}>
+                {fallbackLeadImageUrl ? (
+                  <img
+                    className={styles.entry_LeadImage}
+                    src={fallbackLeadImageUrl}
+                    alt=""
+                    loading="eager"
+                    decoding="async"
+                  />
+                ) : null}
+                {lazy.nodes}
+              </div>
             ) : (
               <div
                 className={styles.entry_Content}
