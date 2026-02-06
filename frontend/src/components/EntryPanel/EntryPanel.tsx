@@ -13,6 +13,8 @@ import { IconArrowShortRight } from '@/components/icons/IconArrowShortRight';
 import { ScrollToTop } from '@/components/ScrollToTop/ScrollToTop';
 import type { Entry, Feed } from '@/app/_lib/types';
 import { IconWrapper } from '../icons/IconWrapper/IconWrapper';
+import { IconStar } from '../icons/IconStar';
+import { IconExit } from '../icons/IconExit';
 
 function useLazyEntryContent(html?: string) {
   return useMemo<ReactNode[] | null>(() => {
@@ -36,7 +38,7 @@ function convertHtmlToReactNodes(html: string): ReactNode[] {
   return Array.from(doc.body.childNodes)
     .map((node, index) => transformNodeToReact(node, `entry-node-${index}`))
     .filter(
-      (child): child is ReactNode => child !== null && child !== undefined
+      (child): child is ReactNode => child !== null && child !== undefined,
     );
 }
 
@@ -89,7 +91,7 @@ function transformNodeToReact(node: ChildNode, key: string): ReactNode | null {
   }
 
   const children = Array.from(element.childNodes).map((child, childIndex) =>
-    transformNodeToReact(child, `${key}-${childIndex}`)
+    transformNodeToReact(child, `${key}-${childIndex}`),
   );
 
   return createElement(tagName, { ...props, key }, children);
@@ -97,11 +99,11 @@ function transformNodeToReact(node: ChildNode, key: string): ReactNode | null {
 
 function buildElementProps(
   element: Element,
-  options: { omit?: string[] } = {}
+  options: { omit?: string[] } = {},
 ): ElementProps {
   const props: ElementProps = {};
   const omit = new Set(
-    (options.omit ?? []).map((attrName) => attrName.toLowerCase())
+    (options.omit ?? []).map((attrName) => attrName.toLowerCase()),
   );
 
   Array.from(element.attributes).forEach((attr) => {
@@ -139,7 +141,7 @@ function buildElementProps(
 
 function createLazyImageElement(
   element: HTMLImageElement,
-  key: string
+  key: string,
 ): ReactNode | null {
   const src = element.getAttribute('src');
 
@@ -378,7 +380,10 @@ export function EntryPanel({
                 type="button"
                 className={styles.actionsList_Item}
               >
-                {selectedIsStarred ? 'Unstar' : 'Star'}
+                <IconWrapper>
+                  <IconStar />
+                </IconWrapper>
+                <span>{selectedIsStarred ? 'Unstar' : 'Star'}</span>
                 {', '}
               </Button>
               <a
@@ -388,7 +393,11 @@ export function EntryPanel({
                 title="Source link"
                 className={`${buttonStyles.button} ${buttonStyles.primary} ${styles.actionsList_Item}`}
               >
-                Source link{', '}
+                <span>Source link</span>
+                <IconWrapper>
+                  <IconExit />
+                </IconWrapper>
+                {', '}
               </a>
               <Button
                 onClick={onFetchOriginal}
@@ -397,16 +406,18 @@ export function EntryPanel({
                   fetchingOriginal
                     ? 'Fetching...'
                     : hasFetchedOriginal
-                    ? 'Source already fetched'
-                    : 'Fetch source'
+                      ? 'Source already fetched'
+                      : 'Fetch source'
                 }
                 className={styles.actionsList_Item}
               >
-                {fetchingOriginal
-                  ? 'Fetching...'
-                  : hasFetchedOriginal
-                  ? 'Source fetched'
-                  : 'Fetch source'}
+                <span>
+                  {fetchingOriginal
+                    ? 'Fetching...'
+                    : hasFetchedOriginal
+                      ? 'Source fetched'
+                      : 'Fetch source'}
+                </span>
                 {', '}
               </Button>
               <Button
@@ -420,7 +431,11 @@ export function EntryPanel({
                 }
                 className={styles.actionsList_Item}
               >
-                {entry.status === 'unread' ? 'Mark as read' : 'Mark as unread'}
+                <span>
+                  {entry.status === 'unread'
+                    ? 'Mark as read'
+                    : 'Mark as unread'}
+                </span>
               </Button>
             </div>
             <div className={styles.prevNextButtons}>
