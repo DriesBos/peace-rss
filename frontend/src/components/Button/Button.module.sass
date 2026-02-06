@@ -18,7 +18,7 @@
       .icon, svg, .iconWrapper
         transform: rotate(135deg)
   &[data-collapse="true"]
-    span:first-child
+    span
       width: 0px !important
 
 // Has underline
@@ -35,13 +35,13 @@
     transition: width var(--transition-header-toggle)
     &::after
       @include underline(var(--color-text))
-  span:first-child::after
+  span::after
     @include underline(transparent)
     transition: background var(--transition-buttons)
   &[data-active="true"]
-    span:first-child::after
+    span::after
       @include underline(var(--color-text))
-  span:first-child::after
+  span::after
     @include underline(var(--color-text))
   &[data-collapse="true"]
     gap: 0 !important
@@ -67,27 +67,34 @@
     width: auto
     overflow: hidden
     transition: width var(--transition-header-toggle)
-  span:first-child::after
-    @include underline(transparent)
-    transition: background var(--transition-buttons)
+  span
+    &::after
+      @include underline(transparent)
+      transition: background var(--transition-buttons)
   &[data-active="true"]
-    span:first-child::after
-      @include underline(var(--color-text))
+    span
+      text-decoration: underline
+      &::after
+        @include underline(var(--color-text))
   &:hover
     @media (hover: hover)
-      span:first-child::after
-        @include underline(var(--color-text))
+      span
+        text-decoration: underline
+        &::after
+          @include underline(var(--color-text))
   &[data-collapse="true"]
     gap: 0 !important
     span
       width: 0 !important
+    span::after
+      @include underline(var(--color-text))
 
 .button:disabled
   color: var(--color-text-secondary)
   cursor: not-allowed
   &::after
     @include underline(transparent)
-  span:first-child::after
+  span::after
     @include underline(transparent)
 
 .count
@@ -97,3 +104,5 @@
   @include font-count
   color: var(--color-text-secondary)
   transform: translate(-5px, -6px)
+  &::after
+    @include underline(transparent)
