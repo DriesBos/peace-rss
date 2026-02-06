@@ -429,7 +429,6 @@ export function EntryPanel({
                   <IconStar />
                 </IconWrapper>
                 <span>{selectedIsStarred ? 'Unstar' : 'Star'}</span>
-                {', '}
               </Button>
               <a
                 href={entry.url}
@@ -442,7 +441,6 @@ export function EntryPanel({
                 <IconWrapper variant="small">
                   <IconExit />
                 </IconWrapper>
-                {', '}
               </a>
               <Button
                 onClick={onFetchOriginal}
@@ -467,7 +465,6 @@ export function EntryPanel({
                         ? 'Retry fetching source'
                         : 'Fetch source'}
                 </span>
-                {', '}
               </Button>
               <Button
                 onClick={() =>
