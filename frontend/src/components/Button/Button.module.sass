@@ -33,6 +33,8 @@
     width: auto
     overflow: hidden
     transition: width var(--transition-header-toggle)
+    &::after
+      @include underline(var(--color-text))
   span:first-child::after
     @include underline(transparent)
     transition: background var(--transition-buttons)
