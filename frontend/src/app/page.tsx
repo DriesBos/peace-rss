@@ -51,6 +51,7 @@ export default function Home() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchMode, setSearchMode] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isCategoriesOpen, setIsCategoriesOpen] = useState(false);
   const [offset, setOffset] = useState(0);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -719,6 +720,10 @@ export default function Home() {
     });
   }, []);
 
+  const toggleCategories = useCallback(() => {
+    setIsCategoriesOpen((prev) => !prev);
+  }, []);
+
   useEffect(() => {
     if (!isProvisioned || !isSearchOpen) return;
 
@@ -1210,6 +1215,8 @@ export default function Home() {
             <HeaderCategories
               isMenuOpen={isMenuModalOpen}
               onOpenMenu={openMenuModal}
+              isCategoriesOpen={isCategoriesOpen}
+              onToggleCategories={toggleCategories}
               isOffline={isOffline}
               categories={categories}
               selectedCategoryId={selectedCategoryId}

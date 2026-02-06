@@ -3,7 +3,7 @@ import styles from './Button.module.sass';
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'category' | 'nav' | 'icon';
-  icon?: 'plus' | 'menu' | 'search' | 'close' | 'star';
+  icon?: 'plus' | 'menu' | 'search' | 'close' | 'star' | 'categories';
   children: React.ReactNode;
   active?: boolean;
   className?: string;

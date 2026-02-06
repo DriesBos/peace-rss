@@ -6,17 +6,29 @@
   width: 100%
   display: flex
   flex-direction: row
-  justify-content: space-between
-  align-items: flex-start
-  gap: 6px
-  padding: var(--one-rem) 0
+  justify-content: flex-start
+  align-items: center
+  gap: 12px
+  padding: var(--half-rem) 0
   background: var(--color-app)
   z-index: calc(var(--index-newsfeed) + 1)
   overflow: visible
-  height: 2rem
-  height: 100%
+  &[data-categories-open="true"]
+    gap: 0
+  &_Fixed
+    display: flex
+    flex-direction: row
+    align-items: center
+    gap: 12px
+    flex: 0 0 auto
+  &[data-categories-open="true"] &_Fixed
+    background: var(--color-app)
+    border-right: 1px solid var(--color-text-secondary)
+    padding: var(--half-rem) var(--one-rem) var(--half-rem) var(--space-sides-general)
+    gap: var(--one-rem)
   &_Menu
-    padding: 0 var(--space-sides-general)
+    display: flex
+    align-items: center
   &_Offline
     @include font-nav
     color: var(--color-text-secondary)
@@ -24,20 +36,30 @@
     display: flex
     align-items: center
     gap: 6px
+  &_isCategoriesOpen
+    display: flex
+    align-items: center
   &_CategoryList
     list-style: none
     display: flex
     flex-direction: row
     flex-wrap: nowrap
-    gap: 0.75rem
-    height: calc(100% + 1px)
-    overflow: visible
+    align-items: center
+    gap: 12px
     overflow-x: auto
     scrollbar-width: none
     -ms-overflow-style: none
-    padding: 0 0 0 var(--space-sides-general)
+    padding: var(--half-rem) var(--space-sides-general)
+    flex: 1 1 auto
     &::-webkit-scrollbar
       display: none
+  &_CategoryList_Item
+    display: inline-flex
+    align-items: center
+    gap: 4px
+
+.categoryItemActive
+  color: var(--color-text)
 
 .searchInput
   font-size: var(--type-input)
