@@ -8,55 +8,67 @@
   flex-direction: row
   justify-content: flex-start
   align-items: center
-  gap: 12px
-  padding: var(--half-rem) 0
   background: var(--color-app)
   z-index: calc(var(--index-newsfeed) + 1)
   overflow: visible
-  &[data-categories-open="true"]
-    gap: 0
-  &_Fixed
+  height: 2rem
+  &_Left
     display: flex
     flex-direction: row
     align-items: center
-    gap: 12px
     flex: 0 0 auto
-  &[data-categories-open="true"] &_Fixed
     background: var(--color-app)
-    border-right: 1px solid var(--color-text-secondary)
-    padding: var(--half-rem) var(--one-rem) var(--half-rem) var(--space-sides-general)
-    gap: var(--one-rem)
+    height: 2rem
+  &[data-categories-open="true"] &_Left
+    border-right: var(--border-containers)
   &_Menu
-    display: flex
-    align-items: center
-  &_Offline
-    @include font-nav
-    color: var(--color-text-secondary)
+    padding: 0 var(--space-sides-general)
+    width: auto
+    transition: width .33s ease-in
   &_Search
     display: flex
     align-items: center
-    gap: 6px
+    gap: 4px
+    padding: 0 var(--space-sides-general)
+    width: auto
+    transition: width 2s ease-in
+  &_Offline
+    @include font-nav
+    color: var(--color-text-secondary)
+    padding: 0 var(--space-sides-general)
+  &_Categories
+    opacity: 1
+    width: auto
+    padding: 0 var(--space-sides-general)
+    transition: width var(--transition-header-toggle), padding var(--transition-header-toggle)
+  &[data-categories-open="true"]
+    .header
+      &_Categories
+        width: 0
+        opacity: 0
+        padding: 0
+        pointer-events: none
   &_isCategoriesOpen
     display: flex
     align-items: center
+
   &_CategoryList
     list-style: none
     display: flex
     flex-direction: row
     flex-wrap: nowrap
     align-items: center
+    justify-content: flex-start
     gap: 12px
     overflow-x: auto
     scrollbar-width: none
     -ms-overflow-style: none
-    padding: var(--half-rem) var(--space-sides-general)
     flex: 1 1 auto
+    padding: 0 var(--space-sides-general)
+    height: 2rem
+    width: 100%
     &::-webkit-scrollbar
       display: none
-  &_CategoryList_Item
-    display: inline-flex
-    align-items: center
-    gap: 4px
 
 .categoryItemActive
   color: var(--color-text)

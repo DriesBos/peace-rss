@@ -8,6 +8,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   active?: boolean;
   className?: string;
   count?: number;
+  collapse?: boolean;
 }
 
 export const Button: React.FC<ButtonProps> = ({
@@ -17,6 +18,7 @@ export const Button: React.FC<ButtonProps> = ({
   active = false,
   count,
   icon,
+  collapse,
   ...props
 }) => {
   return (
@@ -24,6 +26,7 @@ export const Button: React.FC<ButtonProps> = ({
       className={`${styles.button} ${styles[variant]} ${className}`}
       data-active={active}
       data-icon={icon}
+      data-collapse={collapse}
       {...props}
     >
       {children}

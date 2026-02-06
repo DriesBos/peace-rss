@@ -62,39 +62,39 @@ export function HeaderCategories({
 
   return (
     <header className={styles.header} data-categories-open={isCategoriesOpen}>
-      <div className={styles.header_Fixed}>
+      <div className={styles.header_Left}>
         <div className={styles.header_Menu}>
-          <div className={styles.header_Search} data-open={isMenuOpen}>
-            <Button
-              type="button"
-              variant={isCategoriesOpen ? 'icon' : 'nav'}
-              onClick={onOpenMenu}
-              aria-haspopup="dialog"
-              aria-expanded={isMenuOpen}
-              aria-label={isCategoriesOpen ? 'Open menu' : undefined}
-              data-active={isMenuOpen}
-            >
-              <IconWrapper>
-                <IconMenu />
-              </IconWrapper>
-              {!isCategoriesOpen && <span>Menu</span>}
-            </Button>
-          </div>
+          <Button
+            type="button"
+            variant={'nav'}
+            onClick={onOpenMenu}
+            aria-haspopup="dialog"
+            aria-expanded={isMenuOpen}
+            aria-label={isCategoriesOpen ? 'Open menu' : undefined}
+            data-active={isMenuOpen}
+            data-collapse={isCategoriesOpen}
+          >
+            <IconWrapper>
+              <IconMenu />
+            </IconWrapper>
+            <span>Menu</span>
+          </Button>
         </div>
         <div className={styles.header_Search} data-open={isSearchOpen}>
           <Button
             type="button"
-            variant={isCategoriesOpen ? 'icon' : 'nav'}
+            variant={'nav'}
             icon="search"
             onClick={onToggleSearch}
             aria-expanded={isSearchOpen}
             aria-controls="header-search-input"
             aria-label={isSearchOpen ? 'Close search' : 'Open search'}
+            data-collapse={isCategoriesOpen}
           >
             <IconWrapper>
               <IconSearch />
             </IconWrapper>
-            {!isCategoriesOpen && <span>Search</span>}
+            <span>Search</span>
           </Button>
           {isSearchOpen && (
             <input
@@ -109,31 +109,28 @@ export function HeaderCategories({
             />
           )}
         </div>
-        {!isCategoriesOpen && (
-          <div className={styles.header_isCategoriesOpen}>
-            <Button
-              type="button"
-              variant="nav"
-              icon="categories"
-              onClick={onToggleCategories}
-              aria-expanded={isCategoriesOpen}
-              aria-controls="header-categories-list"
-              aria-label="Toggle categories"
-            >
-              <IconWrapper>
-                <IconCategories />
-              </IconWrapper>
-              <span>Categories</span>
-            </Button>
-          </div>
-        )}
+        {/* {!isCategoriesOpen && ( */}
+        <div className={styles.header_Categories}>
+          <Button
+            type="button"
+            variant="nav"
+            icon="categories"
+            onClick={onToggleCategories}
+            aria-expanded={isCategoriesOpen}
+            aria-controls="header-categories-list"
+            aria-label="Toggle categories"
+          >
+            <IconWrapper>
+              <IconCategories />
+            </IconWrapper>
+            <span>Categories</span>
+          </Button>
+        </div>
+        {/* )} */}
       </div>
       {isOffline && <div className={styles.header_Offline}>app is offline</div>}
       {isCategoriesOpen && (
-        <ul
-          className={styles.header_CategoryList}
-          id="header-categories-list"
-        >
+        <ul className={styles.header_CategoryList} id="header-categories-list">
           <li>
             <Button
               type="button"

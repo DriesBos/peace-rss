@@ -39,6 +39,9 @@
   flex-direction: row
   align-items: center
   @include font-nav
+  span:first-child
+    width: auto
+    transition: width var(--transition-header-toggle)
   span:first-child::after
     @include underline(transparent)
     transition: background var(--transition-buttons)
@@ -49,6 +52,9 @@
     @media (hover: hover)
       span:first-child::after
         @include underline(var(--color-text))
+  &[data-collapse="true"]
+    span:first-child
+      width: 0
 
 .button:disabled
   color: var(--color-text-secondary)
