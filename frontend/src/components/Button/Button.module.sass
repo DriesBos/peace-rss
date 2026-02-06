@@ -30,16 +30,17 @@
   gap: var(--space-buttons-gap)
   transition: gap var(--transition-buttons)
   overflow: visible
-  span:first-child
+  > span:first-of-type
     width: auto
     display: inline-block
+    padding-bottom: 2px
     transition: width var(--transition-header-toggle)
     &::after
       @include underline(var(--color-text))
       transition: background var(--transition-buttons)
   &[data-collapse="true"]
     gap: 0 !important
-    span:first-child
+    > span:first-of-type
       width: 0 !important
 
 // Only icon, no text
@@ -54,27 +55,28 @@
   gap: var(--space-buttons-gap)
   @include font-nav
   transition: gap var(--transition-buttons)
-  span:first-child
+  > span:not(.count):first-of-type
     width: auto
     display: inline-block
+    padding-bottom: 2px
     transition: width var(--transition-header-toggle)
     &::after
       @include underline(transparent)
       transition: background var(--transition-buttons)
   &[data-active="true"]
-    span:first-child
+    > span:not(.count):first-of-type
       &::after
         @include underline(var(--color-text))
   &:hover
     @media (hover: hover)
-      span:first-child
+      > span:not(.count):first-of-type
         &::after
           @include underline(var(--color-text))
   &[data-collapse="true"]
     gap: 0 !important
     span
       width: 0 !important
-    span:first-child::after
+    > span:not(.count):first-of-type::after
       @include underline(var(--color-text))
 
 .button:disabled
@@ -82,7 +84,7 @@
   cursor: not-allowed
   &::after
     @include underline(transparent)
-  span:first-child::after
+  > span:not(.count):first-of-type::after
     @include underline(transparent)
 
 .count

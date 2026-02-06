@@ -1,6 +1,6 @@
 'use client';
 
-import { createElement, useEffect, useMemo, useRef, useState } from 'react';
+import { createElement, useMemo, useRef } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import IntersectionImage from 'react-intersection-image';
 import styles from './EntryPanel.module.sass';
@@ -457,24 +457,23 @@ export function EntryPanel({
   const selectedIsStarred = Boolean(entry?.starred);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
-  const [stableLeadImageUrl, setStableLeadImageUrl] = useState<string | null>(
-    null,
-  );
+  const stableLeadImageRef = useRef<{
+    entryId: number | null;
+    url: string | null;
+  }>({ entryId: null, url: null });
 
-  useEffect(() => {
-    setStableLeadImageUrl(null);
-  }, [entry?.id]);
+  const currentEntryId = entry?.id ?? null;
+  if (stableLeadImageRef.current.entryId !== currentEntryId) {
+    stableLeadImageRef.current.entryId = currentEntryId;
+    stableLeadImageRef.current.url = null;
+  }
 
-  useEffect(() => {
-    if (!entry) return;
-    if (stableLeadImageUrl) return;
-    if (!lazy?.leadImageUrl) return;
-    setStableLeadImageUrl(lazy.leadImageUrl);
-  }, [entry, lazy?.leadImageUrl, stableLeadImageUrl]);
+  const leadImageUrl = lazy?.leadImageUrl?.trim() || null;
+  if (leadImageUrl) {
+    stableLeadImageRef.current.url = leadImageUrl;
+  }
 
-  const leadImageUrl = lazy?.leadImageUrl ?? null;
-  const fallbackLeadImageUrl =
-    leadImageUrl ? null : stableLeadImageUrl ?? null;
+  const pinnedLeadImageUrl = leadImageUrl ? null : stableLeadImageRef.current.url;
 
   return (
     <SlidePanel
@@ -522,10 +521,10 @@ export function EntryPanel({
           {entry.content ? (
             lazy ? (
               <div className={styles.entry_Content}>
-                {fallbackLeadImageUrl ? (
+                {pinnedLeadImageUrl ? (
                   <img
                     className={styles.entry_LeadImage}
-                    src={fallbackLeadImageUrl}
+                    src={pinnedLeadImageUrl}
                     alt=""
                     loading="eager"
                     decoding="async"
