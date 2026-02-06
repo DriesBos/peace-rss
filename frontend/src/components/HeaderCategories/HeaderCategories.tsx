@@ -90,7 +90,7 @@ export function HeaderCategories({
             aria-expanded={isSearchOpen}
             aria-controls="header-search-input"
             aria-label={isSearchOpen ? 'Close search' : 'Open search'}
-            data-collapse={isCategoriesOpen}
+            data-collapse={isCategoriesOpen || isSearchOpen}
           >
             <IconWrapper>
               <IconSearch />

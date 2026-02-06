@@ -3,7 +3,6 @@
 .button
   display: inline-flex
   align-items: center
-  gap: 6px
   position: relative
   cursor: pointer
   transition: color 0.165s ease
@@ -25,6 +24,7 @@
 // Has underline
 .primary
   color: var(--color-text)
+  gap: 4px
   @include font-button
   &::after
     @include underline(var(--color-text))
@@ -41,6 +41,7 @@
   display: inline-flex
   flex-direction: row
   align-items: center
+  gap: 4px
   @include font-nav
   transition: gap var(--transition-buttons)
   span
