@@ -7,7 +7,6 @@
   cursor: pointer
   transition: color 0.165s ease
   white-space: nowrap
-  overflow: visible
   span
     position: relative
   .icon, svg, .iconWrapper
@@ -18,8 +17,9 @@
       .icon, svg, .iconWrapper
         transform: rotate(135deg)
   &[data-collapse="true"]
-    span
+    > span:first-of-type
       width: 0px !important
+      overflow: hidden
 
 // Has underline
 .primary
@@ -29,11 +29,11 @@
   align-items: flex-start
   gap: var(--space-buttons-gap)
   transition: gap var(--transition-buttons)
-  overflow: visible
   > span:first-of-type
     width: auto
     display: inline-block
     padding-bottom: 2px
+    overflow: visible
     transition: width var(--transition-header-toggle)
     &::after
       @include underline(var(--color-text))
@@ -95,4 +95,4 @@
   color: var(--color-text-secondary)
   transform: translate(-5px, -6px)
   &::after
-    @include underline(transparent) !important
+    @include underline(transparent)
