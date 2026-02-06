@@ -65,7 +65,7 @@ export default function Home() {
   const [selectedEntryId, setSelectedEntryId] = useState<number | null>(null);
   const [selectedFeedId, setSelectedFeedId] = useState<number | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
-    null
+    null,
   );
   const [isStarredView, setIsStarredView] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -78,7 +78,7 @@ export default function Home() {
   const [provisionError, setProvisionError] = useState<string | null>(null);
   const [newFeedUrl, setNewFeedUrl] = useState('');
   const [newFeedCategoryId, setNewFeedCategoryId] = useState<number | null>(
-    null
+    null,
   );
   const [addFeedLoading, setAddFeedLoading] = useState(false);
   const [addFeedError, setAddFeedError] = useState<string | null>(null);
@@ -88,7 +88,7 @@ export default function Home() {
   const [fetchingOriginal, setFetchingOriginal] = useState(false);
   const [starredEntries, setStarredEntries] = useState<Entry[]>([]);
   const [fetchedEntryIds, setFetchedEntryIds] = useState<Set<number>>(
-    new Set()
+    new Set(),
   );
   const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -141,7 +141,13 @@ export default function Home() {
       selectedFeedId,
       selectedCategoryId,
     }),
-    [searchMode, searchQuery, isStarredView, selectedFeedId, selectedCategoryId]
+    [
+      searchMode,
+      searchQuery,
+      isStarredView,
+      selectedFeedId,
+      selectedCategoryId,
+    ],
   );
 
   const {
@@ -176,9 +182,12 @@ export default function Home() {
 
   const countLoadedUnreadEntries = useCallback(
     (list: Entry[]) => {
-      return list.reduce((sum, entry) => sum + (isEntryUnread(entry) ? 1 : 0), 0);
+      return list.reduce(
+        (sum, entry) => sum + (isEntryUnread(entry) ? 1 : 0),
+        0,
+      );
     },
-    [isEntryUnread]
+    [isEntryUnread],
   );
 
   const mergePreservingSessionReadEntries = useCallback(
@@ -201,7 +210,7 @@ export default function Home() {
       });
       return merged;
     },
-    []
+    [],
   );
 
   const {
@@ -276,7 +285,7 @@ export default function Home() {
       setReturnToMenuAfterSubModal(true);
       setEditError(null);
     },
-    []
+    [],
   );
 
   const closeEditModal = useCallback(() => {
@@ -356,7 +365,7 @@ export default function Home() {
       });
       return merged;
     },
-    []
+    [],
   );
 
   // Load starred entries for the menu
@@ -372,14 +381,14 @@ export default function Home() {
 
   const syncSelection = useCallback((nextEntries: Entry[]) => {
     setSelectedEntryId((prev) =>
-      prev && nextEntries.some((entry) => entry.id === prev) ? prev : null
+      prev && nextEntries.some((entry) => entry.id === prev) ? prev : null,
     );
   }, []);
 
   const refreshAllData = useCallback(async () => {
     const now = Math.floor(Date.now() / 1000);
     const sessionReadSnapshot = entriesRef.current.filter(
-      (entry) => (entry.status ?? 'unread') === 'read'
+      (entry) => (entry.status ?? 'unread') === 'read',
     );
     const canIncrementallyRefresh =
       !searchMode &&
@@ -399,7 +408,7 @@ export default function Home() {
 
         if (delta.entries.length > 0) {
           setEntries((prev) =>
-            mergeEntryDeltas(prev, delta.entries, fetchedEntryIds)
+            mergeEntryDeltas(prev, delta.entries, fetchedEntryIds),
           );
         }
 
@@ -429,7 +438,7 @@ export default function Home() {
     if (data?.entries) {
       const merged = mergePreservingSessionReadEntries(
         data.entries,
-        sessionReadSnapshot
+        sessionReadSnapshot,
       );
       setEntries(merged);
       syncSelection(merged);
@@ -461,18 +470,18 @@ export default function Home() {
   const reloadCurrentEntries = useCallback(async () => {
     const current = entriesRef.current;
     const sessionReadSnapshot = current.filter(
-      (entry) => (entry.status ?? 'unread') === 'read'
+      (entry) => (entry.status ?? 'unread') === 'read',
     );
     const limit = Math.max(
       searchMode || isStarredView
         ? current.length
         : countLoadedUnreadEntries(current),
-      INITIAL_ENTRIES_LIMIT
+      INITIAL_ENTRIES_LIMIT,
     );
     const data = await loadEntries({ append: false, offset: 0, limit });
     const merged = mergePreservingSessionReadEntries(
       data.entries,
-      sessionReadSnapshot
+      sessionReadSnapshot,
     );
     setEntries(merged);
     syncSelection(merged);
@@ -519,24 +528,24 @@ export default function Home() {
     pullState === 'pulling'
       ? Math.min(pullDistance, PULL_MAX_PX)
       : pullState === 'fetching' || pullState === 'done'
-      ? FETCH_INDICATOR_HEIGHT
-      : 0;
+        ? FETCH_INDICATOR_HEIGHT
+        : 0;
 
   const pullOffset =
     pullState === 'pulling'
       ? Math.min(pullDistance, PULL_MAX_PX)
       : pullState === 'fetching' || pullState === 'done'
-      ? FETCH_INDICATOR_HEIGHT
-      : 0;
+        ? FETCH_INDICATOR_HEIGHT
+        : 0;
 
   const indicatorLabel =
     pullState === 'pulling'
       ? 'pulling'
       : pullState === 'fetching'
-      ? 'fetching'
-      : pullState === 'done'
-      ? 'done'
-      : '';
+        ? 'fetching'
+        : pullState === 'done'
+          ? 'done'
+          : '';
 
   const lastRefreshedLabel = useMemo(() => {
     if (!lastRefreshedAt) return null;
@@ -554,7 +563,7 @@ export default function Home() {
         body: JSON.stringify({ entry_ids: entryIds, status }),
       });
     },
-    []
+    [],
   );
 
   const setEntryStatusById = useCallback(
@@ -567,13 +576,10 @@ export default function Home() {
         await markEntryStatus([entryId], status);
         setEntries((prev) =>
           prev.map((entry) =>
-            entry.id === entryId ? { ...entry, status } : entry
-          )
+            entry.id === entryId ? { ...entry, status } : entry,
+          ),
         );
-        await Promise.all([
-          loadFeeds(),
-          refreshUnreadCounters(),
-        ]);
+        await Promise.all([loadFeeds(), refreshUnreadCounters()]);
         try {
           const data = await fetchEntriesData({ offset: 0, limit: 1 });
           setTotal(data.total ?? 0);
@@ -595,7 +601,7 @@ export default function Home() {
       markEntryStatus,
       refreshUnreadCounters,
       setTotal,
-    ]
+    ],
   );
 
   async function markPageRead() {
@@ -605,13 +611,10 @@ export default function Home() {
     try {
       await markEntryStatus(
         entries.map((e) => e.id),
-        'read'
+        'read',
       );
       setEntries((prev) => prev.map((entry) => ({ ...entry, status: 'read' })));
-      await Promise.all([
-        loadFeeds(),
-        refreshUnreadCounters(),
-      ]);
+      await Promise.all([loadFeeds(), refreshUnreadCounters()]);
       try {
         const data = await fetchEntriesData({ offset: 0, limit: 1 });
         setTotal(data.total ?? 0);
@@ -663,7 +666,12 @@ export default function Home() {
         console.error('Failed to toggle entry star', e);
       }
     },
-    [loadStarredEntries, refreshStarredCount, isStarredView, reloadCurrentEntries]
+    [
+      loadStarredEntries,
+      refreshStarredCount,
+      isStarredView,
+      reloadCurrentEntries,
+    ],
   );
 
   async function setSelectedStatus(status: 'read' | 'unread') {
@@ -676,7 +684,7 @@ export default function Home() {
     try {
       const res = await fetchJson<{ ok: boolean; provisioned: boolean }>(
         '/api/bootstrap',
-        { method: 'POST' }
+        { method: 'POST' },
       );
       if (res.ok && res.provisioned) {
         setIsProvisioned(true);
@@ -747,7 +755,7 @@ export default function Home() {
       return true;
     } catch (e) {
       setAddCategoryError(
-        e instanceof Error ? e.message : 'Failed to add category'
+        e instanceof Error ? e.message : 'Failed to add category',
       );
       return false;
     } finally {
@@ -769,7 +777,11 @@ export default function Home() {
       });
 
       // Success: refresh categories and feeds
-      await Promise.all([loadCategories(), loadFeeds(), refreshUnreadCounters()]);
+      await Promise.all([
+        loadCategories(),
+        loadFeeds(),
+        refreshUnreadCounters(),
+      ]);
       if (selectedCategoryId === categoryId) {
         setSelectedCategoryId(null);
         setSelectedFeedId(null);
@@ -831,7 +843,7 @@ export default function Home() {
       return true;
     } catch (e) {
       setEditError(
-        e instanceof Error ? e.message : 'Failed to update category'
+        e instanceof Error ? e.message : 'Failed to update category',
       );
       return false;
     } finally {
@@ -916,7 +928,7 @@ export default function Home() {
       setSelectedEntryId(null);
       loadEntries({ append: false, offset: 0, limit: INITIAL_ENTRIES_LIMIT })
         .catch((e) =>
-          setError(e instanceof Error ? e.message : 'Failed to search')
+          setError(e instanceof Error ? e.message : 'Failed to search'),
         )
         .finally(() => setIsLoading(false));
     }, 250);
@@ -951,22 +963,22 @@ export default function Home() {
       try {
         const result = await fetchJson<{ ok: boolean; content: string }>(
           `/api/entries/${targetEntry.id}/fetch-content`,
-          { method: 'POST' }
+          { method: 'POST' },
         );
 
         if (result.ok && result.content) {
           // Update the entry in the entries array with the new content
           setEntries((prev) =>
             prev.map((e) =>
-              e.id === targetEntry.id ? { ...e, content: result.content } : e
-            )
+              e.id === targetEntry.id ? { ...e, content: result.content } : e,
+            ),
           );
           // Mark this entry as fetched
           setFetchedEntryIds((prev) => new Set(prev).add(targetEntry.id));
         }
       } catch (e) {
         setError(
-          e instanceof Error ? e.message : 'Failed to fetch original article'
+          e instanceof Error ? e.message : 'Failed to fetch original article',
         );
         // Mark as fetched even on error to avoid retry loops
         setFetchedEntryIds((prev) => new Set(prev).add(targetEntry.id));
@@ -974,7 +986,7 @@ export default function Home() {
         setFetchingOriginal(false);
       }
     },
-    [selectedEntry, entries, isProvisioned, fetchedEntryIds]
+    [selectedEntry, entries, isProvisioned, fetchedEntryIds],
   );
 
   const handleEntrySelect = useCallback(
@@ -985,7 +997,9 @@ export default function Home() {
       const entry = entries.find((e) => e.id === entryId);
       if (!entry) return;
 
-      const hasContent = Boolean(entry.content && entry.content.trim().length > 0);
+      const hasContent = Boolean(
+        entry.content && entry.content.trim().length > 0,
+      );
 
       // Only attempt to fetch if content is missing and we haven't fetched already
       if (!hasContent && !fetchedEntryIds.has(entryId) && isProvisioned) {
@@ -993,7 +1007,7 @@ export default function Home() {
         void fetchOriginalArticle(entryId);
       }
     },
-    [entries, fetchedEntryIds, isProvisioned, fetchOriginalArticle]
+    [entries, fetchedEntryIds, isProvisioned, fetchOriginalArticle],
   );
 
   const navigateToPrev = useCallback(() => {
@@ -1043,7 +1057,7 @@ export default function Home() {
       startXRef.current = touch.clientX;
       startYRef.current = touch.clientY;
     },
-    [canSwipe, isProvisioned, isLoading]
+    [canSwipe, isProvisioned, isLoading],
   );
 
   const handleTouchMove = useCallback(
@@ -1077,7 +1091,7 @@ export default function Home() {
       setPullDistance(deltaY);
       if (pullState !== 'pulling') setPullState('pulling');
     },
-    [isProvisioned, isLoading, pullState]
+    [isProvisioned, isLoading, pullState],
   );
 
   const handleTouchEnd = useCallback(
@@ -1136,7 +1150,14 @@ export default function Home() {
         navigateToPrev();
       }
     },
-    [canSwipe, hasNext, hasPrev, navigateToNext, navigateToPrev, refreshAllData]
+    [
+      canSwipe,
+      hasNext,
+      hasPrev,
+      navigateToNext,
+      navigateToPrev,
+      refreshAllData,
+    ],
   );
 
   useEffect(() => {
@@ -1248,7 +1269,7 @@ export default function Home() {
           toast(
             nextStatus === 'read'
               ? NOTIFICATION_COPY.app.articleMarked
-              : NOTIFICATION_COPY.app.articleUnmarked
+              : NOTIFICATION_COPY.app.articleUnmarked,
           );
         })();
         return;
@@ -1277,7 +1298,7 @@ export default function Home() {
         if (hasPrev) navigateToPrev();
       }
     },
-    { target: getBrowserWindow() }
+    { target: getBrowserWindow() },
   );
 
   // Auto-mark entry as read after 5s on the entry page
@@ -1321,12 +1342,6 @@ export default function Home() {
     setEntryStatusById,
   ]);
 
-  // Console log entries data
-  useEffect(() => {
-    console.log('Entries data:', entries);
-    console.log(`Total entries loaded: ${entries.length}`);
-  }, [entries]);
-
   // Auto-fetch original article when entry is selected (safety net)
   // Primary fetch happens in handleEntrySelect for immediate response
   // This useEffect acts as a fallback in case handleEntrySelect didn't trigger
@@ -1357,7 +1372,9 @@ export default function Home() {
   ]);
 
   const loadedForPaging =
-    searchMode || isStarredView ? entries.length : countLoadedUnreadEntries(entries);
+    searchMode || isStarredView
+      ? entries.length
+      : countLoadedUnreadEntries(entries);
   const canLoadMore = total > loadedForPaging;
   // const selectedFeedTitle = searchMode
   //   ? `Search: ${searchQuery}`
