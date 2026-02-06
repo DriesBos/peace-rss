@@ -164,6 +164,7 @@ export default function RootLayout({
                 </SignedOut>
                 <SignedIn>{children}</SignedIn>
               </main>
+              <div id="modal-root" />
             </ThemeProvider>
           </SerwistProvider>
         </body>

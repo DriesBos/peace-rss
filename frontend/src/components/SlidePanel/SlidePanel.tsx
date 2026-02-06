@@ -1,4 +1,7 @@
-import type { RefObject } from 'react';
+'use client';
+
+import { useEffect, useState, type RefObject } from 'react';
+import { createPortal } from 'react-dom';
 import styles from './SlidePanel.module.sass';
 import { Button } from '@/components/Button/Button';
 import { IconArrowLeft } from '@/components/icons/IconArrowLeft';
@@ -24,6 +27,13 @@ export function SlidePanel({
   // Disable body scroll when panel is open
   useDisableScroll(isOpen);
 
+  const [portalTarget, setPortalTarget] = useState<Element | null>(null);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    setPortalTarget(document.getElementById('modal-root') ?? document.body);
+  }, []);
+
   // Handle Escape key to close panel
   useKeydown(
     (event) => {
@@ -38,7 +48,7 @@ export function SlidePanel({
     }
   );
 
-  return (
+  const panel = (
     <>
       {/* Backdrop overlay */}
       <div
@@ -55,6 +65,7 @@ export function SlidePanel({
         role="dialog"
         aria-modal="true"
         aria-label={ariaLabel}
+        aria-hidden={!isOpen}
         data-open={isOpen}
       >
         <div className={styles.slidePanel_Content}>
@@ -76,4 +87,7 @@ export function SlidePanel({
       </div>
     </>
   );
+
+  if (!portalTarget) return null;
+  return createPortal(panel, portalTarget);
 }

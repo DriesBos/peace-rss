@@ -266,6 +266,7 @@ export type EntryPanelProps = {
   onClose: () => void;
   onToggleStar: () => void;
   onFetchOriginal: () => void;
+  onRefetchOriginal: () => void;
   fetchingOriginal: boolean;
   onSetStatus: (status: 'read' | 'unread') => void;
   onNavigatePrev: () => void;
@@ -283,6 +284,7 @@ export function EntryPanel({
   onClose,
   onToggleStar,
   onFetchOriginal,
+  onRefetchOriginal,
   fetchingOriginal,
   onSetStatus,
   onNavigatePrev,
@@ -435,6 +437,27 @@ export function EntryPanel({
                   {entry.status === 'unread'
                     ? 'Mark as read'
                     : 'Mark as unread'}
+                </span>
+                {', '}
+              </Button>
+              <Button
+                onClick={onRefetchOriginal}
+                disabled={fetchingOriginal}
+                title={
+                  fetchingOriginal
+                    ? 'Fetching...'
+                    : hasFetchedOriginal
+                      ? 'Fetch original article again'
+                      : 'Fetch original article'
+                }
+                className={styles.actionsList_Item}
+              >
+                <span>
+                  {fetchingOriginal
+                    ? 'Fetching...'
+                    : hasFetchedOriginal
+                      ? 'Refetch original'
+                      : 'Fetch original'}
                 </span>
               </Button>
             </div>

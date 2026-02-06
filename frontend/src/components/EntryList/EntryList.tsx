@@ -51,6 +51,7 @@ function LazyEntryItem({
           feedTitle={feedTitle}
           publishedAt={published}
           active={isActive}
+          marked={entry.status === 'read'}
           content={entry.content}
           url={entry.url}
           onClick={() => onEntryClick(entry.id)}

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SignedIn, SignedOut, RedirectToSignIn } from '@clerk/nextjs';
+import { toast } from 'sonner';
 import styles from './page.module.sass';
 import { AddModal } from '@/components/AddModal/AddModal';
 import { EditModal } from '@/components/EditModal/EditModal';
@@ -15,7 +16,8 @@ import type { Category, Entry, Feed } from '@/app/_lib/types';
 import { useReaderData } from '@/hooks/useReaderData';
 import { useUnreadCounters } from '@/hooks/useUnreadCounters';
 import { fetchStarredEntries } from '@/lib/readerApi';
-import { INITIAL_ENTRIES_LIMIT } from '@/lib/entriesQuery';
+import { ENTRIES_PAGE_SIZE, INITIAL_ENTRIES_LIMIT } from '@/lib/entriesQuery';
+import { NOTIFICATION_COPY } from '@/lib/notificationCopy';
 
 type PullState = 'idle' | 'pulling' | 'fetching' | 'done';
 
@@ -104,6 +106,7 @@ export default function Home() {
   const doneTimeoutRef = useRef<number | null>(null);
   const hasInitialLoadRef = useRef(false);
   const lastSyncRef = useRef<number | null>(null);
+  const autoMarkTimeoutRef = useRef<number | null>(null);
 
   const setLastSync = useCallback((timestamp: number | null) => {
     lastSyncRef.current = timestamp;
@@ -159,9 +162,47 @@ export default function Home() {
     fetchEntriesData,
     loadEntries,
     resetEntries,
-    loadMore: loadMoreEntries,
     refreshAll,
   } = useReaderData({ isProvisioned, view });
+
+  const entriesRef = useRef<Entry[]>([]);
+  useEffect(() => {
+    entriesRef.current = entries;
+  }, [entries]);
+
+  const isEntryUnread = useCallback((entry: Entry) => {
+    return (entry.status ?? 'unread') === 'unread';
+  }, []);
+
+  const countLoadedUnreadEntries = useCallback(
+    (list: Entry[]) => {
+      return list.reduce((sum, entry) => sum + (isEntryUnread(entry) ? 1 : 0), 0);
+    },
+    [isEntryUnread]
+  );
+
+  const mergePreservingSessionReadEntries = useCallback(
+    (nextUnreadEntries: Entry[], sessionReadEntries: Entry[]) => {
+      if (sessionReadEntries.length === 0) return nextUnreadEntries;
+
+      const mergedById = new Map<number, Entry>();
+      for (const entry of nextUnreadEntries) mergedById.set(entry.id, entry);
+
+      for (const entry of sessionReadEntries) {
+        if ((entry.status ?? 'unread') !== 'read') continue;
+        if (!mergedById.has(entry.id)) mergedById.set(entry.id, entry);
+      }
+
+      const merged = Array.from(mergedById.values());
+      merged.sort((a, b) => {
+        const aTime = a.published_at ? new Date(a.published_at).getTime() : 0;
+        const bTime = b.published_at ? new Date(b.published_at).getTime() : 0;
+        return bTime - aTime;
+      });
+      return merged;
+    },
+    []
+  );
 
   const {
     totalUnreadCount,
@@ -261,11 +302,18 @@ export default function Home() {
     return entries.find((e) => e.id === selectedEntryId) ?? null;
   }, [entries, selectedEntryId]);
 
+  const selectedEntryRef = useRef<Entry | null>(null);
+  useEffect(() => {
+    selectedEntryRef.current = selectedEntry;
+  }, [selectedEntry]);
+
+  const isUpdatingStatusRef = useRef(false);
+  useEffect(() => {
+    isUpdatingStatusRef.current = isUpdatingStatus;
+  }, [isUpdatingStatus]);
+
   const hasFetchedOriginal = useMemo(() => {
     if (!selectedEntry) return false;
-    if (selectedEntry.content && selectedEntry.content.trim().length > 0) {
-      return true;
-    }
     return fetchedEntryIds.has(selectedEntry.id);
   }, [selectedEntry, fetchedEntryIds]);
 
@@ -285,13 +333,13 @@ export default function Home() {
         map.set(entry.id, entry);
       }
       for (const entry of delta) {
-        if (entry.status && entry.status !== 'unread') {
-          map.delete(entry.id);
-          continue;
-        }
         const existing = map.get(entry.id);
         if (!existing) {
-          map.set(entry.id, entry);
+          // Don't introduce read entries into the list; we only keep reads that
+          // originated in this session (i.e. already present in `current`).
+          if ((entry.status ?? 'unread') === 'unread') {
+            map.set(entry.id, entry);
+          }
           continue;
         }
         const merged = { ...existing, ...entry };
@@ -330,6 +378,9 @@ export default function Home() {
 
   const refreshAllData = useCallback(async () => {
     const now = Math.floor(Date.now() / 1000);
+    const sessionReadSnapshot = entriesRef.current.filter(
+      (entry) => (entry.status ?? 'unread') === 'read'
+    );
     const canIncrementallyRefresh =
       !searchMode &&
       !isStarredView &&
@@ -376,7 +427,12 @@ export default function Home() {
       loadStarredEntries(),
     ]);
     if (data?.entries) {
-      syncSelection(data.entries);
+      const merged = mergePreservingSessionReadEntries(
+        data.entries,
+        sessionReadSnapshot
+      );
+      setEntries(merged);
+      syncSelection(merged);
     }
     setLastSync(now);
   }, [
@@ -387,6 +443,7 @@ export default function Home() {
     loadFeeds,
     loadStarredEntries,
     mergeEntryDeltas,
+    mergePreservingSessionReadEntries,
     refreshAll,
     refreshStarredCount,
     refreshUnreadCounters,
@@ -402,23 +459,61 @@ export default function Home() {
   ]);
 
   const reloadCurrentEntries = useCallback(async () => {
-    const limit = Math.max(entries.length, INITIAL_ENTRIES_LIMIT);
+    const current = entriesRef.current;
+    const sessionReadSnapshot = current.filter(
+      (entry) => (entry.status ?? 'unread') === 'read'
+    );
+    const limit = Math.max(
+      searchMode || isStarredView
+        ? current.length
+        : countLoadedUnreadEntries(current),
+      INITIAL_ENTRIES_LIMIT
+    );
     const data = await loadEntries({ append: false, offset: 0, limit });
-    syncSelection(data.entries);
-    return data;
-  }, [entries.length, loadEntries, syncSelection]);
+    const merged = mergePreservingSessionReadEntries(
+      data.entries,
+      sessionReadSnapshot
+    );
+    setEntries(merged);
+    syncSelection(merged);
+    return { ...data, entries: merged };
+  }, [
+    countLoadedUnreadEntries,
+    isStarredView,
+    loadEntries,
+    mergePreservingSessionReadEntries,
+    searchMode,
+    setEntries,
+    syncSelection,
+  ]);
 
   const handleLoadMore = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      await loadMoreEntries();
+      const pagingOffset =
+        searchMode || isStarredView
+          ? entries.length
+          : countLoadedUnreadEntries(entries);
+      await loadEntries({
+        append: true,
+        offset: pagingOffset,
+        limit: ENTRIES_PAGE_SIZE,
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load more');
     } finally {
       setIsLoading(false);
     }
-  }, [loadMoreEntries, setIsLoading, setError]);
+  }, [
+    countLoadedUnreadEntries,
+    entries,
+    isStarredView,
+    loadEntries,
+    searchMode,
+    setError,
+    setIsLoading,
+  ]);
 
   const indicatorHeight =
     pullState === 'pulling'
@@ -451,16 +546,57 @@ export default function Home() {
     });
   }, [lastRefreshedAt]);
 
-  async function markEntryStatus(
-    entryIds: number[],
-    status: 'read' | 'unread'
-  ) {
-    await fetchJson<{ ok: true }>('/api/entries/status', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ entry_ids: entryIds, status }),
-    });
-  }
+  const markEntryStatus = useCallback(
+    async (entryIds: number[], status: 'read' | 'unread') => {
+      await fetchJson<{ ok: true }>('/api/entries/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ entry_ids: entryIds, status }),
+      });
+    },
+    []
+  );
+
+  const setEntryStatusById = useCallback(
+    async (entryId: number, status: 'read' | 'unread'): Promise<boolean> => {
+      if (isUpdatingStatusRef.current) return false;
+      isUpdatingStatusRef.current = true;
+      setIsUpdatingStatus(true);
+      setError(null);
+      try {
+        await markEntryStatus([entryId], status);
+        setEntries((prev) =>
+          prev.map((entry) =>
+            entry.id === entryId ? { ...entry, status } : entry
+          )
+        );
+        await Promise.all([
+          loadFeeds(),
+          refreshUnreadCounters(),
+        ]);
+        try {
+          const data = await fetchEntriesData({ offset: 0, limit: 1 });
+          setTotal(data.total ?? 0);
+        } catch {
+          // Ignore count refresh errors; counters will be updated on next refresh.
+        }
+        return true;
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Failed to update status');
+        return false;
+      } finally {
+        isUpdatingStatusRef.current = false;
+        setIsUpdatingStatus(false);
+      }
+    },
+    [
+      fetchEntriesData,
+      loadFeeds,
+      markEntryStatus,
+      refreshUnreadCounters,
+      setTotal,
+    ]
+  );
 
   async function markPageRead() {
     if (entries.length === 0) return;
@@ -471,11 +607,17 @@ export default function Home() {
         entries.map((e) => e.id),
         'read'
       );
+      setEntries((prev) => prev.map((entry) => ({ ...entry, status: 'read' })));
       await Promise.all([
         loadFeeds(),
         refreshUnreadCounters(),
-        reloadCurrentEntries(),
       ]);
+      try {
+        const data = await fetchEntriesData({ offset: 0, limit: 1 });
+        setTotal(data.total ?? 0);
+      } catch {
+        // Ignore count refresh errors; counters will be updated on next refresh.
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to mark page read');
     } finally {
@@ -525,22 +667,9 @@ export default function Home() {
   );
 
   async function setSelectedStatus(status: 'read' | 'unread') {
-    if (!selectedEntry) return;
-    if (isUpdatingStatus) return;
-    setIsUpdatingStatus(true);
-    setError(null);
-    try {
-      await markEntryStatus([selectedEntry.id], status);
-      await Promise.all([
-        loadFeeds(),
-        refreshUnreadCounters(),
-        reloadCurrentEntries(),
-      ]);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to update status');
-    } finally {
-      setIsUpdatingStatus(false);
-    }
+    const current = selectedEntryRef.current;
+    if (!current) return;
+    await setEntryStatusById(current.id, status);
   }
 
   async function bootstrap() {
@@ -799,19 +928,22 @@ export default function Home() {
   }, [searchQuery, isSearchOpen, isProvisioned, searchMode]);
 
   const fetchOriginalArticle = useCallback(
-    async (entryId?: number) => {
+    async (entryId?: number, options?: { force?: boolean }) => {
+      const force = Boolean(options?.force);
       const targetEntry = entryId
         ? entries.find((e) => e.id === entryId)
         : selectedEntry;
 
       if (!targetEntry || !isProvisioned) return;
 
-      if (targetEntry.content && targetEntry.content.trim().length > 0) {
-        return;
-      }
+      if (!force) {
+        if (targetEntry.content && targetEntry.content.trim().length > 0) {
+          return;
+        }
 
-      // Skip if we've already attempted to fetch this entry
-      if (fetchedEntryIds.has(targetEntry.id)) return;
+        // Skip if we've already attempted to fetch this entry
+        if (fetchedEntryIds.has(targetEntry.id)) return;
+      }
 
       setFetchingOriginal(true);
       setError(null);
@@ -834,7 +966,7 @@ export default function Home() {
         }
       } catch (e) {
         setError(
-          e instanceof Error ? e.message : 'Failed to fetch source link'
+          e instanceof Error ? e.message : 'Failed to fetch original article'
         );
         // Mark as fetched even on error to avoid retry loops
         setFetchedEntryIds((prev) => new Set(prev).add(targetEntry.id));
@@ -1103,6 +1235,25 @@ export default function Home() {
         return;
       }
 
+      // m or M = mark/unmark entry (when entry is open)
+      if (e.key === 'm' || e.key === 'M') {
+        const current = selectedEntryRef.current;
+        if (!current) return;
+        e.preventDefault();
+        const currentStatus = current.status ?? 'unread';
+        const nextStatus = currentStatus === 'unread' ? 'read' : 'unread';
+        void (async () => {
+          const ok = await setEntryStatusById(current.id, nextStatus);
+          if (!ok) return;
+          toast(
+            nextStatus === 'read'
+              ? NOTIFICATION_COPY.app.articleMarked
+              : NOTIFICATION_COPY.app.articleUnmarked
+          );
+        })();
+        return;
+      }
+
       // ArrowDown = next entry
       if (e.key === 'ArrowDown') {
         e.preventDefault();
@@ -1128,6 +1279,47 @@ export default function Home() {
     },
     { target: getBrowserWindow() }
   );
+
+  // Auto-mark entry as read after 5s on the entry page
+  useEffect(() => {
+    const win = getBrowserWindow();
+    if (!win) return;
+    if (!isProvisioned) return;
+    if (isMenuModalOpen || isAddModalOpen || isEditModalOpen) return;
+
+    const entry = selectedEntryRef.current;
+    if (!entry) return;
+    if ((entry.status ?? 'unread') !== 'unread') return;
+
+    const entryId = entry.id;
+
+    if (autoMarkTimeoutRef.current) {
+      win.clearTimeout(autoMarkTimeoutRef.current);
+      autoMarkTimeoutRef.current = null;
+    }
+
+    autoMarkTimeoutRef.current = win.setTimeout(() => {
+      const current = selectedEntryRef.current;
+      if (!current || current.id !== entryId) return;
+      if ((current.status ?? 'unread') !== 'unread') return;
+      void setEntryStatusById(entryId, 'read');
+    }, 5000);
+
+    return () => {
+      if (autoMarkTimeoutRef.current) {
+        win.clearTimeout(autoMarkTimeoutRef.current);
+        autoMarkTimeoutRef.current = null;
+      }
+    };
+  }, [
+    selectedEntry?.id,
+    selectedEntry?.status,
+    isProvisioned,
+    isMenuModalOpen,
+    isAddModalOpen,
+    isEditModalOpen,
+    setEntryStatusById,
+  ]);
 
   // Console log entries data
   useEffect(() => {
@@ -1164,7 +1356,9 @@ export default function Home() {
     fetchOriginalArticle,
   ]);
 
-  const canLoadMore = entries.length > 0 && total > entries.length;
+  const loadedForPaging =
+    searchMode || isStarredView ? entries.length : countLoadedUnreadEntries(entries);
+  const canLoadMore = total > loadedForPaging;
   // const selectedFeedTitle = searchMode
   //   ? `Search: ${searchQuery}`
   //   : isStarredView
@@ -1345,6 +1539,9 @@ export default function Home() {
               onClose={() => setSelectedEntryId(null)}
               onToggleStar={() => void toggleSelectedStar()}
               onFetchOriginal={() => void fetchOriginalArticle()}
+              onRefetchOriginal={() =>
+                void fetchOriginalArticle(undefined, { force: true })
+              }
               fetchingOriginal={fetchingOriginal}
               onSetStatus={(status) => void setSelectedStatus(status)}
               onNavigatePrev={navigateToPrev}

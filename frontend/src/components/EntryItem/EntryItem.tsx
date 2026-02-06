@@ -1,3 +1,6 @@
+'use client';
+
+import { useMemo } from 'react';
 import styles from './EntryItem.module.sass';
 import { FormattedDate } from '../FormattedDate';
 
@@ -9,6 +12,7 @@ type EntryItemProps = {
   content?: string;
   url?: string;
   active?: boolean;
+  marked: boolean;
   onClick?: () => void;
 };
 
@@ -183,6 +187,30 @@ function createPreview(
   return (lastSpace > 0 ? truncated.slice(0, lastSpace) : truncated) + '…';
 }
 
+function getAbsoluteUrl(
+  imageUrl: string | null,
+  baseUrl: string | undefined
+): string | null {
+  if (!imageUrl) return null;
+
+  if (
+    imageUrl.startsWith('http://') ||
+    imageUrl.startsWith('https://') ||
+    imageUrl.startsWith('//')
+  ) {
+    return imageUrl;
+  }
+
+  if (!baseUrl) return imageUrl;
+
+  try {
+    const parsedBaseUrl = new URL(baseUrl);
+    return new URL(imageUrl, parsedBaseUrl.origin).href;
+  } catch {
+    return imageUrl;
+  }
+}
+
 export function EntryItem({
   title,
   feedTitle,
@@ -191,43 +219,21 @@ export function EntryItem({
   content,
   url,
   active,
+  marked,
   onClick,
 }: EntryItemProps) {
-  // Generate preview from content
-  const preview = createPreview(content, 200);
-  // Extract thumbnail URL
-  const thumbnailUrl = extractThumbnail(content);
-
-  // Resolve relative URLs if needed
-  const getAbsoluteUrl = (imageUrl: string | null): string | null => {
-    if (!imageUrl) return null;
-    // If already absolute, return as is
-    if (
-      imageUrl.startsWith('http://') ||
-      imageUrl.startsWith('https://') ||
-      imageUrl.startsWith('//')
-    ) {
-      return imageUrl;
-    }
-    // If relative and we have a base URL, resolve it
-    if (url) {
-      try {
-        const baseUrl = new URL(url);
-        return new URL(imageUrl, baseUrl.origin).href;
-      } catch {
-        // If URL parsing fails, return as is
-        return imageUrl;
-      }
-    }
-    return imageUrl;
-  };
-
-  const absoluteThumbnailUrl = getAbsoluteUrl(thumbnailUrl);
+  const preview = useMemo(() => createPreview(content, 200), [content]);
+  const thumbnailUrl = useMemo(() => extractThumbnail(content), [content]);
+  const absoluteThumbnailUrl = useMemo(
+    () => getAbsoluteUrl(thumbnailUrl, url),
+    [thumbnailUrl, url]
+  );
 
   return (
     <div
       className={styles.entryItem}
       data-active={active}
+      data-marked={marked ? 'true' : 'false'}
       onClick={onClick}
       role="button"
       tabIndex={0}
