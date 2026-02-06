@@ -12,9 +12,50 @@ import { IconArrowShortLeft } from '@/components/icons/IconArrowShortLeft';
 import { IconArrowShortRight } from '@/components/icons/IconArrowShortRight';
 import { ScrollToTop } from '@/components/ScrollToTop/ScrollToTop';
 import type { Entry, Feed } from '@/app/_lib/types';
+import {
+  extractYouTubeVideoId,
+  getYouTubeEmbedUrl,
+} from '@/lib/youtube';
 import { IconWrapper } from '../icons/IconWrapper/IconWrapper';
 import { IconStar } from '../icons/IconStar';
 import { IconExit } from '../icons/IconExit';
+
+type YouTubeInlineProps = {
+  videoId: string;
+  href?: string;
+  title?: string;
+};
+
+function YouTubeInline({ videoId, href, title }: YouTubeInlineProps) {
+  const embedUrl = getYouTubeEmbedUrl(videoId);
+
+  return (
+    <div className={styles.youtube}>
+      <div className={styles.youtube_Player}>
+        <iframe
+          className={styles.youtube_Iframe}
+          src={embedUrl}
+          title={title || 'YouTube video'}
+          loading="lazy"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          referrerPolicy="strict-origin-when-cross-origin"
+          sandbox="allow-scripts allow-same-origin allow-presentation"
+          allowFullScreen
+        />
+      </div>
+      {href ? (
+        <a
+          className={styles.youtube_Link}
+          href={href}
+          target="_blank"
+          rel="noreferrer"
+        >
+          Open on YouTube
+        </a>
+      ) : null}
+    </div>
+  );
+}
 
 function resolveUrl(value: string, baseUrl?: string): string {
   if (!baseUrl) return value;
@@ -109,6 +150,39 @@ function transformNodeToReact(
 
   if (tagName === 'script' || tagName === 'style') {
     return null;
+  }
+
+  if (tagName === 'p' || tagName === 'div') {
+    const hasNonWhitespaceText = Array.from(element.childNodes).some(
+      (child) =>
+        child.nodeType === Node.TEXT_NODE && Boolean(child.textContent?.trim()),
+    );
+    const childElements = Array.from(element.children);
+    if (!hasNonWhitespaceText && childElements.length === 1) {
+      const onlyChild = childElements[0] as HTMLElement;
+      if (onlyChild.tagName.toLowerCase() === 'a') {
+        const rawHref = onlyChild.getAttribute('href') ?? '';
+        const resolvedHref = rawHref ? resolveUrl(rawHref, baseUrl) : '';
+        const videoId = rawHref ? extractYouTubeVideoId(resolvedHref) : null;
+        if (videoId) {
+          return (
+            <YouTubeInline
+              key={key}
+              videoId={videoId}
+              href={resolvedHref}
+              title={onlyChild.textContent ?? undefined}
+            />
+          );
+        }
+      }
+    }
+  }
+
+  if (tagName === 'iframe') {
+    const src = element.getAttribute('src') ?? '';
+    const videoId = extractYouTubeVideoId(src);
+    if (!videoId) return null;
+    return <YouTubeInline key={key} videoId={videoId} />;
   }
 
   if (tagName === 'img') {

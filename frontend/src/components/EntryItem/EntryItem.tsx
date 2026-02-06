@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import styles from './EntryItem.module.sass';
 import { FormattedDate } from '../FormattedDate';
+import { extractYouTubeVideoId, getYouTubePosterUrl } from '@/lib/youtube';
 
 type EntryItemProps = {
   title?: string;
@@ -36,6 +37,19 @@ function extractThumbnail(htmlContent: string | undefined): string | null {
   } catch {
     // If parsing fails, fall back to regex
     return extractThumbnailRegex(htmlContent);
+  }
+
+  // YouTube: prefer video poster as the list thumbnail.
+  const youtubeCandidate = doc.querySelector(
+    'iframe[src*="youtube"], iframe[src*="youtu.be"], a[href*="youtube"], a[href*="youtu.be"]'
+  );
+  const youtubeUrl =
+    youtubeCandidate?.getAttribute('src') ??
+    youtubeCandidate?.getAttribute('href') ??
+    '';
+  const youtubeId = youtubeUrl ? extractYouTubeVideoId(youtubeUrl) : null;
+  if (youtubeId) {
+    return getYouTubePosterUrl(youtubeId);
   }
 
   // 1. First try: Open Graph image meta tag
@@ -112,6 +126,16 @@ function extractThumbnail(htmlContent: string | undefined): string | null {
  * Fallback regex-based extraction if DOMParser fails
  */
 function extractThumbnailRegex(htmlContent: string): string | null {
+  const youtubeMatch = htmlContent.match(
+    /(https?:\/\/(?:www\.)?youtube\.com\/watch\?[^"'\s>]*v=([a-zA-Z0-9_-]{11})|https?:\/\/youtu\.be\/([a-zA-Z0-9_-]{11})|https?:\/\/(?:www\.)?youtube(?:-nocookie)?\.com\/embed\/([a-zA-Z0-9_-]{11}))/i
+  );
+  const youtubeId =
+    (youtubeMatch && youtubeMatch[2]) ||
+    (youtubeMatch && youtubeMatch[3]) ||
+    (youtubeMatch && youtubeMatch[4]) ||
+    null;
+  if (youtubeId) return getYouTubePosterUrl(youtubeId);
+
   // Try OG image
   const ogMatch = htmlContent.match(
     /<meta\s+property=["']og:image["']\s+content=["']([^"']+)["']/i

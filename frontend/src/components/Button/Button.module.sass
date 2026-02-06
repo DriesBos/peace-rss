@@ -26,23 +26,18 @@
   @include font-button
   display: inline-flex
   flex-direction: row
-  align-items: center
+  align-items: flex-start
   gap: 4px
   transition: gap var(--transition-buttons)
   span
     width: auto
     overflow: hidden
+    display: inline-block
+    padding-bottom: 2px
     transition: width var(--transition-header-toggle)
     &::after
       @include underline(var(--color-text))
-  span::after
-    @include underline(transparent)
-    transition: background var(--transition-buttons)
-  &[data-active="true"]
-    span::after
-      @include underline(var(--color-text))
-  span::after
-    @include underline(var(--color-text))
+      transition: background var(--transition-buttons)
   &[data-collapse="true"]
     gap: 0 !important
     span
@@ -59,15 +54,16 @@
 .nav
   display: inline-flex
   flex-direction: row
-  align-items: center
+  align-items: flex-start
   gap: 4px
   @include font-nav
   transition: gap var(--transition-buttons)
   span
     width: auto
     overflow: hidden
+    display: inline-block
+    padding-bottom: 2px
     transition: width var(--transition-header-toggle)
-  span
     &::after
       @include underline(transparent)
       transition: background var(--transition-buttons)
