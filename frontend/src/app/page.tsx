@@ -103,6 +103,22 @@ export default function Home() {
   const isRefreshingRef = useRef(false);
   const doneTimeoutRef = useRef<number | null>(null);
   const hasInitialLoadRef = useRef(false);
+  const lastSyncRef = useRef<number | null>(null);
+
+  const setLastSync = useCallback((timestamp: number | null) => {
+    lastSyncRef.current = timestamp;
+    const win = getBrowserWindow();
+    if (!win) return;
+    try {
+      if (timestamp === null) {
+        win.localStorage.removeItem('peace-rss-last-sync');
+      } else {
+        win.localStorage.setItem('peace-rss-last-sync', String(timestamp));
+      }
+    } catch {
+      // Ignore storage errors.
+    }
+  }, []);
 
   // Edit modal state
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -137,8 +153,10 @@ export default function Home() {
     setEntries,
     setIsLoading,
     setError,
+    setTotal,
     loadFeeds,
     loadCategories,
+    fetchEntriesData,
     loadEntries,
     resetEntries,
     loadMore: loadMoreEntries,
@@ -151,6 +169,7 @@ export default function Home() {
     categoryUnreadCounts,
     refreshUnreadCounters,
     refreshStarredCount,
+    getTotalForView,
   } = useUnreadCounters({ isProvisioned, feeds });
 
   const openMenuModal = useCallback(() => {
@@ -259,6 +278,39 @@ export default function Home() {
     };
   }, [entries, selectedEntryId]);
 
+  const mergeEntryDeltas = useCallback(
+    (current: Entry[], delta: Entry[], fetchedIds: Set<number>) => {
+      const map = new Map<number, Entry>();
+      for (const entry of current) {
+        map.set(entry.id, entry);
+      }
+      for (const entry of delta) {
+        if (entry.status && entry.status !== 'unread') {
+          map.delete(entry.id);
+          continue;
+        }
+        const existing = map.get(entry.id);
+        if (!existing) {
+          map.set(entry.id, entry);
+          continue;
+        }
+        const merged = { ...existing, ...entry };
+        if (fetchedIds.has(entry.id) && existing.content) {
+          merged.content = existing.content;
+        }
+        map.set(entry.id, merged);
+      }
+      const merged = Array.from(map.values());
+      merged.sort((a, b) => {
+        const aTime = a.published_at ? new Date(a.published_at).getTime() : 0;
+        const bTime = b.published_at ? new Date(b.published_at).getTime() : 0;
+        return bTime - aTime;
+      });
+      return merged;
+    },
+    []
+  );
+
   // Load starred entries for the menu
   const loadStarredEntries = useCallback(async () => {
     if (!isProvisioned) return;
@@ -277,6 +329,47 @@ export default function Home() {
   }, []);
 
   const refreshAllData = useCallback(async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const canIncrementallyRefresh =
+      !searchMode &&
+      !isStarredView &&
+      selectedFeedId === null &&
+      selectedCategoryId === null;
+
+    if (canIncrementallyRefresh && lastSyncRef.current) {
+      try {
+        await Promise.all([loadFeeds(), loadCategories()]);
+        const delta = await fetchEntriesData({
+          offset: 0,
+          limit: INITIAL_ENTRIES_LIMIT,
+          status: 'all',
+          changedAfter: lastSyncRef.current,
+        });
+
+        if (delta.entries.length > 0) {
+          setEntries((prev) =>
+            mergeEntryDeltas(prev, delta.entries, fetchedEntryIds)
+          );
+        }
+
+        await Promise.all([
+          refreshUnreadCounters(),
+          refreshStarredCount(),
+          loadStarredEntries(),
+        ]);
+
+        const viewTotal = getTotalForView(view);
+        if (viewTotal !== null) {
+          setTotal(viewTotal);
+        }
+
+        setLastSync(now);
+        return;
+      } catch (e) {
+        console.error('Incremental refresh failed, falling back', e);
+      }
+    }
+
     const data = await refreshAll(() => [
       refreshUnreadCounters(),
       refreshStarredCount(),
@@ -285,12 +378,27 @@ export default function Home() {
     if (data?.entries) {
       syncSelection(data.entries);
     }
+    setLastSync(now);
   }, [
-    refreshAll,
-    refreshUnreadCounters,
-    refreshStarredCount,
+    fetchEntriesData,
+    getTotalForView,
+    isStarredView,
+    loadCategories,
+    loadFeeds,
     loadStarredEntries,
+    mergeEntryDeltas,
+    refreshAll,
+    refreshStarredCount,
+    refreshUnreadCounters,
+    searchMode,
+    selectedCategoryId,
+    selectedFeedId,
+    setEntries,
+    setLastSync,
+    setTotal,
     syncSelection,
+    view,
+    fetchedEntryIds,
   ]);
 
   const reloadCurrentEntries = useCallback(async () => {
@@ -930,6 +1038,14 @@ export default function Home() {
   // Initial load after provisioning
   useEffect(() => {
     if (!isProvisioned || hasInitialLoadRef.current) return;
+    const win = getBrowserWindow();
+    if (win) {
+      const stored = win.localStorage.getItem('peace-rss-last-sync');
+      const parsed = stored ? Number(stored) : null;
+      if (parsed && Number.isFinite(parsed)) {
+        lastSyncRef.current = parsed;
+      }
+    }
     void refreshAllData().finally(() => {
       hasInitialLoadRef.current = true;
     });
@@ -942,6 +1058,7 @@ export default function Home() {
     setIsLoading(true);
     setError(null);
     setSelectedEntryId(null);
+    setLastSync(null);
     resetEntries()
       .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load'))
       .finally(() => setIsLoading(false));
@@ -954,6 +1071,7 @@ export default function Home() {
     resetEntries,
     setIsLoading,
     setError,
+    setLastSync,
   ]);
 
   const isEditableTarget = useCallback((target: EventTarget | null) => {

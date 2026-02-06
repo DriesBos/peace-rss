@@ -18,6 +18,13 @@ function getNumberParam(url: URL, key: string, defaultValue: number): number {
   return Number.isFinite(n) && n >= 0 ? Math.floor(n) : defaultValue;
 }
 
+function getOptionalNumberParam(url: URL, key: string): number | null {
+  const value = url.searchParams.get(key);
+  if (!value) return null;
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : null;
+}
+
 export async function GET(request: Request) {
   try {
     // 1. Require Clerk authentication
@@ -58,10 +65,18 @@ export async function GET(request: Request) {
     const isStarredQuery = starred === 'true';
 
     // For non-starred/non-search queries, use status filter (default: unread)
-    const status =
+    let status: string | null =
       !isStarredQuery && !isSearchQuery
         ? getStringParam(url, 'status', 'unread')
-        : undefined;
+        : null;
+
+    if (status === 'all') {
+      status = null;
+    }
+
+    if (status && status !== 'read' && status !== 'unread') {
+      return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+    }
 
     // Optional feed filter (used by the UI); ignore when missing.
     const feedIdRaw = url.searchParams.get('feed_id');
@@ -112,6 +127,16 @@ export async function GET(request: Request) {
 
     if (feedId) qs.set('feed_id', String(feedId));
     if (categoryId) qs.set('category_id', String(categoryId));
+
+    const changedAfter = getOptionalNumberParam(url, 'changed_after');
+    if (changedAfter) {
+      qs.set('changed_after', String(changedAfter));
+    }
+
+    const publishedAfter = getOptionalNumberParam(url, 'published_after');
+    if (publishedAfter) {
+      qs.set('published_after', String(publishedAfter));
+    }
 
     // 4. Fetch entries using per-user token
     const data = await mfFetchUser<unknown>(

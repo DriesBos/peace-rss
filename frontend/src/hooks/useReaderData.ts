@@ -1,6 +1,10 @@
 import { useCallback, useState } from 'react';
 import type { Category, EntriesResponse, Entry, Feed } from '@/app/_lib/types';
-import { buildEntriesUrl, ENTRIES_PAGE_SIZE, INITIAL_ENTRIES_LIMIT } from '@/lib/entriesQuery';
+import {
+  buildEntriesUrl,
+  ENTRIES_PAGE_SIZE,
+  INITIAL_ENTRIES_LIMIT,
+} from '@/lib/entriesQuery';
 import { fetchCategories, fetchEntries, fetchFeeds } from '@/lib/readerApi';
 
 export type ReaderView = {
@@ -15,6 +19,9 @@ type LoadEntriesOptions = {
   append?: boolean;
   offset?: number;
   limit?: number;
+  status?: 'read' | 'unread' | 'all' | null;
+  changedAfter?: number;
+  publishedAfter?: number;
 };
 
 export function useReaderData({
@@ -45,10 +52,15 @@ export function useReaderData({
     return data;
   }, []);
 
-  const loadEntries = useCallback(
+  const fetchEntriesData = useCallback(
     async (options: LoadEntriesOptions = {}): Promise<EntriesResponse> => {
-      const { append = false, offset = 0, limit = INITIAL_ENTRIES_LIMIT } =
-        options;
+      const {
+        offset = 0,
+        limit = INITIAL_ENTRIES_LIMIT,
+        status,
+        changedAfter,
+        publishedAfter,
+      } = options;
       const url = buildEntriesUrl({
         limit,
         offset,
@@ -56,8 +68,19 @@ export function useReaderData({
         isStarredView: view.searchMode ? false : view.isStarredView,
         selectedFeedId: view.searchMode ? null : view.selectedFeedId,
         selectedCategoryId: view.searchMode ? null : view.selectedCategoryId,
+        status,
+        changedAfter,
+        publishedAfter,
       });
-      const data = await fetchEntries(url);
+      return fetchEntries(url);
+    },
+    [view]
+  );
+
+  const loadEntries = useCallback(
+    async (options: LoadEntriesOptions = {}): Promise<EntriesResponse> => {
+      const { append = false } = options;
+      const data = await fetchEntriesData(options);
       setTotal(data.total ?? 0);
 
       if (append) {
@@ -68,11 +91,15 @@ export function useReaderData({
 
       return data;
     },
-    [view]
+    [fetchEntriesData]
   );
 
   const resetEntries = useCallback(async (): Promise<EntriesResponse> => {
-    return loadEntries({ append: false, offset: 0, limit: INITIAL_ENTRIES_LIMIT });
+    return loadEntries({
+      append: false,
+      offset: 0,
+      limit: INITIAL_ENTRIES_LIMIT,
+    });
   }, [loadEntries]);
 
   const loadMore = useCallback(async (): Promise<EntriesResponse> => {
@@ -123,6 +150,7 @@ export function useReaderData({
     isRefreshingFeeds,
     error,
     lastRefreshedAt,
+    setTotal,
     setEntries,
     setFeeds,
     setCategories,
@@ -130,6 +158,7 @@ export function useReaderData({
     setError,
     loadFeeds,
     loadCategories,
+    fetchEntriesData,
     loadEntries,
     resetEntries,
     loadMore,

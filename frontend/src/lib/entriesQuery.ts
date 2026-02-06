@@ -10,7 +10,7 @@ type EntriesQueryOptions = {
   isStarredView?: boolean;
   selectedFeedId?: number | null;
   selectedCategoryId?: number | null;
-  status?: 'read' | 'unread';
+  status?: 'read' | 'unread' | 'all' | null;
   changedAfter?: number;
   publishedAfter?: number;
 };
@@ -40,7 +40,7 @@ export function buildEntriesUrl({
     qs.set('search', trimmedQuery);
   } else if (isStarredView) {
     qs.set('starred', 'true');
-  } else {
+  } else if (status) {
     qs.set('status', status);
   }
 
