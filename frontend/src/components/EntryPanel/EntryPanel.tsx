@@ -394,7 +394,7 @@ export function EntryPanel({
                 className={`${buttonStyles.button} ${buttonStyles.primary} ${styles.actionsList_Item}`}
               >
                 <span>Source link</span>
-                <IconWrapper>
+                <IconWrapper variant="small">
                   <IconExit />
                 </IconWrapper>
                 {', '}

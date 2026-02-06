@@ -1,7 +1,7 @@
 import styles from './IconWrapper.module.sass';
 
 interface IconWrapperProps {
-  variant?: 'default' | 'wide' | 'inverted';
+  variant?: 'default' | 'wide' | 'inverted' | 'small';
   children: React.ReactNode;
   className?: string;
   mirrored?: boolean;

@@ -23,11 +23,28 @@
 
 // Has underline
 .primary
-  color: var(--color-text)
-  gap: 4px
   @include font-button
-  &::after
+  display: inline-flex
+  flex-direction: row
+  align-items: center
+  gap: 4px
+  transition: gap var(--transition-buttons)
+  span
+    width: auto
+    overflow: hidden
+    transition: width var(--transition-header-toggle)
+  span:first-child::after
+    @include underline(transparent)
+    transition: background var(--transition-buttons)
+  &[data-active="true"]
+    span:first-child::after
+      @include underline(var(--color-text))
+  span:first-child::after
     @include underline(var(--color-text))
+  &[data-collapse="true"]
+    gap: 0 !important
+    span
+      width: 0 !important
 
 // Only icon, no text
 .icon
