@@ -85,11 +85,14 @@ export default function Home() {
   const [newCategoryTitle, setNewCategoryTitle] = useState('');
   const [addCategoryLoading, setAddCategoryLoading] = useState(false);
   const [addCategoryError, setAddCategoryError] = useState<string | null>(null);
-  const [fetchingOriginal, setFetchingOriginal] = useState(false);
+  const fetchingOriginalEntryIdsRef = useRef<Set<number>>(new Set());
+  const [fetchingOriginalEntryIds, setFetchingOriginalEntryIds] = useState<
+    Set<number>
+  >(new Set());
   const [starredEntries, setStarredEntries] = useState<Entry[]>([]);
-  const [fetchedEntryIds, setFetchedEntryIds] = useState<Set<number>>(
-    new Set(),
-  );
+  const [originalFetchStatusById, setOriginalFetchStatusById] = useState<
+    Record<number, 'success' | 'error'>
+  >({});
   const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [returnToMenuAfterSubModal, setReturnToMenuAfterSubModal] =
@@ -176,6 +179,14 @@ export default function Home() {
     entriesRef.current = entries;
   }, [entries]);
 
+  const fetchedOriginalSuccessIds = useMemo(() => {
+    const ids = new Set<number>();
+    for (const [id, status] of Object.entries(originalFetchStatusById)) {
+      if (status === 'success') ids.add(Number(id));
+    }
+    return ids;
+  }, [originalFetchStatusById]);
+
   const isEntryUnread = useCallback((entry: Entry) => {
     return (entry.status ?? 'unread') === 'unread';
   }, []);
@@ -209,6 +220,23 @@ export default function Home() {
         return bTime - aTime;
       });
       return merged;
+    },
+    [],
+  );
+
+  const preserveOriginalContent = useCallback(
+    (nextEntries: Entry[], previousEntries: Entry[], originalIds: Set<number>) => {
+      if (originalIds.size === 0) return nextEntries;
+
+      const previousById = new Map<number, Entry>();
+      for (const entry of previousEntries) previousById.set(entry.id, entry);
+
+      return nextEntries.map((entry) => {
+        if (!originalIds.has(entry.id)) return entry;
+        const previous = previousById.get(entry.id);
+        if (!previous?.content) return entry;
+        return { ...entry, content: previous.content };
+      });
     },
     [],
   );
@@ -321,10 +349,10 @@ export default function Home() {
     isUpdatingStatusRef.current = isUpdatingStatus;
   }, [isUpdatingStatus]);
 
-  const hasFetchedOriginal = useMemo(() => {
-    if (!selectedEntry) return false;
-    return fetchedEntryIds.has(selectedEntry.id);
-  }, [selectedEntry, fetchedEntryIds]);
+  const selectedOriginalFetchStatus = useMemo(() => {
+    if (!selectedEntry) return undefined;
+    return originalFetchStatusById[selectedEntry.id];
+  }, [selectedEntry, originalFetchStatusById]);
 
   const { selectedIndex, hasPrev, hasNext } = useMemo(() => {
     const index = entries.findIndex((e) => e.id === selectedEntryId);
@@ -387,7 +415,8 @@ export default function Home() {
 
   const refreshAllData = useCallback(async () => {
     const now = Math.floor(Date.now() / 1000);
-    const sessionReadSnapshot = entriesRef.current.filter(
+    const previousEntriesSnapshot = entriesRef.current;
+    const sessionReadSnapshot = previousEntriesSnapshot.filter(
       (entry) => (entry.status ?? 'unread') === 'read',
     );
     const canIncrementallyRefresh =
@@ -408,7 +437,7 @@ export default function Home() {
 
         if (delta.entries.length > 0) {
           setEntries((prev) =>
-            mergeEntryDeltas(prev, delta.entries, fetchedEntryIds),
+            mergeEntryDeltas(prev, delta.entries, fetchedOriginalSuccessIds),
           );
         }
 
@@ -436,8 +465,13 @@ export default function Home() {
       loadStarredEntries(),
     ]);
     if (data?.entries) {
-      const merged = mergePreservingSessionReadEntries(
+      const withContent = preserveOriginalContent(
         data.entries,
+        previousEntriesSnapshot,
+        fetchedOriginalSuccessIds,
+      );
+      const merged = mergePreservingSessionReadEntries(
+        withContent,
         sessionReadSnapshot,
       );
       setEntries(merged);
@@ -453,6 +487,7 @@ export default function Home() {
     loadStarredEntries,
     mergeEntryDeltas,
     mergePreservingSessionReadEntries,
+    preserveOriginalContent,
     refreshAll,
     refreshStarredCount,
     refreshUnreadCounters,
@@ -464,7 +499,7 @@ export default function Home() {
     setTotal,
     syncSelection,
     view,
-    fetchedEntryIds,
+    fetchedOriginalSuccessIds,
   ]);
 
   const reloadCurrentEntries = useCallback(async () => {
@@ -479,8 +514,13 @@ export default function Home() {
       INITIAL_ENTRIES_LIMIT,
     );
     const data = await loadEntries({ append: false, offset: 0, limit });
-    const merged = mergePreservingSessionReadEntries(
+    const withContent = preserveOriginalContent(
       data.entries,
+      current,
+      fetchedOriginalSuccessIds,
+    );
+    const merged = mergePreservingSessionReadEntries(
+      withContent,
       sessionReadSnapshot,
     );
     setEntries(merged);
@@ -488,9 +528,11 @@ export default function Home() {
     return { ...data, entries: merged };
   }, [
     countLoadedUnreadEntries,
+    fetchedOriginalSuccessIds,
     isStarredView,
     loadEntries,
     mergePreservingSessionReadEntries,
+    preserveOriginalContent,
     searchMode,
     setEntries,
     syncSelection,
@@ -948,16 +990,12 @@ export default function Home() {
 
       if (!targetEntry || !isProvisioned) return;
 
-      if (!force) {
-        if (targetEntry.content && targetEntry.content.trim().length > 0) {
-          return;
-        }
+      const fetchStatus = originalFetchStatusById[targetEntry.id];
+      if (!force && fetchStatus === 'success') return;
+      if (fetchingOriginalEntryIdsRef.current.has(targetEntry.id)) return;
 
-        // Skip if we've already attempted to fetch this entry
-        if (fetchedEntryIds.has(targetEntry.id)) return;
-      }
-
-      setFetchingOriginal(true);
+      fetchingOriginalEntryIdsRef.current.add(targetEntry.id);
+      setFetchingOriginalEntryIds(new Set(fetchingOriginalEntryIdsRef.current));
       setError(null);
 
       try {
@@ -973,41 +1011,45 @@ export default function Home() {
               e.id === targetEntry.id ? { ...e, content: result.content } : e,
             ),
           );
-          // Mark this entry as fetched
-          setFetchedEntryIds((prev) => new Set(prev).add(targetEntry.id));
+          setOriginalFetchStatusById((prev) => ({
+            ...prev,
+            [targetEntry.id]: 'success',
+          }));
+        } else {
+          setOriginalFetchStatusById((prev) => ({
+            ...prev,
+            [targetEntry.id]: 'error',
+          }));
         }
       } catch (e) {
         setError(
           e instanceof Error ? e.message : 'Failed to fetch original article',
         );
-        // Mark as fetched even on error to avoid retry loops
-        setFetchedEntryIds((prev) => new Set(prev).add(targetEntry.id));
+        setOriginalFetchStatusById((prev) => ({
+          ...prev,
+          [targetEntry.id]: 'error',
+        }));
       } finally {
-        setFetchingOriginal(false);
+        fetchingOriginalEntryIdsRef.current.delete(targetEntry.id);
+        setFetchingOriginalEntryIds(new Set(fetchingOriginalEntryIdsRef.current));
       }
     },
-    [selectedEntry, entries, isProvisioned, fetchedEntryIds],
+    [
+      entries,
+      isProvisioned,
+      originalFetchStatusById,
+      selectedEntry,
+      setEntries,
+    ],
   );
 
   const handleEntrySelect = useCallback(
     (entryId: number) => {
       setSelectedEntryId(entryId);
-
-      // Immediately check if we should fetch original content
-      const entry = entries.find((e) => e.id === entryId);
-      if (!entry) return;
-
-      const hasContent = Boolean(
-        entry.content && entry.content.trim().length > 0,
-      );
-
-      // Only attempt to fetch if content is missing and we haven't fetched already
-      if (!hasContent && !fetchedEntryIds.has(entryId) && isProvisioned) {
-        // Trigger fetch with the entry ID immediately
-        void fetchOriginalArticle(entryId);
-      }
+      if (!isProvisioned) return;
+      void fetchOriginalArticle(entryId);
     },
-    [entries, fetchedEntryIds, isProvisioned, fetchOriginalArticle],
+    [fetchOriginalArticle, isProvisioned],
   );
 
   const navigateToPrev = useCallback(() => {
@@ -1346,28 +1388,23 @@ export default function Home() {
   // Primary fetch happens in handleEntrySelect for immediate response
   // This useEffect acts as a fallback in case handleEntrySelect didn't trigger
   useEffect(() => {
-    if (!selectedEntry || fetchingOriginal || !isProvisioned) return;
-
-    if (selectedEntry.content && selectedEntry.content.trim().length > 0) {
-      return;
-    }
-
-    // Skip if we've already attempted to fetch this entry
-    if (fetchedEntryIds.has(selectedEntry.id)) return;
+    if (!selectedEntry || !isProvisioned) return;
+    if (fetchingOriginalEntryIds.has(selectedEntry.id)) return;
+    if (originalFetchStatusById[selectedEntry.id] === 'success') return;
 
     // Trigger the fetch as a safety net (small delay to avoid duplicate calls)
     const timeoutId = setTimeout(() => {
-      if (!fetchedEntryIds.has(selectedEntry.id)) {
-        void fetchOriginalArticle();
+      if (originalFetchStatusById[selectedEntry.id] !== 'success') {
+        void fetchOriginalArticle(selectedEntry.id);
       }
     }, 100);
 
     return () => clearTimeout(timeoutId);
   }, [
     selectedEntry,
-    fetchingOriginal,
-    fetchedEntryIds,
+    fetchingOriginalEntryIds,
     isProvisioned,
+    originalFetchStatusById,
     fetchOriginalArticle,
   ]);
 
@@ -1555,17 +1592,20 @@ export default function Home() {
               feedsById={feedsById}
               onClose={() => setSelectedEntryId(null)}
               onToggleStar={() => void toggleSelectedStar()}
-              onFetchOriginal={() => void fetchOriginalArticle()}
-              onRefetchOriginal={() =>
+              onFetchOriginal={() =>
                 void fetchOriginalArticle(undefined, { force: true })
               }
-              fetchingOriginal={fetchingOriginal}
+              fetchingOriginal={
+                selectedEntry
+                  ? fetchingOriginalEntryIds.has(selectedEntry.id)
+                  : false
+              }
+              originalFetchStatus={selectedOriginalFetchStatus}
               onSetStatus={(status) => void setSelectedStatus(status)}
               onNavigatePrev={navigateToPrev}
               onNavigateNext={navigateToNext}
               hasPrev={hasPrev}
               hasNext={hasNext}
-              hasFetchedOriginal={hasFetchedOriginal}
               isTogglingStar={isTogglingStar}
               isUpdatingStatus={isUpdatingStatus}
             />

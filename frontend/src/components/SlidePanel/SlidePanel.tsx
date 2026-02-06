@@ -31,7 +31,21 @@ export function SlidePanel({
 
   useEffect(() => {
     if (typeof document === 'undefined') return;
-    setPortalTarget(document.getElementById('modal-root') ?? document.body);
+
+    let cancelled = false;
+    const schedule =
+      typeof queueMicrotask === 'function'
+        ? queueMicrotask
+        : (callback: () => void) => Promise.resolve().then(callback);
+
+    schedule(() => {
+      if (cancelled) return;
+      setPortalTarget(document.getElementById('modal-root') ?? document.body);
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Handle Escape key to close panel

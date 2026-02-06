@@ -16,7 +16,32 @@ import { IconWrapper } from '../icons/IconWrapper/IconWrapper';
 import { IconStar } from '../icons/IconStar';
 import { IconExit } from '../icons/IconExit';
 
-function useLazyEntryContent(html?: string) {
+function resolveUrl(value: string, baseUrl?: string): string {
+  if (!baseUrl) return value;
+
+  try {
+    return new URL(value, baseUrl).href;
+  } catch {
+    return value;
+  }
+}
+
+function resolveSrcSet(value: string, baseUrl?: string): string {
+  if (!baseUrl) return value;
+
+  return value
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => {
+      const [url, ...rest] = part.split(/\s+/);
+      const resolvedUrl = resolveUrl(url, baseUrl);
+      return [resolvedUrl, ...rest].join(' ');
+    })
+    .join(', ');
+}
+
+function useLazyEntryContent(html?: string, baseUrl?: string) {
   return useMemo<ReactNode[] | null>(() => {
     const canUseDom =
       typeof window !== 'undefined' && typeof window.DOMParser !== 'undefined';
@@ -24,19 +49,21 @@ function useLazyEntryContent(html?: string) {
     if (!html || !canUseDom) return null;
 
     try {
-      return convertHtmlToReactNodes(html);
+      return convertHtmlToReactNodes(html, baseUrl);
     } catch {
       return null;
     }
-  }, [html]);
+  }, [html, baseUrl]);
 }
 
-function convertHtmlToReactNodes(html: string): ReactNode[] {
+function convertHtmlToReactNodes(html: string, baseUrl?: string): ReactNode[] {
   const parser = new window.DOMParser();
   const doc = parser.parseFromString(html, 'text/html');
 
   return Array.from(doc.body.childNodes)
-    .map((node, index) => transformNodeToReact(node, `entry-node-${index}`))
+    .map((node, index) =>
+      transformNodeToReact(node, `entry-node-${index}`, baseUrl),
+    )
     .filter(
       (child): child is ReactNode => child !== null && child !== undefined,
     );
@@ -64,7 +91,11 @@ type ElementProps = Record<string, unknown> & {
   style?: CSSProperties;
 };
 
-function transformNodeToReact(node: ChildNode, key: string): ReactNode | null {
+function transformNodeToReact(
+  node: ChildNode,
+  key: string,
+  baseUrl?: string,
+): ReactNode | null {
   if (node.nodeType === Node.TEXT_NODE) {
     return node.textContent;
   }
@@ -81,17 +112,17 @@ function transformNodeToReact(node: ChildNode, key: string): ReactNode | null {
   }
 
   if (tagName === 'img') {
-    return createLazyImageElement(element as HTMLImageElement, key);
+    return createLazyImageElement(element as HTMLImageElement, key, baseUrl);
   }
 
-  const props = buildElementProps(element);
+  const props = buildElementProps(element, { baseUrl });
 
   if (VOID_ELEMENTS.has(tagName)) {
     return createElement(tagName, { ...props, key });
   }
 
   const children = Array.from(element.childNodes).map((child, childIndex) =>
-    transformNodeToReact(child, `${key}-${childIndex}`),
+    transformNodeToReact(child, `${key}-${childIndex}`, baseUrl),
   );
 
   return createElement(tagName, { ...props, key }, children);
@@ -99,7 +130,7 @@ function transformNodeToReact(node: ChildNode, key: string): ReactNode | null {
 
 function buildElementProps(
   element: Element,
-  options: { omit?: string[] } = {},
+  options: { omit?: string[]; baseUrl?: string } = {},
 ): ElementProps {
   const props: ElementProps = {};
   const omit = new Set(
@@ -126,6 +157,17 @@ function buildElementProps(
 
     const mappedName = mapAttributeName(attr.name);
 
+    if (mappedName === 'href') {
+      const rawHref = attr.value.trim();
+      if (/^javascript:/i.test(rawHref)) {
+        return;
+      }
+      props[mappedName] = options.baseUrl
+        ? resolveUrl(rawHref, options.baseUrl)
+        : rawHref;
+      return;
+    }
+
     if (mappedName === 'className') {
       props.className = props.className
         ? `${props.className} ${attr.value}`
@@ -142,6 +184,7 @@ function buildElementProps(
 function createLazyImageElement(
   element: HTMLImageElement,
   key: string,
+  baseUrl?: string,
 ): ReactNode | null {
   const src = element.getAttribute('src');
 
@@ -172,7 +215,9 @@ function createLazyImageElement(
     mergedStyle.transition = 'opacity 0.6s ease-in-out';
   }
 
+  const resolvedSrc = resolveUrl(src, baseUrl);
   const srcSet = element.getAttribute('srcset');
+  const resolvedSrcSet = srcSet ? resolveSrcSet(srcSet, baseUrl) : null;
   const sizes = element.getAttribute('sizes');
   const alt = element.getAttribute('alt') ?? '';
 
@@ -180,9 +225,9 @@ function createLazyImageElement(
     <IntersectionImage
       key={key}
       {...restProps}
-      src={src}
+      src={resolvedSrc}
       alt={alt}
-      srcSet={srcSet ?? undefined}
+      srcSet={resolvedSrcSet ?? undefined}
       sizes={sizes ?? undefined}
       className={combinedClassName || undefined}
       style={Object.keys(mergedStyle).length ? mergedStyle : {}}
@@ -266,14 +311,13 @@ export type EntryPanelProps = {
   onClose: () => void;
   onToggleStar: () => void;
   onFetchOriginal: () => void;
-  onRefetchOriginal: () => void;
   fetchingOriginal: boolean;
+  originalFetchStatus?: 'success' | 'error';
   onSetStatus: (status: 'read' | 'unread') => void;
   onNavigatePrev: () => void;
   onNavigateNext: () => void;
   hasPrev: boolean;
   hasNext: boolean;
-  hasFetchedOriginal: boolean;
   isTogglingStar: boolean;
   isUpdatingStatus: boolean;
 };
@@ -284,18 +328,17 @@ export function EntryPanel({
   onClose,
   onToggleStar,
   onFetchOriginal,
-  onRefetchOriginal,
   fetchingOriginal,
+  originalFetchStatus,
   onSetStatus,
   onNavigatePrev,
   onNavigateNext,
   hasPrev,
   hasNext,
-  hasFetchedOriginal,
   isTogglingStar,
   isUpdatingStatus,
 }: EntryPanelProps) {
-  const lazyEntryContent = useLazyEntryContent(entry?.content);
+  const lazyEntryContent = useLazyEntryContent(entry?.content, entry?.url);
   const selectedIsStarred = Boolean(entry?.starred);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
@@ -403,22 +446,26 @@ export function EntryPanel({
               </a>
               <Button
                 onClick={onFetchOriginal}
-                disabled={fetchingOriginal || hasFetchedOriginal}
+                disabled={fetchingOriginal}
                 title={
                   fetchingOriginal
-                    ? 'Fetching...'
-                    : hasFetchedOriginal
-                      ? 'Source already fetched'
-                      : 'Fetch source'
+                    ? 'Fetching soure...'
+                    : originalFetchStatus === 'success'
+                      ? 'Refetch source'
+                      : originalFetchStatus === 'error'
+                        ? 'Retry fetching source'
+                        : 'Fetch source'
                 }
                 className={styles.actionsList_Item}
               >
                 <span>
                   {fetchingOriginal
-                    ? 'Fetching...'
-                    : hasFetchedOriginal
+                    ? 'Fetching source...'
+                    : originalFetchStatus === 'success'
                       ? 'Source fetched'
-                      : 'Fetch source'}
+                      : originalFetchStatus === 'error'
+                        ? 'Retry fetching source'
+                        : 'Fetch source'}
                 </span>
                 {', '}
               </Button>
@@ -437,27 +484,6 @@ export function EntryPanel({
                   {entry.status === 'unread'
                     ? 'Mark as read'
                     : 'Mark as unread'}
-                </span>
-                {', '}
-              </Button>
-              <Button
-                onClick={onRefetchOriginal}
-                disabled={fetchingOriginal}
-                title={
-                  fetchingOriginal
-                    ? 'Fetching...'
-                    : hasFetchedOriginal
-                      ? 'Fetch original article again'
-                      : 'Fetch original article'
-                }
-                className={styles.actionsList_Item}
-              >
-                <span>
-                  {fetchingOriginal
-                    ? 'Fetching...'
-                    : hasFetchedOriginal
-                      ? 'Refetch original'
-                      : 'Fetch original'}
                 </span>
               </Button>
             </div>

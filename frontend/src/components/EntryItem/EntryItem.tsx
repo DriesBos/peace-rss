@@ -65,7 +65,8 @@ function extractThumbnail(htmlContent: string | undefined): string | null {
   const picture = doc.querySelector('picture');
   if (picture) {
     const img = picture.querySelector('img');
-    if (img && img.src) return img.src;
+    const pictureImgSrc = img?.getAttribute('src');
+    if (pictureImgSrc) return pictureImgSrc;
 
     // Try source elements
     const source = picture.querySelector('source[srcset]');
@@ -81,7 +82,8 @@ function extractThumbnail(htmlContent: string | undefined): string | null {
 
   // 4. Fourth try: First <img> element
   const img = doc.querySelector('img');
-  if (img && img.src) {
+  const imgSrc = img?.getAttribute('src');
+  if (img && imgSrc) {
     // Filter out very small images (likely tracking pixels)
     const width = img.getAttribute('width');
     const height = img.getAttribute('height');
@@ -90,19 +92,18 @@ function extractThumbnail(htmlContent: string | undefined): string | null {
       const h = parseInt(height, 10);
       // Skip if smaller than 100x100 (likely tracking pixel)
       if (w >= 100 && h >= 100) {
-        return img.src;
+        return imgSrc;
       }
     } else {
       // If no size attributes, include it anyway
-      return img.src;
+      return imgSrc;
     }
   }
 
   // 5. Fallback: Check for video without poster
   const videoNoPoster = doc.querySelector('video');
-  if (videoNoPoster && videoNoPoster.src) {
-    return videoNoPoster.src;
-  }
+  const videoSrc = videoNoPoster?.getAttribute('src');
+  if (videoSrc) return videoSrc;
 
   return null;
 }
@@ -173,8 +174,8 @@ function createPreview(
   // Count words (split by whitespace and filter empty strings)
   const words = textOnly.split(/\s+/).filter((word) => word.length > 0);
 
-  // Only show preview if there are at least 6 words
-  if (words.length < 6) return '';
+  // Only show preview if there are at least a few words
+  if (words.length < 3) return '';
 
   const fullText = words.join(' ');
 
@@ -205,7 +206,7 @@ function getAbsoluteUrl(
 
   try {
     const parsedBaseUrl = new URL(baseUrl);
-    return new URL(imageUrl, parsedBaseUrl.origin).href;
+    return new URL(imageUrl, parsedBaseUrl).href;
   } catch {
     return imageUrl;
   }
