@@ -18,6 +18,8 @@ A minimalist RSS reader built on Miniflux, wrapped in a modern Next.js UI with C
 docker compose up -d --build
 ```
 
+Note: the `frontend` container runs a production Next.js build, so edits to files (e.g. `.module.sass`) won’t show up until you rebuild (`--build`) and restart the `frontend` service.
+
 3. Open the app:
 
 - App: `http://localhost/`

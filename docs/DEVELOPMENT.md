@@ -9,6 +9,8 @@
 docker compose up -d --build
 ```
 
+Note: the `frontend` service in `docker-compose.yml` runs a production Next.js build (`next build` during image build, then `next start`). That means code/style edits on your host will **not** hot-reload into the running container; you must rebuild the image to see changes.
+
 Stop services:
 ```bash
 docker compose down
@@ -31,6 +33,10 @@ docker compose build frontend
 - Restart frontend:
 ```bash
 docker compose up -d frontend
+```
+- Rebuild + restart frontend (after edits):
+```bash
+docker compose up -d --build frontend
 ```
 
 ## Styling Convention
