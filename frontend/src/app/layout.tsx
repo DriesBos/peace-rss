@@ -15,6 +15,7 @@ import { ThemeProvider } from '@/components/ThemeProvider';
 import KomorebiShader from '@/components/KomorebiShader/KomorebiShader';
 import { SerwistProvider } from './serwist';
 import Notifications from '@/components/Notifications/Notifications';
+import { GlobalKeybindings } from '@/components/GlobalKeybindings/GlobalKeybindings';
 
 const untitledSans = localFont({
   src: [
@@ -162,7 +163,10 @@ export default function RootLayout({
                     </div>
                   </div>
                 </SignedOut>
-                <SignedIn>{children}</SignedIn>
+                <SignedIn>
+                  <GlobalKeybindings />
+                  {children}
+                </SignedIn>
               </main>
               <div id="modal-root" />
             </ThemeProvider>

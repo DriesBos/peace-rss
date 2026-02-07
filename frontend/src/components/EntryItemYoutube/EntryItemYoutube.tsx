@@ -53,6 +53,7 @@ export function EntryItemYoutube({
               fill
               sizes="(max-width: 745px) 100vw, 376px"
               quality={60}
+              unoptimized
               loading="lazy"
               style={{ objectFit: 'cover' }}
             />

@@ -13,6 +13,7 @@ export type ReaderView = {
   isStarredView: boolean;
   selectedFeedId: number | null;
   selectedCategoryId: number | null;
+  storiesWindowDays: 7 | 30 | 90;
 };
 
 type LoadEntriesOptions = {
@@ -59,8 +60,15 @@ export function useReaderData({
         limit = INITIAL_ENTRIES_LIMIT,
         status,
         changedAfter,
-        publishedAfter,
+        publishedAfter: publishedAfterOverride,
       } = options;
+      const publishedAfter =
+        publishedAfterOverride ??
+        (!view.searchMode
+          ? Math.floor(
+              (Date.now() - view.storiesWindowDays * 24 * 60 * 60 * 1000) / 1000
+            )
+          : undefined);
       const url = buildEntriesUrl({
         limit,
         offset,

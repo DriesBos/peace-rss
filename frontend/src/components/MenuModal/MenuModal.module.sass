@@ -152,6 +152,23 @@
   gap: var(--half-rem)
   padding: var(--one-rem)
 
+.cardSection
+  display: flex
+  flex-direction: column
+  gap: var(--quarter-rem)
+
+.cardLabel
+  @include font-meta
+  color: var(--color-text-secondary)
+  letter-spacing: 0.08em
+  text-transform: uppercase
+
+.cardDivider
+  height: 1px
+  background: var(--color-text-secondary)
+  opacity: 0.25
+  margin: 2px 0
+
 .themeOption
   appearance: none
   border: 0

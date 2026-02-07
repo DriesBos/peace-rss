@@ -14,6 +14,8 @@ type UpdateFeedRequest = {
   title?: string;
   feed_url?: string;
   category_id?: number;
+  blocklist_rules?: string;
+  rewrite_rules?: string;
 };
 
 export async function PUT(
@@ -59,12 +61,19 @@ export async function PUT(
       );
     }
 
-    const { title, feed_url, category_id } = body as UpdateFeedRequest;
+    const { title, feed_url, category_id, blocklist_rules, rewrite_rules } =
+      body as UpdateFeedRequest;
 
     // Build update payload
     const updatePayload: Record<string, unknown> = {};
     if (title !== undefined) updatePayload.title = title;
     if (feed_url !== undefined) updatePayload.feed_url = feed_url;
+    if (blocklist_rules !== undefined) {
+      updatePayload.blocklist_rules = blocklist_rules;
+    }
+    if (rewrite_rules !== undefined) {
+      updatePayload.rewrite_rules = rewrite_rules;
+    }
     if (category_id !== undefined) {
       updatePayload.category = { id: category_id };
     }

@@ -646,6 +646,7 @@ export function EntryPanel({
                       fill
                       sizes="(max-width: 745px) 100vw, 800px"
                       quality={75}
+                      unoptimized
                       loading="lazy"
                       style={{ objectFit: 'contain' }}
                     />

@@ -1,0 +1,117 @@
+@use '@/styles/vars' as *
+
+:root
+  // Colors
+  --color-white: #ffffff
+  --color-black: #000000
+  --color-modal-bg: rgba(0, 0, 0, 0.4)
+
+  // Theme Light
+  &[data-theme="light"]
+    --color-app: var(--color-white)
+    --color-app-secondary: hsla(0, 0%, 85%, 1)
+    --color-text: hsla(0, 0%, 15%, 1)
+    --color-text-secondary: hsla(0, 0%, 68%, 1)
+    --color-footer-bg: hsla(0, 0%, 15%, 0.1)
+  &[data-theme="dark"]
+    --color-app: var(--color-black)
+    --color-app-secondary: hsla(0, 0%, 12%, 1)
+    --color-text: hsla(0, 0%, 85%, 1)
+    --color-text-secondary: hsla(0, 0%, 50%, 1)
+    --color-footer-bg: hsla(0, 0%, 85%, 0.1)
+  &[data-theme="softlight"]
+    --color-app: hsla(70, 11%, 89%, 1)
+    --color-app-secondary: hsla(72, 11%, 82%, 1)
+    --color-text: hsla(0, 0%, 11%, 1)
+    --color-text-secondary: hsla(0, 0%, 48%, 1)
+    --color-footer-bg: hsla(0, 0%, 10%, 0.1)
+  &[data-theme="softdark"]
+    --color-app: hsla(0, 0%, 43%, 1)
+    --color-app-secondary: hsla(0, 0%, 38%, 1)
+    --color-text: hsla(0, 0%, 0%, 1)
+    --color-text-secondary: hsla(0, 0%, 25%, 1)
+    --color-footer-bg: hsla(0, 0%, 0%, 0.1)
+  &[data-theme="green"]
+    --color-app: hsla(71, 14%, 24%, 1)
+    --color-app-secondary: hsla(71, 14%, 38%, 1)
+    --color-text: hsla(0, 0%, 98%, 1)
+    --color-text-secondary: hsla(0, 0%, 72%, 1)
+    --color-footer-bg: hsla(0, 0%, 98%, 0.1)
+  &[data-theme="nightmode"]
+    --color-app: hsla(0, 0%, 0%, 1)
+    --color-app-secondary: hsla(0, 0%, 6%, 1)
+    --color-text: hsla(0, 100%, 46%, 1)
+    --color-text-secondary: hsla(0, 100%, 46%, 0.6)
+    --color-footer-bg: hsla(0, 100%, 46%, 0.1)
+
+  // Spacing
+  --quarter-rem: 4px
+  --half-rem: 8px
+  --one-rem: 16px
+  --one-half-rem: 24px
+  --two-rem: 32px
+  --three-rem: 48px
+  --four-rem: 64px
+  --eight-rem: 128px
+  // Spacing Content
+  --space-sides-general: 8px
+  --space-sides-stories: 16px
+  --space-content-top: 128px
+  --space-content-bottom: 64px
+  //// Gap between content container items
+  --space-headcontent-gap: 64px
+  --space-caption-gap: 6px
+  --space-titlemeta-gap: 4px
+  // Spacing Modals
+  --space-sides-modal: 16px
+  --space-top-modal: 48px
+  --space-bottom-modal: 48px
+  // Spacing btns
+  --space-buttons-gap: 6px
+  @media (min-width: $res-tabled)
+    --space-sides-general: 16px
+    --space-sides-stories: 32px
+
+  // Borders
+  --border-radius-image: 4px
+  --border-radius-containers: 4px
+  --border-radius-buttons: 4px
+  --border-buttons: 1px solid var(--color-text)
+  --border-buttons-inactive: 1px solid var(--color-text-secondary)
+  --border-containers: 1px solid var(--color-text-secondary)
+
+  // Buttons
+  --disabled-opacity: 0.33
+  --padding-buttons: 8px 16px
+  --icon-size: 16px
+  --icon-size-small: 12px
+  --icon-size-wide: 32px
+
+  // Transitions
+  --transition-general: 0.33s ease
+  --transition-theme: 0.33s ease
+  --transition-buttons: 0.25s ease
+  --transition-modal: 0.33s ease-in
+  --transition-header-toggle: 0.33s ease-in
+  // Type
+  --type-body: 14px
+  --type-title: 18px
+  --type-nav: 14px
+  --type-data: 12px
+  --type-button: 14px
+  --type-caption: 12px
+  --type-meta: 12px
+  --type-summary: 12px
+  --type-count: 9px
+  --type-input: 16px
+
+  // Transitions
+  --transition-general: 0.33s ease
+  --transition-theme: 0.33s ease
+
+  // Z-index
+  --index-newsfeed: 100
+  --index-komorebi: 50
+  --index-slidepanel: 500
+  --index-modal: 600
+  --index-menu: 700

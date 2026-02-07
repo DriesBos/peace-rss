@@ -7,6 +7,7 @@ import { EscapeToHome } from '@/components/EscapeToHome/EscapeToHome';
 const TIPS = [
   'Pull down at the top of the page to refresh your feeds.',
   'Press R to refresh your feed.',
+  'Press + to open the Add modal from anywhere.',
   'Press ArrowDown to move to the next entry.',
   'Press ArrowUp to move to the previous entry.',
   'When an entry is open, press ArrowRight for next and ArrowLeft for previous.',

@@ -26,12 +26,15 @@ import { NOTIFICATION_COPY } from '@/lib/notificationCopy';
 import { useKeydown } from '@/hooks/useKeydown';
 
 type MenuView = 'feeds' | 'look' | 'other';
+type StoriesWindowDays = 7 | 30 | 90;
 
 export type MenuModalProps = {
   isOpen: boolean;
   onClose: () => void;
   categories: Category[];
   feeds: Feed[];
+  storiesWindowDays: StoriesWindowDays;
+  onStoriesWindowDaysChange: (days: StoriesWindowDays) => void;
   openEditModal: (type: 'feed' | 'category', item: Feed | Category) => void;
   openAddModal: () => void;
   onRefreshFeeds: () => Promise<void> | void;
@@ -50,6 +53,7 @@ const THEME_LABELS: Record<string, string> = {
   green: 'Green',
   nightmode: 'Nightmode',
 };
+const STORIES_WINDOW_OPTIONS: StoriesWindowDays[] = [7, 30, 90];
 const THEME_TOAST_DEBOUNCE_MS = 350;
 
 function buildInitialCollapsedCategories(categories: Category[]) {
@@ -67,6 +71,8 @@ export function MenuModal({
   onClose,
   categories,
   feeds,
+  storiesWindowDays,
+  onStoriesWindowDaysChange,
   openEditModal,
   openAddModal,
   onRefreshFeeds,
@@ -516,17 +522,37 @@ export function MenuModal({
             </button>
 
             <div className={styles.themeCard}>
-              {Object.entries(THEME_LABELS).map(([themeName, label]) => (
-                <button
-                  type="button"
-                  key={themeName}
-                  className={styles.themeOption}
-                  data-active={theme === themeName}
-                  onClick={() => handleThemeChange(themeName)}
-                >
-                  {label}
-                </button>
-              ))}
+              <div className={styles.cardSection}>
+                <div className={styles.cardLabel}>Theme</div>
+                {Object.entries(THEME_LABELS).map(([themeName, label]) => (
+                  <button
+                    type="button"
+                    key={themeName}
+                    className={styles.themeOption}
+                    data-active={theme === themeName}
+                    onClick={() => handleThemeChange(themeName)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              <div className={styles.cardDivider} />
+
+              <div className={styles.cardSection}>
+                <div className={styles.cardLabel}>Stories</div>
+                {STORIES_WINDOW_OPTIONS.map((days) => (
+                  <button
+                    type="button"
+                    key={days}
+                    className={styles.themeOption}
+                    data-active={storiesWindowDays === days}
+                    onClick={() => onStoriesWindowDaysChange(days)}
+                  >
+                    Last {days} days
+                  </button>
+                ))}
+              </div>
             </div>
 
             <button

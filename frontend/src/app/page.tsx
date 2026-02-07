@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { SignedIn, SignedOut, RedirectToSignIn } from '@clerk/nextjs';
 import { toast } from 'sonner';
 import styles from './page.module.sass';
@@ -19,8 +20,16 @@ import { fetchStarredEntries } from '@/lib/readerApi';
 import { ENTRIES_PAGE_SIZE, INITIAL_ENTRIES_LIMIT } from '@/lib/entriesQuery';
 import { NOTIFICATION_COPY } from '@/lib/notificationCopy';
 import type { SocialPlatform } from '@/lib/social/types';
+import {
+  hasRemoveClickbaitRule,
+  mergeManagedFilterWordsIntoBlocklistRules,
+  parseFilterWordsInput,
+  parseManagedFilterWordsFromBlocklistRules,
+  setRemoveClickbaitRule,
+} from '@/lib/minifluxRules';
 
 type PullState = 'idle' | 'pulling' | 'fetching' | 'done';
+type StoriesWindowDays = 7 | 30 | 90;
 
 const PULL_TRIGGER_PX = 70;
 const PULL_MAX_PX = 90;
@@ -28,6 +37,8 @@ const DONE_HOLD_MS = 700;
 const FETCH_INDICATOR_HEIGHT = 32;
 const SWIPE_THRESHOLD_PX = 60;
 const SWIPE_MAX_VERTICAL_PX = 50;
+const STORIES_WINDOW_STORAGE_KEY = 'peace-rss-stories-window-days';
+const DEFAULT_STORIES_WINDOW_DAYS: StoriesWindowDays = 30;
 
 const getBrowserWindow = (): any => {
   if (typeof globalThis === 'undefined') return null;
@@ -71,6 +82,8 @@ export default function Home() {
   const [isStarredView, setIsStarredView] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchMode, setSearchMode] = useState(false);
+  const [storiesWindowDays, setStoriesWindowDays] =
+    useState<StoriesWindowDays>(DEFAULT_STORIES_WINDOW_DAYS);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isCategoriesOpen, setIsCategoriesOpen] = useState(false);
   const [isTogglingStar, setIsTogglingStar] = useState(false);
@@ -140,8 +153,38 @@ export default function Home() {
   const [editTitle, setEditTitle] = useState('');
   const [editFeedUrl, setEditFeedUrl] = useState('');
   const [editCategoryId, setEditCategoryId] = useState<number | null>(null);
+  const [editFilterWords, setEditFilterWords] = useState('');
+  const [editRemoveClickbait, setEditRemoveClickbait] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const win = getBrowserWindow();
+    if (!win) return;
+    try {
+      const stored = win.localStorage.getItem(STORIES_WINDOW_STORAGE_KEY);
+      if (!stored) return;
+      const parsed = Number(stored);
+      if (parsed === 7 || parsed === 30 || parsed === 90) {
+        setStoriesWindowDays(parsed);
+      }
+    } catch {
+      // Ignore storage errors.
+    }
+  }, []);
+
+  useEffect(() => {
+    const win = getBrowserWindow();
+    if (!win) return;
+    try {
+      win.localStorage.setItem(
+        STORIES_WINDOW_STORAGE_KEY,
+        String(storiesWindowDays),
+      );
+    } catch {
+      // Ignore storage errors.
+    }
+  }, [storiesWindowDays]);
 
   const view = useMemo(
     () => ({
@@ -150,6 +193,7 @@ export default function Home() {
       isStarredView,
       selectedFeedId,
       selectedCategoryId,
+      storiesWindowDays,
     }),
     [
       searchMode,
@@ -157,6 +201,7 @@ export default function Home() {
       isStarredView,
       selectedFeedId,
       selectedCategoryId,
+      storiesWindowDays,
     ],
   );
 
@@ -272,6 +317,7 @@ export default function Home() {
   const openAddModal = useCallback(() => {
     setIsAddModalOpen(true);
     setIsMenuModalOpen(false);
+    setIsEditModalOpen(false);
     setReturnToMenuAfterSubModal(true);
   }, []);
 
@@ -314,6 +360,12 @@ export default function Home() {
         const feed = item as Feed;
         setEditFeedUrl(feed.feed_url || '');
         setEditCategoryId(feed.category?.id || null);
+        setEditFilterWords(
+          parseManagedFilterWordsFromBlocklistRules(feed.blocklist_rules).join(
+            ', ',
+          ),
+        );
+        setEditRemoveClickbait(hasRemoveClickbaitRule(feed.rewrite_rules));
       }
       setIsEditModalOpen(true);
       setIsMenuModalOpen(false);
@@ -333,6 +385,8 @@ export default function Home() {
     setEditTitle('');
     setEditFeedUrl('');
     setEditCategoryId(null);
+    setEditFilterWords('');
+    setEditRemoveClickbait(false);
     setEditError(null);
   }, [returnToMenuAfterSubModal]);
 
@@ -949,13 +1003,31 @@ export default function Home() {
 
     const trimmedTitle = editTitle.trim();
     const trimmedUrl = editFeedUrl.trim();
+    const { words: filterWords, invalid: invalidFilterWords } =
+      parseFilterWordsInput(editFilterWords);
 
     if (!trimmedTitle || !trimmedUrl) return false;
+    if (invalidFilterWords.length > 0) {
+      setEditError(
+        `Invalid filter words: ${invalidFilterWords.join(', ')}. Use letters, numbers, _ or -.`,
+      );
+      return false;
+    }
 
     setEditLoading(true);
     setEditError(null);
 
     try {
+      const existingFeed = feedsById.get(editItemId);
+      const blocklistRules = mergeManagedFilterWordsIntoBlocklistRules(
+        existingFeed?.blocklist_rules,
+        filterWords,
+      );
+      const rewriteRules = setRemoveClickbaitRule(
+        existingFeed?.rewrite_rules,
+        editRemoveClickbait,
+      );
+
       await fetchJson<{ ok: boolean }>(`/api/feeds/${editItemId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -963,6 +1035,8 @@ export default function Home() {
           title: trimmedTitle,
           feed_url: trimmedUrl,
           category_id: editCategoryId,
+          blocklist_rules: blocklistRules,
+          rewrite_rules: rewriteRules,
         }),
       });
 
@@ -1311,6 +1385,7 @@ export default function Home() {
     selectedCategoryId,
     isStarredView,
     searchMode,
+    storiesWindowDays,
     isProvisioned,
     resetEntries,
     setIsLoading,
@@ -1328,6 +1403,30 @@ export default function Home() {
     if (target.getAttribute('role') === 'textbox') return true;
     return false;
   }, []);
+
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const win = getBrowserWindow();
+    if (!win) return;
+
+    const onOpenAdd = () => openAddModal();
+    win.addEventListener('peace-rss:open-add-modal', onOpenAdd);
+    return () => {
+      win.removeEventListener('peace-rss:open-add-modal', onOpenAdd);
+    };
+  }, [openAddModal]);
+
+  useEffect(() => {
+    if (searchParams.get('openAdd') !== '1') return;
+    openAddModal();
+
+    const remaining = new URLSearchParams(searchParams.toString());
+    remaining.delete('openAdd');
+    const qs = remaining.toString();
+    router.replace(qs ? `/?${qs}` : '/', { scroll: false });
+  }, [openAddModal, router, searchParams]);
 
   // Keyboard shortcuts for navigation
   useKeydown(
@@ -1533,6 +1632,8 @@ export default function Home() {
               onClose={closeMenuModal}
               categories={categories}
               feeds={feeds}
+              storiesWindowDays={storiesWindowDays}
+              onStoriesWindowDaysChange={setStoriesWindowDays}
               openEditModal={openEditModal}
               openAddModal={openAddModal}
               onRefreshFeeds={() => refreshAllData()}
@@ -1578,6 +1679,8 @@ export default function Home() {
               editTitle={editTitle}
               editFeedUrl={editFeedUrl}
               editCategoryId={editCategoryId}
+              editFilterWords={editFilterWords}
+              editRemoveClickbait={editRemoveClickbait}
               editLoading={editLoading}
               editError={editError}
               onClose={closeEditModal}
@@ -1588,6 +1691,8 @@ export default function Home() {
               onChangeTitle={setEditTitle}
               onChangeFeedUrl={setEditFeedUrl}
               onChangeCategoryId={setEditCategoryId}
+              onChangeFilterWords={setEditFilterWords}
+              onChangeRemoveClickbait={setEditRemoveClickbait}
             />
 
             <HeaderCategories

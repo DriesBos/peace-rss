@@ -290,6 +290,7 @@ export function EntryItem({
             fill
             sizes="(max-width: 745px) 23vw, 90px"
             quality={60}
+            unoptimized
             loading="lazy"
             style={{ objectFit: 'cover' }}
             onError={() => setIsThumbnailErrored(true)}
