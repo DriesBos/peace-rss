@@ -1,6 +1,6 @@
 'use client';
 
-import { createElement, useMemo, useRef } from 'react';
+import { createElement, useEffect, useMemo, useRef } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import IntersectionImage from 'react-intersection-image';
 import styles from './EntryPanel.module.sass';
@@ -30,6 +30,9 @@ type YouTubeInlineProps = {
   href?: string;
   title?: string;
 };
+
+const SWIPE_THRESHOLD_PX = 60;
+const SWIPE_MAX_VERTICAL_PX = 50;
 
 function YouTubeInline({ videoId, href, title }: YouTubeInlineProps) {
   const embedUrl = getYouTubeEmbedUrl(videoId);
@@ -87,39 +90,6 @@ function resolveSrcSet(value: string, baseUrl?: string): string {
     .join(', ');
 }
 
-function extractLeadImageUrl(doc: Document, baseUrl?: string): string | null {
-  const blocks = Array.from(doc.body.children).slice(0, 4);
-
-  for (const block of blocks) {
-    const img =
-      block.tagName.toLowerCase() === 'img'
-        ? (block as HTMLImageElement)
-        : (block.querySelector('img') as HTMLImageElement | null);
-
-    if (img) {
-      const src =
-        img.getAttribute('src') ||
-        img.getAttribute('data-src') ||
-        img.getAttribute('data-lazy-src') ||
-        img.getAttribute('data-original') ||
-        '';
-      const trimmed = src.trim();
-      if (trimmed) return resolveUrl(trimmed, baseUrl);
-    }
-
-    const video =
-      block.tagName.toLowerCase() === 'video'
-        ? (block as HTMLVideoElement)
-        : (block.querySelector('video[poster]') as HTMLVideoElement | null);
-    if (video) {
-      const poster = video.getAttribute('poster')?.trim();
-      if (poster) return resolveUrl(poster, baseUrl);
-    }
-  }
-
-  return null;
-}
-
 function useLazyEntryContent(html?: string, baseUrl?: string) {
   return useMemo<LazyEntryContent | null>(() => {
     const canUseDom =
@@ -130,15 +100,78 @@ function useLazyEntryContent(html?: string, baseUrl?: string) {
     try {
       const parser = new window.DOMParser();
       const doc = parser.parseFromString(html, 'text/html');
-      const leadImageUrl = extractLeadImageUrl(doc, baseUrl);
+      const leadImage = extractLeadImage(doc, baseUrl);
+      leadImage?.cleanup?.();
       return {
         nodes: convertDocToReactNodes(doc, baseUrl),
-        leadImageUrl,
+        leadImageUrl: leadImage?.url ?? null,
       };
     } catch {
       return null;
     }
   }, [html, baseUrl]);
+}
+
+type ExtractedLeadImage = {
+  url: string;
+  cleanup?: () => void;
+};
+
+function extractLeadImage(
+  doc: Document,
+  baseUrl?: string,
+): ExtractedLeadImage | null {
+  const blocks = Array.from(doc.body.children).slice(0, 4);
+
+  for (const block of blocks) {
+    const tagName = block.tagName.toLowerCase();
+
+    let img: HTMLImageElement | null = null;
+    let elementToRemove: Element | null = null;
+
+    if (tagName === 'img') {
+      img = block as HTMLImageElement;
+      elementToRemove = block;
+    } else {
+      img = block.querySelector('img') as HTMLImageElement | null;
+      if (img) {
+        const hasNonWhitespaceText = Boolean(block.textContent?.trim());
+        const childElements = Array.from(block.children);
+        const hasOnlyImageElement =
+          childElements.length === 1 && childElements[0] === img;
+
+        if (!hasNonWhitespaceText && hasOnlyImageElement) {
+          elementToRemove = block;
+        } else {
+          img = null;
+        }
+      }
+    }
+
+    if (img) {
+      const src =
+        img.getAttribute('src') ||
+        img.getAttribute('data-src') ||
+        img.getAttribute('data-lazy-src') ||
+        img.getAttribute('data-original') ||
+        '';
+      const trimmed = src.trim();
+      if (!trimmed) continue;
+
+      const resolvedUrl = resolveUrl(trimmed, baseUrl);
+
+      return {
+        url: resolvedUrl,
+        cleanup: elementToRemove
+          ? () => {
+              elementToRemove.remove();
+            }
+          : undefined,
+      };
+    }
+  }
+
+  return null;
 }
 
 function convertDocToReactNodes(doc: Document, baseUrl?: string): ReactNode[] {
@@ -456,24 +489,63 @@ export function EntryPanel({
   const lazy = useLazyEntryContent(entry?.content, entry?.url);
   const selectedIsStarred = Boolean(entry?.starred);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
-
-  const stableLeadImageRef = useRef<{
-    entryId: number | null;
-    url: string | null;
-  }>({ entryId: null, url: null });
-
-  const currentEntryId = entry?.id ?? null;
-  if (stableLeadImageRef.current.entryId !== currentEntryId) {
-    stableLeadImageRef.current.entryId = currentEntryId;
-    stableLeadImageRef.current.url = null;
-  }
+  const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
+  const entryId = entry?.id ?? null;
 
   const leadImageUrl = lazy?.leadImageUrl?.trim() || null;
-  if (leadImageUrl) {
-    stableLeadImageRef.current.url = leadImageUrl;
-  }
+  const pinnedLeadImageUrl = leadImageUrl;
 
-  const pinnedLeadImageUrl = leadImageUrl ? null : stableLeadImageRef.current.url;
+  useEffect(() => {
+    if (entryId === null) return;
+
+    const node = scrollContainerRef.current;
+    if (!node) return;
+
+    const onTouchStart = (event: TouchEvent) => {
+      if (event.touches.length !== 1) return;
+      const touch = event.touches[0];
+      swipeStartRef.current = { x: touch.clientX, y: touch.clientY };
+    };
+
+    const onTouchEnd = (event: TouchEvent) => {
+      const swipeStart = swipeStartRef.current;
+      swipeStartRef.current = null;
+
+      if (!swipeStart) return;
+      const touch = event.changedTouches?.[0];
+      if (!touch) return;
+
+      const deltaX = touch.clientX - swipeStart.x;
+      const deltaY = touch.clientY - swipeStart.y;
+
+      if (
+        Math.abs(deltaX) < SWIPE_THRESHOLD_PX ||
+        Math.abs(deltaY) > SWIPE_MAX_VERTICAL_PX
+      ) {
+        return;
+      }
+
+      if (deltaX < 0 && hasNext) {
+        onNavigateNext();
+      } else if (deltaX > 0 && hasPrev) {
+        onNavigatePrev();
+      }
+    };
+
+    const onTouchCancel = () => {
+      swipeStartRef.current = null;
+    };
+
+    node.addEventListener('touchstart', onTouchStart, { passive: true });
+    node.addEventListener('touchend', onTouchEnd, { passive: true });
+    node.addEventListener('touchcancel', onTouchCancel);
+
+    return () => {
+      node.removeEventListener('touchstart', onTouchStart);
+      node.removeEventListener('touchend', onTouchEnd);
+      node.removeEventListener('touchcancel', onTouchCancel);
+    };
+  }, [entryId, hasNext, hasPrev, onNavigateNext, onNavigatePrev]);
 
   return (
     <SlidePanel
