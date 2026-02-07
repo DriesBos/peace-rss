@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo } from 'react';
+import Image from 'next/image';
+import { useMemo, useState } from 'react';
 import styles from './EntryItem.module.sass';
 import { FormattedDate } from '../FormattedDate';
 import { extractYouTubeVideoId, getYouTubePosterUrl } from '@/lib/youtube';
@@ -220,10 +221,13 @@ function getAbsoluteUrl(
 
   if (
     imageUrl.startsWith('http://') ||
-    imageUrl.startsWith('https://') ||
-    imageUrl.startsWith('//')
+    imageUrl.startsWith('https://')
   ) {
     return imageUrl;
+  }
+
+  if (imageUrl.startsWith('//')) {
+    return `https:${imageUrl}`;
   }
 
   if (!baseUrl) return imageUrl;
@@ -253,6 +257,7 @@ export function EntryItem({
     () => getAbsoluteUrl(thumbnailUrl, url),
     [thumbnailUrl, url]
   );
+  const [isThumbnailErrored, setIsThumbnailErrored] = useState(false);
 
   return (
     <div
@@ -277,19 +282,17 @@ export function EntryItem({
         </div>
         {preview && <p className={styles.entryItem_Preview}>{preview}</p>}
       </div>
-      {absoluteThumbnailUrl && (
+      {absoluteThumbnailUrl && !isThumbnailErrored && (
         <div className={styles.entryItem_Thumbnail}>
-          <img
+          <Image
             src={absoluteThumbnailUrl}
             alt={title || 'Entry thumbnail'}
+            fill
+            sizes="(max-width: 745px) 23vw, 90px"
+            quality={60}
             loading="lazy"
-            onError={(e) => {
-              // Hide thumbnail container if image fails to load
-              const target = e.currentTarget;
-              if (target.parentElement) {
-                target.parentElement.style.display = 'none';
-              }
-            }}
+            style={{ objectFit: 'cover' }}
+            onError={() => setIsThumbnailErrored(true)}
           />
         </div>
       )}

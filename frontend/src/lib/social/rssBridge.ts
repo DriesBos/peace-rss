@@ -1,0 +1,200 @@
+import 'server-only';
+
+import type { NormalizedSocialFeedInput } from './types';
+import { buildSocialSourceKeyFromInput } from './source';
+
+type FindFeedItem = {
+  url?: string;
+};
+
+const rssBridgeBaseUrl = (process.env.RSS_BRIDGE_BASE_URL || '').replace(/\/+$/, '');
+const socialFeedsBaseUrl = (process.env.SOCIAL_FEEDS_BASE_URL || '').replace(/\/+$/, '');
+const discoverCacheTtlMs = (() => {
+  const value = Number(process.env.SOCIAL_DISCOVERY_CACHE_TTL_MS || '600000');
+  if (!Number.isFinite(value) || value <= 0) return 600000;
+  return Math.floor(value);
+})();
+const discoverCacheBySource = new Map<
+  string,
+  { feedUrl: string; expiresAt: number }
+>();
+const discoverInFlightBySource = new Map<string, Promise<string>>();
+let discoveryReadsSinceCleanup = 0;
+
+function assertRssBridgeBaseUrl() {
+  if (!rssBridgeBaseUrl) {
+    throw new Error('RSS_BRIDGE_BASE_URL is not set');
+  }
+}
+
+function assertSocialFeedsBaseUrl() {
+  if (!socialFeedsBaseUrl) {
+    throw new Error('SOCIAL_FEEDS_BASE_URL is not set');
+  }
+}
+
+function cleanupDiscoveryCache(now: number) {
+  for (const [key, value] of discoverCacheBySource.entries()) {
+    if (value.expiresAt <= now) {
+      discoverCacheBySource.delete(key);
+    }
+  }
+}
+
+function getCachedDiscoveryFeed(sourceKey: string): string | null {
+  const now = Date.now();
+  discoveryReadsSinceCleanup += 1;
+  if (discoveryReadsSinceCleanup >= 100) {
+    cleanupDiscoveryCache(now);
+    discoveryReadsSinceCleanup = 0;
+  }
+
+  const cached = discoverCacheBySource.get(sourceKey);
+  if (!cached) return null;
+  if (cached.expiresAt <= now) {
+    discoverCacheBySource.delete(sourceKey);
+    return null;
+  }
+  return cached.feedUrl;
+}
+
+function buildProfileUrl(input: NormalizedSocialFeedInput): string {
+  if (input.platform === 'instagram') {
+    return `https://www.instagram.com/${input.handle}/`;
+  }
+  return `https://twitter.com/${input.handle}`;
+}
+
+function buildDiscoveryProfileUrls(input: NormalizedSocialFeedInput): string[] {
+  if (input.platform === 'instagram') {
+    return [buildProfileUrl(input)];
+  }
+  return [
+    buildProfileUrl(input),
+    `https://x.com/${input.handle}`,
+  ];
+}
+
+function buildAuthorizationHeader(
+  loginUsername?: string,
+  loginPassword?: string
+): string | undefined {
+  if (!loginUsername || !loginPassword) return undefined;
+  const token = Buffer.from(`${loginUsername}:${loginPassword}`).toString('base64');
+  return `Basic ${token}`;
+}
+
+function toAbsoluteBridgeUrl(value: string): string {
+  assertRssBridgeBaseUrl();
+  const resolved = new URL(value, `${rssBridgeBaseUrl}/`);
+  const bridgeOrigin = new URL(rssBridgeBaseUrl).origin;
+  if (resolved.origin !== bridgeOrigin) {
+    throw new Error('RSS-Bridge returned an unexpected feed origin');
+  }
+  return resolved.toString();
+}
+
+export function isBridgeFeedUrl(value: string): boolean {
+  if (!rssBridgeBaseUrl) return false;
+  try {
+    const parsed = new URL(value);
+    const base = new URL(rssBridgeBaseUrl);
+    return parsed.origin === base.origin;
+  } catch {
+    return false;
+  }
+}
+
+export async function discoverBridgeFeedUrl(
+  input: NormalizedSocialFeedInput
+): Promise<string> {
+  assertRssBridgeBaseUrl();
+  const sourceKey = buildSocialSourceKeyFromInput(input);
+
+  const cached = getCachedDiscoveryFeed(sourceKey);
+  if (cached) return cached;
+
+  const existing = discoverInFlightBySource.get(sourceKey);
+  if (existing) return existing;
+
+  const discoveryPromise = (async () => {
+    const profileUrls = buildDiscoveryProfileUrls(input);
+    const authHeader = buildAuthorizationHeader(
+      input.loginUsername,
+      input.loginPassword
+    );
+
+    const errors: string[] = [];
+
+    for (const profileUrl of profileUrls) {
+      const discoveryUrl = new URL(
+        '/?action=findfeed&format=Atom',
+        `${rssBridgeBaseUrl}/`
+      );
+      discoveryUrl.searchParams.set('url', profileUrl);
+
+      const headers = new Headers({
+        Accept: 'application/json, text/plain;q=0.9, */*;q=0.8',
+      });
+      if (authHeader) headers.set('Authorization', authHeader);
+
+      const res = await fetch(discoveryUrl.toString(), {
+        method: 'GET',
+        headers,
+        cache: 'no-store',
+      });
+
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        errors.push(
+          `findfeed(${profileUrl}) -> ${res.status} ${res.statusText} ${text}`.trim()
+        );
+        continue;
+      }
+
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        const text = await res.text().catch(() => '');
+        errors.push(
+          `findfeed(${profileUrl}) returned non-JSON response: ${text}`.trim()
+        );
+        continue;
+      }
+
+      const items = (await res.json()) as FindFeedItem[];
+      if (!Array.isArray(items) || items.length === 0 || !items[0]?.url) {
+        errors.push(`findfeed(${profileUrl}) returned no feed candidates`);
+        continue;
+      }
+
+      const bridgeFeedUrl = toAbsoluteBridgeUrl(items[0].url);
+      discoverCacheBySource.set(sourceKey, {
+        feedUrl: bridgeFeedUrl,
+        expiresAt: Date.now() + discoverCacheTtlMs,
+      });
+      return bridgeFeedUrl;
+    }
+
+    const joinedErrors = errors.join(' | ');
+    if (joinedErrors.includes('No bridge found for given url')) {
+      throw new Error(
+        `No RSS-Bridge bridge found for ${input.platform}:${input.handle}. ` +
+          'Ensure the required bridge is enabled/available in your RSS-Bridge instance.'
+      );
+    }
+
+    throw new Error(
+      `RSS-Bridge discovery failed for ${input.platform}:${input.handle}. ${joinedErrors}`.trim()
+    );
+  })().finally(() => {
+    discoverInFlightBySource.delete(sourceKey);
+  });
+
+  discoverInFlightBySource.set(sourceKey, discoveryPromise);
+  return discoveryPromise;
+}
+
+export function buildSocialProxyFeedUrl(token: string): string {
+  assertSocialFeedsBaseUrl();
+  return `${socialFeedsBaseUrl}/api/social/rss/${encodeURIComponent(token)}`;
+}

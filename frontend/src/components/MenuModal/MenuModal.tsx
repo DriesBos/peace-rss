@@ -48,6 +48,7 @@ const THEME_LABELS: Record<string, string> = {
   softlight: 'Soft Light',
   softdark: 'Soft Dark',
   green: 'Green',
+  nightmode: 'Nightmode',
 };
 const THEME_TOAST_DEBOUNCE_MS = 350;
 

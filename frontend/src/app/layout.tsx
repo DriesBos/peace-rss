@@ -132,7 +132,7 @@ export default function RootLayout({
             <ThemeProvider
               attribute="data-theme"
               defaultTheme="light"
-              themes={['light', 'dark', 'softlight', 'softdark', 'green']}
+              themes={['light', 'dark', 'softlight', 'softdark', 'green', 'nightmode']}
               enableSystem={true}
               storageKey="peace-rss-theme"
             >

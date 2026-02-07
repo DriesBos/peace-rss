@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { createElement, useEffect, useMemo, useRef } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import IntersectionImage from 'react-intersection-image';
@@ -22,7 +23,13 @@ import { IconExit } from '../icons/IconExit';
 
 type LazyEntryContent = {
   nodes: ReactNode[];
-  leadImageUrl: string | null;
+  leadImage: LeadImageData | null;
+};
+
+type LeadImageData = {
+  url: string;
+  width?: number;
+  height?: number;
 };
 
 type YouTubeInlineProps = {
@@ -104,7 +111,13 @@ function useLazyEntryContent(html?: string, baseUrl?: string) {
       leadImage?.cleanup?.();
       return {
         nodes: convertDocToReactNodes(doc, baseUrl),
-        leadImageUrl: leadImage?.url ?? null,
+        leadImage: leadImage
+          ? {
+              url: leadImage.url,
+              width: leadImage.width,
+              height: leadImage.height,
+            }
+          : null,
       };
     } catch {
       return null;
@@ -114,6 +127,8 @@ function useLazyEntryContent(html?: string, baseUrl?: string) {
 
 type ExtractedLeadImage = {
   url: string;
+  width?: number;
+  height?: number;
   cleanup?: () => void;
 };
 
@@ -148,27 +163,40 @@ function extractLeadImage(
       }
     }
 
-    if (img) {
-      const src =
-        img.getAttribute('src') ||
-        img.getAttribute('data-src') ||
-        img.getAttribute('data-lazy-src') ||
-        img.getAttribute('data-original') ||
-        '';
-      const trimmed = src.trim();
-      if (!trimmed) continue;
+	    if (img) {
+	      const src =
+	        img.getAttribute('src') ||
+	        img.getAttribute('data-src') ||
+	        img.getAttribute('data-lazy-src') ||
+	        img.getAttribute('data-original') ||
+	        '';
+	      const trimmed = src.trim();
+	      if (!trimmed) continue;
 
-      const resolvedUrl = resolveUrl(trimmed, baseUrl);
+	      const widthAttr = img.getAttribute('width');
+	      const heightAttr = img.getAttribute('height');
+	      const parsedWidth = widthAttr ? Number.parseInt(widthAttr, 10) : NaN;
+	      const parsedHeight = heightAttr ? Number.parseInt(heightAttr, 10) : NaN;
 
-      return {
-        url: resolvedUrl,
-        cleanup: elementToRemove
-          ? () => {
-              elementToRemove.remove();
-            }
-          : undefined,
-      };
-    }
+	      const resolvedUrl = resolveUrl(trimmed, baseUrl);
+
+	      return {
+	        url: resolvedUrl,
+	        width:
+	          Number.isFinite(parsedWidth) && parsedWidth > 0
+	            ? parsedWidth
+	            : undefined,
+	        height:
+	          Number.isFinite(parsedHeight) && parsedHeight > 0
+	            ? parsedHeight
+	            : undefined,
+	        cleanup: elementToRemove
+	          ? () => {
+	              elementToRemove.remove();
+	            }
+	          : undefined,
+	      };
+	    }
   }
 
   return null;
@@ -492,8 +520,15 @@ export function EntryPanel({
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const entryId = entry?.id ?? null;
 
-  const leadImageUrl = lazy?.leadImageUrl?.trim() || null;
-  const pinnedLeadImageUrl = leadImageUrl;
+  const leadImage = lazy?.leadImage ?? null;
+  const leadImageUrl = leadImage?.url.trim() || null;
+  const pinnedLeadImage = leadImageUrl
+    ? {
+        url: leadImageUrl,
+        width: leadImage?.width,
+        height: leadImage?.height,
+      }
+    : null;
 
   useEffect(() => {
     if (entryId === null) return;
@@ -593,14 +628,28 @@ export function EntryPanel({
           {entry.content ? (
             lazy ? (
               <div className={styles.entry_Content}>
-                {pinnedLeadImageUrl ? (
-                  <img
-                    className={styles.entry_LeadImage}
-                    src={pinnedLeadImageUrl}
-                    alt=""
-                    loading="eager"
-                    decoding="async"
-                  />
+                {pinnedLeadImage ? (
+                  <div
+                    className={styles.entry_LeadImageWrapper}
+                    style={
+                      pinnedLeadImage.width && pinnedLeadImage.height
+                        ? {
+                            aspectRatio: `${pinnedLeadImage.width} / ${pinnedLeadImage.height}`,
+                          }
+                        : undefined
+                    }
+                  >
+                    <Image
+                      className={styles.entry_LeadImage}
+                      src={pinnedLeadImage.url}
+                      alt=""
+                      fill
+                      sizes="(max-width: 745px) 100vw, 800px"
+                      quality={75}
+                      loading="lazy"
+                      style={{ objectFit: 'contain' }}
+                    />
+                  </div>
                 ) : null}
                 {lazy.nodes}
               </div>

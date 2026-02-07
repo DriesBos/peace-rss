@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { NOTIFICATION_COPY } from '@/lib/notificationCopy';
 import { useKeydown } from '@/hooks/useKeydown';
 import { Button } from '@/components/Button/Button';
+import type { SocialPlatform } from '@/lib/social/types';
 
 export type AddModalProps = {
   isOpen: boolean;
@@ -21,6 +22,14 @@ export type AddModalProps = {
   addCategory: (e: React.FormEvent) => Promise<boolean>;
   newFeedUrl: string;
   setNewFeedUrl: (value: string) => void;
+  newFeedPlatform: '' | SocialPlatform;
+  setNewFeedPlatform: (value: '' | SocialPlatform) => void;
+  newFeedHandle: string;
+  setNewFeedHandle: (value: string) => void;
+  newFeedLoginUsername: string;
+  setNewFeedLoginUsername: (value: string) => void;
+  newFeedLoginPassword: string;
+  setNewFeedLoginPassword: (value: string) => void;
   newFeedCategoryId: number | null;
   setNewFeedCategoryId: (value: number | null) => void;
   addFeedLoading: boolean;
@@ -40,6 +49,14 @@ export function AddModal({
   addCategory,
   newFeedUrl,
   setNewFeedUrl,
+  newFeedPlatform,
+  setNewFeedPlatform,
+  newFeedHandle,
+  setNewFeedHandle,
+  newFeedLoginUsername,
+  setNewFeedLoginUsername,
+  newFeedLoginPassword,
+  setNewFeedLoginPassword,
   newFeedCategoryId,
   setNewFeedCategoryId,
   addFeedLoading,
@@ -47,6 +64,10 @@ export function AddModal({
   addFeed,
   isLoading,
 }: AddModalProps) {
+  const canSubmitFeed = Boolean(
+    newFeedUrl.trim() || (newFeedPlatform && newFeedHandle.trim())
+  );
+
   const handleAddCategory = async (event: React.FormEvent) => {
     const didSucceed = await addCategory(event);
     if (didSucceed) {
@@ -111,6 +132,50 @@ export function AddModal({
             placeholder="Feed web address.."
             disabled={addFeedLoading || isLoading}
           />
+          <div className={styles.help}>
+            Use either a direct feed URL, or a social platform + handle.
+          </div>
+          <LabeledSelect
+            id="add-feed-platform"
+            label="Social platform"
+            value={newFeedPlatform}
+            onChange={(value) => setNewFeedPlatform(value as '' | SocialPlatform)}
+            placeholder="Select platform"
+            optionalHint="(optional)"
+            options={[
+              { value: 'instagram', label: 'Instagram' },
+              { value: 'twitter', label: 'Twitter / X' },
+            ]}
+            disabled={addFeedLoading || isLoading}
+          />
+          <LabeledInput
+            id="add-feed-handle"
+            label="Social handle"
+            value={newFeedHandle}
+            onChange={setNewFeedHandle}
+            placeholder="@username or profile URL"
+            disabled={addFeedLoading || isLoading}
+          />
+          <LabeledInput
+            id="add-feed-login-username"
+            label="Login username"
+            value={newFeedLoginUsername}
+            onChange={setNewFeedLoginUsername}
+            placeholder="Optional"
+            disabled={addFeedLoading || isLoading}
+          />
+          <LabeledInput
+            id="add-feed-login-password"
+            label="Login password"
+            value={newFeedLoginPassword}
+            onChange={setNewFeedLoginPassword}
+            placeholder="Optional"
+            type="password"
+            disabled={addFeedLoading || isLoading}
+          />
+          <div className={styles.help}>
+            Login fields are optional and used as RSS-Bridge HTTP auth.
+          </div>
           <LabeledSelect
             id="add-feed-category"
             value={newFeedCategoryId ? String(newFeedCategoryId) : ''}
@@ -127,7 +192,7 @@ export function AddModal({
           />
           <button
             type="submit"
-            disabled={addFeedLoading || isLoading || !newFeedUrl.trim()}
+            disabled={addFeedLoading || isLoading || !canSubmitFeed}
             className={styles.linkButton}
           >
             {addFeedLoading ? 'Adding...' : 'Add feed'}

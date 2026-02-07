@@ -18,6 +18,7 @@ import { useUnreadCounters } from '@/hooks/useUnreadCounters';
 import { fetchStarredEntries } from '@/lib/readerApi';
 import { ENTRIES_PAGE_SIZE, INITIAL_ENTRIES_LIMIT } from '@/lib/entriesQuery';
 import { NOTIFICATION_COPY } from '@/lib/notificationCopy';
+import type { SocialPlatform } from '@/lib/social/types';
 
 type PullState = 'idle' | 'pulling' | 'fetching' | 'done';
 
@@ -77,6 +78,12 @@ export default function Home() {
   const [isProvisioned, setIsProvisioned] = useState(false);
   const [provisionError, setProvisionError] = useState<string | null>(null);
   const [newFeedUrl, setNewFeedUrl] = useState('');
+  const [newFeedPlatform, setNewFeedPlatform] = useState<'' | SocialPlatform>(
+    '',
+  );
+  const [newFeedHandle, setNewFeedHandle] = useState('');
+  const [newFeedLoginUsername, setNewFeedLoginUsername] = useState('');
+  const [newFeedLoginPassword, setNewFeedLoginPassword] = useState('');
   const [newFeedCategoryId, setNewFeedCategoryId] = useState<number | null>(
     null,
   );
@@ -742,15 +749,53 @@ export default function Home() {
     e.preventDefault();
 
     const trimmedUrl = newFeedUrl.trim();
-    if (!trimmedUrl) return false;
+    const trimmedSocialHandle = newFeedHandle.trim();
+    const trimmedLoginUsername = newFeedLoginUsername.trim();
+    const trimmedLoginPassword = newFeedLoginPassword.trim();
+    const hasSocialInput = Boolean(newFeedPlatform && trimmedSocialHandle);
+
+    if (!trimmedUrl && !hasSocialInput) {
+      setAddFeedError(
+        'Enter a feed URL, or choose a social platform and handle.'
+      );
+      return false;
+    }
+
+    if (
+      (trimmedLoginUsername && !trimmedLoginPassword) ||
+      (!trimmedLoginUsername && trimmedLoginPassword)
+    ) {
+      setAddFeedError(
+        'Provide both login username and login password, or leave both empty.'
+      );
+      return false;
+    }
 
     setAddFeedLoading(true);
     setAddFeedError(null);
 
     try {
-      const requestBody: { feed_url: string; category_id?: number } = {
-        feed_url: trimmedUrl,
-      };
+      const requestBody: {
+        feed_url?: string;
+        category_id?: number;
+        social?: {
+          platform: SocialPlatform;
+          handle: string;
+          login_username?: string;
+          login_password?: string;
+        };
+      } = {};
+
+      if (hasSocialInput && newFeedPlatform) {
+        requestBody.social = {
+          platform: newFeedPlatform,
+          handle: trimmedSocialHandle,
+          login_username: trimmedLoginUsername || undefined,
+          login_password: trimmedLoginPassword || undefined,
+        };
+      } else {
+        requestBody.feed_url = trimmedUrl;
+      }
 
       if (newFeedCategoryId) {
         requestBody.category_id = newFeedCategoryId;
@@ -764,6 +809,10 @@ export default function Home() {
 
       // Success: clear input and refresh feeds
       setNewFeedUrl('');
+      setNewFeedPlatform('');
+      setNewFeedHandle('');
+      setNewFeedLoginUsername('');
+      setNewFeedLoginPassword('');
       setNewFeedCategoryId(null);
       await Promise.all([loadFeeds(), refreshUnreadCounters()]);
       return true;
@@ -1505,6 +1554,14 @@ export default function Home() {
               addCategory={addCategory}
               newFeedUrl={newFeedUrl}
               setNewFeedUrl={setNewFeedUrl}
+              newFeedPlatform={newFeedPlatform}
+              setNewFeedPlatform={setNewFeedPlatform}
+              newFeedHandle={newFeedHandle}
+              setNewFeedHandle={setNewFeedHandle}
+              newFeedLoginUsername={newFeedLoginUsername}
+              setNewFeedLoginUsername={setNewFeedLoginUsername}
+              newFeedLoginPassword={newFeedLoginPassword}
+              setNewFeedLoginPassword={setNewFeedLoginPassword}
               newFeedCategoryId={newFeedCategoryId}
               setNewFeedCategoryId={setNewFeedCategoryId}
               addFeedLoading={addFeedLoading}

@@ -4,7 +4,14 @@ import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 import styles from './ThemeSwitcher.module.sass';
 
-const THEMES = ['light', 'dark', 'softlight', 'softdark', 'green'] as const;
+const THEMES = [
+  'light',
+  'dark',
+  'softlight',
+  'softdark',
+  'green',
+  'nightmode',
+] as const;
 
 const THEME_LABELS: Record<string, string> = {
   light: 'Light',
@@ -12,6 +19,7 @@ const THEME_LABELS: Record<string, string> = {
   softlight: 'Soft Light',
   softdark: 'Soft Dark',
   green: 'Green',
+  nightmode: 'Nightmode',
 };
 
 export function ThemeSwitcher() {
@@ -53,4 +61,3 @@ export function ThemeSwitcher() {
     </div>
   );
 }
-
