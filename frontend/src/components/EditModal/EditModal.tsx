@@ -18,7 +18,6 @@ export type EditModalProps = {
   editTitle: string;
   editFeedUrl: string;
   editCategoryId: number | null;
-  editFilterWords: string;
   editRemoveClickbait: boolean;
   editLoading: boolean;
   editError: string | null;
@@ -30,7 +29,6 @@ export type EditModalProps = {
   onChangeTitle: (value: string) => void;
   onChangeFeedUrl: (value: string) => void;
   onChangeCategoryId: (value: number | null) => void;
-  onChangeFilterWords: (value: string) => void;
   onChangeRemoveClickbait: (value: boolean) => void;
 };
 
@@ -42,7 +40,6 @@ export function EditModal({
   editTitle,
   editFeedUrl,
   editCategoryId,
-  editFilterWords,
   editRemoveClickbait,
   editLoading,
   editError,
@@ -54,7 +51,6 @@ export function EditModal({
   onChangeTitle,
   onChangeFeedUrl,
   onChangeCategoryId,
-  onChangeFilterWords,
   onChangeRemoveClickbait,
 }: EditModalProps) {
   const handleSubmitCategory = async (event: React.FormEvent) => {
@@ -181,20 +177,6 @@ export function EditModal({
               }))}
               disabled={editLoading}
             />
-
-            <div className={styles.formField}>
-              <LabeledInput
-                id="edit-feed-filter-words"
-                label="Filter words"
-                value={editFilterWords}
-                onChange={onChangeFilterWords as (value: string) => void}
-                placeholder="war, politics, ads"
-                disabled={editLoading}
-              />
-              <div className={styles.help}>
-                Comma-separated words to block from entry titles.
-              </div>
-            </div>
 
             <label className={styles.checkboxRow}>
               <input

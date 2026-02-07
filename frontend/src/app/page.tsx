@@ -39,6 +39,7 @@ const SWIPE_THRESHOLD_PX = 60;
 const SWIPE_MAX_VERTICAL_PX = 50;
 const STORIES_WINDOW_STORAGE_KEY = 'peace-rss-stories-window-days';
 const DEFAULT_STORIES_WINDOW_DAYS: StoriesWindowDays = 30;
+const GLOBAL_FILTER_WORDS_DEBOUNCE_MS = 450;
 
 const getBrowserWindow = (): any => {
   if (typeof globalThis === 'undefined') return null;
@@ -127,6 +128,7 @@ export default function Home() {
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const isRefreshingRef = useRef(false);
   const doneTimeoutRef = useRef<number | null>(null);
+  const globalFilterWordsDebounceRef = useRef<number | null>(null);
   const hasInitialLoadRef = useRef(false);
   const lastSyncRef = useRef<number | null>(null);
   const autoMarkTimeoutRef = useRef<number | null>(null);
@@ -153,10 +155,15 @@ export default function Home() {
   const [editTitle, setEditTitle] = useState('');
   const [editFeedUrl, setEditFeedUrl] = useState('');
   const [editCategoryId, setEditCategoryId] = useState<number | null>(null);
-  const [editFilterWords, setEditFilterWords] = useState('');
   const [editRemoveClickbait, setEditRemoveClickbait] = useState(false);
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
+  const [globalFilterWords, setGlobalFilterWords] = useState('');
+  const [isApplyingGlobalFilterWords, setIsApplyingGlobalFilterWords] =
+    useState(false);
+  const [globalFilterWordsError, setGlobalFilterWordsError] = useState<
+    string | null
+  >(null);
 
   useEffect(() => {
     const win = getBrowserWindow();
@@ -303,11 +310,28 @@ export default function Home() {
   } = useUnreadCounters({ isProvisioned, feeds });
 
   const openMenuModal = useCallback(() => {
+    const win = getBrowserWindow();
+    if (win && globalFilterWordsDebounceRef.current !== null) {
+      win.clearTimeout(globalFilterWordsDebounceRef.current);
+      globalFilterWordsDebounceRef.current = null;
+    }
+
+    const words = new Set<string>();
+    for (const feed of feeds) {
+      for (const word of parseManagedFilterWordsFromBlocklistRules(
+        feed.blocklist_rules,
+      )) {
+        words.add(word);
+      }
+    }
+    setGlobalFilterWords(Array.from(words).sort().join(', '));
+    setGlobalFilterWordsError(null);
+
     setIsMenuModalOpen(true);
     setIsAddModalOpen(false);
     setIsEditModalOpen(false);
     setReturnToMenuAfterSubModal(false);
-  }, []);
+  }, [feeds]);
 
   const closeMenuModal = useCallback(() => {
     setIsMenuModalOpen(false);
@@ -351,6 +375,15 @@ export default function Home() {
     };
   }, []);
 
+  useEffect(() => {
+    const win = getBrowserWindow();
+    return () => {
+      if (globalFilterWordsDebounceRef.current !== null && win) {
+        win.clearTimeout(globalFilterWordsDebounceRef.current);
+      }
+    };
+  }, []);
+
   const openEditModal = useCallback(
     (type: 'feed' | 'category', item: Feed | Category) => {
       setEditType(type);
@@ -360,11 +393,6 @@ export default function Home() {
         const feed = item as Feed;
         setEditFeedUrl(feed.feed_url || '');
         setEditCategoryId(feed.category?.id || null);
-        setEditFilterWords(
-          parseManagedFilterWordsFromBlocklistRules(feed.blocklist_rules).join(
-            ', ',
-          ),
-        );
         setEditRemoveClickbait(hasRemoveClickbaitRule(feed.rewrite_rules));
       }
       setIsEditModalOpen(true);
@@ -385,7 +413,6 @@ export default function Home() {
     setEditTitle('');
     setEditFeedUrl('');
     setEditCategoryId(null);
-    setEditFilterWords('');
     setEditRemoveClickbait(false);
     setEditError(null);
   }, [returnToMenuAfterSubModal]);
@@ -1003,26 +1030,14 @@ export default function Home() {
 
     const trimmedTitle = editTitle.trim();
     const trimmedUrl = editFeedUrl.trim();
-    const { words: filterWords, invalid: invalidFilterWords } =
-      parseFilterWordsInput(editFilterWords);
 
     if (!trimmedTitle || !trimmedUrl) return false;
-    if (invalidFilterWords.length > 0) {
-      setEditError(
-        `Invalid filter words: ${invalidFilterWords.join(', ')}. Use letters, numbers, _ or -.`,
-      );
-      return false;
-    }
 
     setEditLoading(true);
     setEditError(null);
 
     try {
       const existingFeed = feedsById.get(editItemId);
-      const blocklistRules = mergeManagedFilterWordsIntoBlocklistRules(
-        existingFeed?.blocklist_rules,
-        filterWords,
-      );
       const rewriteRules = setRemoveClickbaitRule(
         existingFeed?.rewrite_rules,
         editRemoveClickbait,
@@ -1035,7 +1050,6 @@ export default function Home() {
           title: trimmedTitle,
           feed_url: trimmedUrl,
           category_id: editCategoryId,
-          blocklist_rules: blocklistRules,
           rewrite_rules: rewriteRules,
         }),
       });
@@ -1050,6 +1064,93 @@ export default function Home() {
       setEditLoading(false);
     }
   }
+
+  const applyGlobalFilterWords = useCallback(
+    async (input: string): Promise<boolean> => {
+      const { words, invalid } = parseFilterWordsInput(input);
+      const normalizedWords = words.join(', ');
+      if (invalid.length > 0) {
+        setGlobalFilterWordsError(
+          `Invalid filter words: ${invalid.join(', ')}. Use letters, numbers, _ or -.`,
+        );
+        return false;
+      }
+
+      const existingWords = new Set<string>();
+      for (const feed of feeds) {
+        for (const word of parseManagedFilterWordsFromBlocklistRules(
+          feed.blocklist_rules,
+        )) {
+          existingWords.add(word);
+        }
+      }
+      const existingCanonical = Array.from(existingWords).sort().join(',');
+      const nextCanonical = words.join(',');
+      if (existingCanonical === nextCanonical) {
+        setGlobalFilterWords(normalizedWords);
+        setGlobalFilterWordsError(null);
+        return true;
+      }
+
+      setIsApplyingGlobalFilterWords(true);
+      setGlobalFilterWordsError(null);
+
+      try {
+        await Promise.all(
+          feeds.map((feed) => {
+            const blocklistRules = mergeManagedFilterWordsIntoBlocklistRules(
+              feed.blocklist_rules,
+              words,
+            );
+            return fetchJson<{ ok: boolean }>(`/api/feeds/${feed.id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ blocklist_rules: blocklistRules }),
+            });
+          }),
+        );
+
+        await Promise.all([loadFeeds(), refreshUnreadCounters()]);
+        setGlobalFilterWords((currentValue) => {
+          const currentCanonical = parseFilterWordsInput(currentValue).words.join(
+            ',',
+          );
+          return currentCanonical === nextCanonical
+            ? normalizedWords
+            : currentValue;
+        });
+        return true;
+      } catch (e) {
+        setGlobalFilterWordsError(
+          e instanceof Error ? e.message : 'Failed to apply filter words',
+        );
+        return false;
+      } finally {
+        setIsApplyingGlobalFilterWords(false);
+      }
+    },
+    [feeds, loadFeeds, refreshUnreadCounters],
+  );
+
+  const handleGlobalFilterWordsChange = useCallback(
+    (value: string) => {
+      setGlobalFilterWords(value);
+      setGlobalFilterWordsError(null);
+
+      const win = getBrowserWindow();
+      if (!win) return;
+
+      if (globalFilterWordsDebounceRef.current !== null) {
+        win.clearTimeout(globalFilterWordsDebounceRef.current);
+      }
+
+      globalFilterWordsDebounceRef.current = win.setTimeout(() => {
+        globalFilterWordsDebounceRef.current = null;
+        void applyGlobalFilterWords(value);
+      }, GLOBAL_FILTER_WORDS_DEBOUNCE_MS);
+    },
+    [applyGlobalFilterWords],
+  );
 
   const toggleSearch = useCallback(() => {
     setIsSearchOpen((prev) => {
@@ -1640,6 +1741,11 @@ export default function Home() {
               isRefreshingFeeds={isRefreshingFeeds}
               lastRefreshedAt={lastRefreshedAt}
               isLoading={isLoading}
+              globalFilterWords={globalFilterWords}
+              onGlobalFilterWordsChange={handleGlobalFilterWordsChange}
+              onApplyGlobalFilterWords={applyGlobalFilterWords}
+              isApplyingGlobalFilterWords={isApplyingGlobalFilterWords}
+              globalFilterWordsError={globalFilterWordsError}
               starredEntries={starredEntries}
               onToggleEntryStar={toggleEntryStar}
             />
@@ -1679,7 +1785,6 @@ export default function Home() {
               editTitle={editTitle}
               editFeedUrl={editFeedUrl}
               editCategoryId={editCategoryId}
-              editFilterWords={editFilterWords}
               editRemoveClickbait={editRemoveClickbait}
               editLoading={editLoading}
               editError={editError}
@@ -1691,7 +1796,6 @@ export default function Home() {
               onChangeTitle={setEditTitle}
               onChangeFeedUrl={setEditFeedUrl}
               onChangeCategoryId={setEditCategoryId}
-              onChangeFilterWords={setEditFilterWords}
               onChangeRemoveClickbait={setEditRemoveClickbait}
             />
 

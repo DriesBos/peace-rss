@@ -20,6 +20,7 @@ import { IconPlus } from '@/components/icons/IconPlus';
 import { IconStar } from '@/components/icons/IconStar';
 import { IconWrapper } from '@/components/icons/IconWrapper/IconWrapper';
 import { LabelWithCount } from '@/components/LabelWithCount/LabelWithCount';
+import { LabeledInput } from '@/components/LabeledInput/LabeledInput';
 import type { Category, Entry, Feed } from '@/app/_lib/types';
 import { toast } from 'sonner';
 import { NOTIFICATION_COPY } from '@/lib/notificationCopy';
@@ -41,6 +42,11 @@ export type MenuModalProps = {
   isRefreshingFeeds: boolean;
   lastRefreshedAt: number | null;
   isLoading: boolean;
+  globalFilterWords: string;
+  onGlobalFilterWordsChange: (value: string) => void;
+  onApplyGlobalFilterWords: (value: string) => Promise<boolean>;
+  isApplyingGlobalFilterWords: boolean;
+  globalFilterWordsError: string | null;
   starredEntries: Entry[];
   onToggleEntryStar: (entryId: number) => Promise<void>;
 };
@@ -79,6 +85,11 @@ export function MenuModal({
   isRefreshingFeeds,
   lastRefreshedAt,
   isLoading,
+  globalFilterWords,
+  onGlobalFilterWordsChange,
+  onApplyGlobalFilterWords,
+  isApplyingGlobalFilterWords,
+  globalFilterWordsError,
   starredEntries,
   onToggleEntryStar,
 }: MenuModalProps) {
@@ -250,6 +261,13 @@ export function MenuModal({
     toast(NOTIFICATION_COPY.app.feedRefreshing);
     void onRefreshFeeds();
   }, [isLoading, onRefreshFeeds]);
+
+  const handleApplyGlobalFilterWords = useCallback(async () => {
+    const didSucceed = await onApplyGlobalFilterWords(globalFilterWords);
+    if (didSucceed) {
+      toast(NOTIFICATION_COPY.app.feedUpdated);
+    }
+  }, [globalFilterWords, onApplyGlobalFilterWords]);
 
   const refreshMeta = useMemo(() => {
     if (isRefreshingFeeds) return 'Refreshing feeds...';
@@ -504,6 +522,40 @@ export function MenuModal({
                   </div>
                 </div>
               )}
+
+              <div className={styles.otherSettings}>
+                <LabelWithCount count={0}>
+                  <span>Other Settings</span>
+                </LabelWithCount>
+
+                <div className={styles.otherSettings_Body}>
+                  <LabeledInput
+                    id="global-filter-words"
+                    label="Filter words"
+                    value={globalFilterWords}
+                    onChange={onGlobalFilterWordsChange}
+                    placeholder="war, politics, ads"
+                    disabled={isLoading}
+                  />
+                  <div className={styles.otherSettings_Help}>
+                    Comma-separated words to filter from all feed titles.
+                    Changes apply automatically to all feeds.
+                  </div>
+                  <Button
+                    type="button"
+                    variant="nav"
+                    onClick={() => void handleApplyGlobalFilterWords()}
+                    disabled={isLoading || isApplyingGlobalFilterWords}
+                  >
+                    {isApplyingGlobalFilterWords ? 'Applying...' : 'Apply now'}
+                  </Button>
+                  {globalFilterWordsError ? (
+                    <div className={styles.otherSettings_Error}>
+                      {globalFilterWordsError}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
             </div>
           </div>
         )}
