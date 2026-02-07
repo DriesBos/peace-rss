@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { createElement, useEffect, useMemo, useRef } from 'react';
+import { createElement, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import IntersectionImage from 'react-intersection-image';
 import styles from './EntryPanel.module.sass';
@@ -17,6 +17,10 @@ import { extractYouTubeVideoId, getYouTubeEmbedUrl } from '@/lib/youtube';
 import { IconWrapper } from '../icons/IconWrapper/IconWrapper';
 import { IconStar } from '../icons/IconStar';
 import { IconExit } from '../icons/IconExit';
+import {
+  extractThumbnailFromHtml,
+  resolveAbsoluteUrl,
+} from '@/lib/entryThumbnail';
 
 type LazyEntryContent = {
   nodes: ReactNode[];
@@ -515,17 +519,75 @@ export function EntryPanel({
   const selectedIsStarred = Boolean(entry?.starred);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
+  const lastEntryIdRef = useRef<number | null>(null);
   const entryId = entry?.id ?? null;
+  const [pinnedLeadImage, setPinnedLeadImage] = useState<LeadImageData | null>(
+    null,
+  );
+  const [isPinnedLeadImageErrored, setIsPinnedLeadImageErrored] =
+    useState(false);
+  const content = entry?.content?.trim() ?? '';
+  const hasContent = Boolean(content);
+  const originalFetchFailed = originalFetchStatus === 'error';
+  const showContent =
+    hasContent && (originalFetchStatus === 'success' || originalFetchFailed);
+  const showLoading = Boolean(entry) && !showContent && !originalFetchFailed;
 
   const leadImage = lazy?.leadImage ?? null;
-  const leadImageUrl = leadImage?.url.trim() || null;
-  const pinnedLeadImage = leadImageUrl
-    ? {
+  const fallbackThumbnailUrl = useMemo(() => {
+    const extracted = extractThumbnailFromHtml(entry?.content);
+    return resolveAbsoluteUrl(extracted, entry?.url);
+  }, [entry?.content, entry?.url]);
+  const preferredThumbnail = useMemo<LeadImageData | null>(() => {
+    const leadImageUrl = leadImage?.url?.trim();
+    if (leadImageUrl) {
+      return {
         url: leadImageUrl,
-        width: leadImage?.width,
-        height: leadImage?.height,
+        width: leadImage.width,
+        height: leadImage.height,
+      };
+    }
+
+    const fallbackUrl = fallbackThumbnailUrl?.trim();
+    if (fallbackUrl) {
+      return { url: fallbackUrl };
+    }
+
+    return null;
+  }, [
+    leadImage?.height,
+    leadImage?.url,
+    leadImage?.width,
+    fallbackThumbnailUrl,
+  ]);
+
+  useEffect(() => {
+    const isEntryChanged = lastEntryIdRef.current !== entryId;
+    if (isEntryChanged) {
+      lastEntryIdRef.current = entryId;
+      setPinnedLeadImage(preferredThumbnail);
+      setIsPinnedLeadImageErrored(false);
+      return;
+    }
+
+    if (!preferredThumbnail) return;
+
+    setIsPinnedLeadImageErrored(false);
+    setPinnedLeadImage((current) => {
+      if (
+        current?.url === preferredThumbnail.url &&
+        current.width === preferredThumbnail.width &&
+        current.height === preferredThumbnail.height
+      ) {
+        return current;
       }
-    : null;
+      return {
+        url: preferredThumbnail.url,
+        width: preferredThumbnail.width,
+        height: preferredThumbnail.height,
+      };
+    });
+  }, [entryId, preferredThumbnail]);
 
   useEffect(() => {
     if (entryId === null) return;
@@ -622,47 +684,51 @@ export function EntryPanel({
             </div>
           </div>
 
-          {entry.content ? (
-            lazy ? (
-              <div className={styles.entry_Content}>
-                {pinnedLeadImage ? (
-                  <div
-                    className={styles.entry_LeadImageWrapper}
-                    style={
-                      pinnedLeadImage.width && pinnedLeadImage.height
-                        ? {
-                            aspectRatio: `${pinnedLeadImage.width} / ${pinnedLeadImage.height}`,
-                          }
-                        : undefined
+          {pinnedLeadImage && !isPinnedLeadImageErrored ? (
+            <div
+              className={styles.entry_LeadImageWrapper}
+              style={
+                pinnedLeadImage.width && pinnedLeadImage.height
+                  ? {
+                      aspectRatio: `${pinnedLeadImage.width} / ${pinnedLeadImage.height}`,
                     }
-                  >
-                    <Image
-                      className={styles.entry_LeadImage}
-                      src={pinnedLeadImage.url}
-                      alt=""
-                      fill
-                      sizes="(max-width: 745px) 100vw, 800px"
-                      quality={75}
-                      unoptimized
-                      loading="lazy"
-                      style={{ objectFit: 'contain' }}
-                    />
-                  </div>
-                ) : null}
-                {lazy.nodes}
-              </div>
+                  : undefined
+              }
+            >
+              <Image
+                className={styles.entry_LeadImage}
+                src={pinnedLeadImage.url}
+                alt=""
+                fill
+                sizes="(max-width: 745px) 100vw, 800px"
+                quality={75}
+                unoptimized
+                loading="lazy"
+                style={{ objectFit: 'contain' }}
+                onError={() => setIsPinnedLeadImageErrored(true)}
+              />
+            </div>
+          ) : null}
+
+          {showLoading ? (
+            <div className={styles.entry_Loading}>Loading original content...</div>
+          ) : showContent ? (
+            lazy ? (
+              <div className={styles.entry_Content}>{lazy.nodes}</div>
             ) : (
               <div
                 className={styles.entry_Content}
                 dangerouslySetInnerHTML={{
-                  __html: entry.content,
+                  __html: content,
                 }}
               />
             )
           ) : (
             <div className={styles.content}>
               <div className={styles.entry_noContent}>
-                No content available.
+                {originalFetchFailed
+                  ? 'Could not fetch original content.'
+                  : 'No content available.'}
               </div>
               <div>
                 <a
