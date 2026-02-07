@@ -13,10 +13,7 @@ import { IconArrowShortLeft } from '@/components/icons/IconArrowShortLeft';
 import { IconArrowShortRight } from '@/components/icons/IconArrowShortRight';
 import { ScrollToTop } from '@/components/ScrollToTop/ScrollToTop';
 import type { Entry, Feed } from '@/app/_lib/types';
-import {
-  extractYouTubeVideoId,
-  getYouTubeEmbedUrl,
-} from '@/lib/youtube';
+import { extractYouTubeVideoId, getYouTubeEmbedUrl } from '@/lib/youtube';
 import { IconWrapper } from '../icons/IconWrapper/IconWrapper';
 import { IconStar } from '../icons/IconStar';
 import { IconExit } from '../icons/IconExit';
@@ -163,40 +160,40 @@ function extractLeadImage(
       }
     }
 
-	    if (img) {
-	      const src =
-	        img.getAttribute('src') ||
-	        img.getAttribute('data-src') ||
-	        img.getAttribute('data-lazy-src') ||
-	        img.getAttribute('data-original') ||
-	        '';
-	      const trimmed = src.trim();
-	      if (!trimmed) continue;
+    if (img) {
+      const src =
+        img.getAttribute('src') ||
+        img.getAttribute('data-src') ||
+        img.getAttribute('data-lazy-src') ||
+        img.getAttribute('data-original') ||
+        '';
+      const trimmed = src.trim();
+      if (!trimmed) continue;
 
-	      const widthAttr = img.getAttribute('width');
-	      const heightAttr = img.getAttribute('height');
-	      const parsedWidth = widthAttr ? Number.parseInt(widthAttr, 10) : NaN;
-	      const parsedHeight = heightAttr ? Number.parseInt(heightAttr, 10) : NaN;
+      const widthAttr = img.getAttribute('width');
+      const heightAttr = img.getAttribute('height');
+      const parsedWidth = widthAttr ? Number.parseInt(widthAttr, 10) : NaN;
+      const parsedHeight = heightAttr ? Number.parseInt(heightAttr, 10) : NaN;
 
-	      const resolvedUrl = resolveUrl(trimmed, baseUrl);
+      const resolvedUrl = resolveUrl(trimmed, baseUrl);
 
-	      return {
-	        url: resolvedUrl,
-	        width:
-	          Number.isFinite(parsedWidth) && parsedWidth > 0
-	            ? parsedWidth
-	            : undefined,
-	        height:
-	          Number.isFinite(parsedHeight) && parsedHeight > 0
-	            ? parsedHeight
-	            : undefined,
-	        cleanup: elementToRemove
-	          ? () => {
-	              elementToRemove.remove();
-	            }
-	          : undefined,
-	      };
-	    }
+      return {
+        url: resolvedUrl,
+        width:
+          Number.isFinite(parsedWidth) && parsedWidth > 0
+            ? parsedWidth
+            : undefined,
+        height:
+          Number.isFinite(parsedHeight) && parsedHeight > 0
+            ? parsedHeight
+            : undefined,
+        cleanup: elementToRemove
+          ? () => {
+              elementToRemove.remove();
+            }
+          : undefined,
+      };
+    }
   }
 
   return null;
