@@ -5,15 +5,13 @@ import { IconWrapper } from '@/components/icons/IconWrapper/IconWrapper';
 import { EscapeToHome } from '@/components/EscapeToHome/EscapeToHome';
 
 const TIPS = [
-  'Pull down at the top of the page to refresh your feeds.',
-  'Press R to refresh your feed.',
-  'Press + to open the Add modal from anywhere.',
-  'Press ArrowDown to move to the next entry.',
-  'Press ArrowUp to move to the previous entry.',
-  'When an entry is open, press ArrowRight for next and ArrowLeft for previous.',
-  'Press Escape to close any open panel or modal. On info pages, Escape returns to Home.',
+  'Pull down — refresh feed',
+  '"R" — refresh feed',
+  '"+" — add content',
+  '"m" — toggle an article asread/unread',
+  '"esc" — close panel or modal or returns to Home.',
+  '"← →" — prev/next article',
   'Swipe left or right on stories to navigate.',
-  'Use the menu to jump between categories and starred entries.',
 ];
 
 export default function TipsPage() {
