@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import styles from './HeaderCategories.module.sass';
 import { Button } from '@/components/Button/Button';
 import { IconMenu } from '@/components/icons/IconMenu';
 import { IconWrapper } from '@/components/icons/IconWrapper/IconWrapper';
-import type { Category } from '@/app/_lib/types';
+import type { Category, Feed } from '@/app/_lib/types';
 import { IconSearch } from '@/components/icons/IconSearch';
 import { IconCategories } from '../icons/IconCategories';
 import { IconStar } from '../icons/IconStar';
@@ -17,6 +17,7 @@ export type HeaderCategoriesProps = {
   onToggleCategories: () => void;
   isOffline: boolean;
   categories: Category[];
+  feeds: Feed[];
   selectedCategoryId: number | null;
   isStarredView: boolean;
   categoryUnreadCounts: Map<number, number>;
@@ -39,6 +40,7 @@ export function HeaderCategories({
   onToggleCategories,
   isOffline,
   categories,
+  feeds,
   selectedCategoryId,
   isStarredView,
   categoryUnreadCounts,
@@ -54,6 +56,21 @@ export function HeaderCategories({
   onSelectCategory,
 }: HeaderCategoriesProps) {
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+
+  const categoriesWithFeeds = useMemo(() => {
+    const categoryFeedCounts = new Map<number, number>();
+    for (const feed of feeds) {
+      const categoryId = feed.category?.id;
+      if (categoryId == null) continue;
+      categoryFeedCounts.set(
+        categoryId,
+        (categoryFeedCounts.get(categoryId) ?? 0) + 1,
+      );
+    }
+    return categories.filter(
+      (cat) => (categoryFeedCounts.get(cat.id) ?? 0) > 0,
+    );
+  }, [categories, feeds]);
 
   useEffect(() => {
     if (!isSearchOpen) return;
@@ -168,7 +185,7 @@ export function HeaderCategories({
                 <span>Starred</span>
               </Button>
             </li>
-            {categories.map((cat) => (
+            {categoriesWithFeeds.map((cat) => (
               <li key={cat.id}>
                 <Button
                   type="button"

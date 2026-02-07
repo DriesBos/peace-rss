@@ -11,6 +11,31 @@ import {
   Serwist,
 } from "serwist";
 
+const apiNetworkErrorFallbackPlugin = {
+  // Avoid unhandled `no-response` errors in the console when the API is unreachable.
+  // Return a synthetic JSON response so the app can surface a useful error message.
+  handlerDidError: async (param: unknown) => {
+    const requestUrl =
+      param &&
+      typeof param === "object" &&
+      "request" in param &&
+      (param as { request?: unknown }).request instanceof Request
+        ? (param as { request: Request }).request.url
+        : "";
+
+    return new Response(
+      JSON.stringify({
+        error: "API request failed (network error)",
+        url: requestUrl,
+      }),
+      {
+        status: 503,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
+  },
+};
+
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
     __SW_MANIFEST: Array<PrecacheEntry | string>;
@@ -36,6 +61,7 @@ const apiRuntimeCache = {
     cacheName: "api-cache",
     networkTimeoutSeconds: 3,
     plugins: [
+      apiNetworkErrorFallbackPlugin,
       new CacheableResponsePlugin({ statuses: [200] }),
       new ExpirationPlugin({
         maxEntries: 200,

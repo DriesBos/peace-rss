@@ -3,8 +3,10 @@
 import { useInView } from 'react-intersection-observer';
 import styles from './EntryList.module.sass';
 import { EntryItem } from '@/components/EntryItem/EntryItem';
+import { EntryItemYoutube } from '@/components/EntryItemYoutube/EntryItemYoutube';
 import { Button } from '@/components/Button/Button';
 import type { Entry, Feed } from '@/app/_lib/types';
+import { extractYouTubeVideoId } from '@/lib/youtube';
 
 function formatDate(value?: string): string {
   if (!value) return '';
@@ -41,21 +43,33 @@ function LazyEntryItem({
     entry.feed?.title ??
     feedsById.get(entry.feed_id)?.title;
   const published = formatDate(entry.published_at);
+  const youtubeId = entry.url ? extractYouTubeVideoId(entry.url) : null;
 
   return (
     <div ref={ref} className={styles.lazyEntryWrapper}>
       {inView && (
-        <EntryItem
-          title={entry.title}
-          author={entry.author}
-          feedTitle={feedTitle}
-          publishedAt={published}
-          active={isActive}
-          marked={entry.status === 'read'}
-          content={entry.content}
-          url={entry.url}
-          onClick={() => onEntryClick(entry.id)}
-        />
+        youtubeId ? (
+          <EntryItemYoutube
+            title={entry.title}
+            author={entry.author}
+            feedTitle={feedTitle}
+            publishedAt={published}
+            videoId={youtubeId}
+            marked={entry.status === 'read'}
+          />
+        ) : (
+          <EntryItem
+            title={entry.title}
+            author={entry.author}
+            feedTitle={feedTitle}
+            publishedAt={published}
+            active={isActive}
+            marked={entry.status === 'read'}
+            content={entry.content}
+            url={entry.url}
+            onClick={() => onEntryClick(entry.id)}
+          />
+        )
       )}
     </div>
   );

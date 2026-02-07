@@ -1597,6 +1597,7 @@ export default function Home() {
               onToggleCategories={toggleCategories}
               isOffline={isOffline}
               categories={categories}
+              feeds={feeds}
               selectedCategoryId={selectedCategoryId}
               isStarredView={isStarredView}
               categoryUnreadCounts={categoryUnreadCounts}
