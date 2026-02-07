@@ -18,7 +18,7 @@ services:
       BASE_URL: ${MINIFLUX_PUBLIC_URL}
       RUN_MIGRATIONS: '1'
       # Admin bootstrap (optional if already created)
-      CREATE_ADMIN: '1'
+      CREATE_ADMIN: '0'
       ADMIN_USERNAME: ${MINIFLUX_ADMIN_USERNAME}
       ADMIN_PASSWORD: ${MINIFLUX_ADMIN_PASSWORD}
     restart: unless-stopped
