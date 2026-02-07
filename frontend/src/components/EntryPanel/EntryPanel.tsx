@@ -539,13 +539,15 @@ export function EntryPanel({
     return resolveAbsoluteUrl(extracted, entry?.url);
   }, [entry?.content, entry?.url]);
   const preferredThumbnail = useMemo<LeadImageData | null>(() => {
-    const leadImageUrl = leadImage?.url?.trim();
-    if (leadImageUrl) {
+    if (leadImage) {
+      const leadImageUrl = leadImage.url.trim();
+      if (leadImageUrl) {
       return {
         url: leadImageUrl,
         width: leadImage.width,
         height: leadImage.height,
       };
+      }
     }
 
     const fallbackUrl = fallbackThumbnailUrl?.trim();
