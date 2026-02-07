@@ -1,8 +1,6 @@
-import Link from 'next/link';
 import styles from './page.module.sass';
-import { IconArrowLeft } from '@/components/icons/IconArrowLeft';
-import { IconWrapper } from '@/components/icons/IconWrapper/IconWrapper';
 import { EscapeToHome } from '@/components/EscapeToHome/EscapeToHome';
+import { BackButton } from '@/components/BackButton/BackButton';
 
 const TIPS = [
   'Pull down — refresh feed',
@@ -19,12 +17,7 @@ export default function TipsPage() {
     <div className={styles.tipsPage}>
       <EscapeToHome />
       <div className={styles.content}>
-        <Link href="/" className={styles.backButton} aria-label="Back to home">
-          <IconWrapper variant="wide">
-            <IconArrowLeft />
-          </IconWrapper>
-          <span>Back</span>
-        </Link>
+        <BackButton />
 
         <div className={styles.textBlock}>
           <h2 className={styles.sectionTitle}>Tips</h2>

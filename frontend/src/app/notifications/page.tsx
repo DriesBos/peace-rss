@@ -1,13 +1,11 @@
 'use client';
 
-import Link from 'next/link';
 import { toast } from 'sonner';
 import styles from './page.module.sass';
-import { IconArrowLeft } from '@/components/icons/IconArrowLeft';
-import { IconWrapper } from '@/components/icons/IconWrapper/IconWrapper';
 import { Button } from '@/components/Button/Button';
 import { NOTIFICATION_COPY } from '@/lib/notificationCopy';
 import { EscapeToHome } from '@/components/EscapeToHome/EscapeToHome';
+import { BackButton } from '@/components/BackButton/BackButton';
 
 type ToastButton = {
   id: string;
@@ -120,12 +118,7 @@ export default function NotificationsPage() {
     <div className={styles.notificationsPage}>
       <EscapeToHome />
       <div className={styles.content}>
-        <Link href="/" className={styles.backButton} aria-label="Back to home">
-          <IconWrapper variant="wide">
-            <IconArrowLeft />
-          </IconWrapper>
-          <span>Back</span>
-        </Link>
+        <BackButton />
 
         <div className={styles.textBlock}>
           <h2 className={styles.sectionTitle}>Notifications</h2>

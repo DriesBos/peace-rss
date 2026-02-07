@@ -1,8 +1,6 @@
-import Link from 'next/link';
 import styles from './page.module.sass';
-import { IconArrowLeft } from '@/components/icons/IconArrowLeft';
-import { IconWrapper } from '@/components/icons/IconWrapper/IconWrapper';
 import { EscapeToHome } from '@/components/EscapeToHome/EscapeToHome';
+import { BackButton } from '@/components/BackButton/BackButton';
 
 const VALUES = [
   'Take (back) control of your news feed — We pull news from sites that abuse attention and reformat it.',
@@ -15,12 +13,7 @@ export default function AboutPage() {
     <div className={styles.aboutPage}>
       <EscapeToHome />
       <div className={styles.content}>
-        <Link href="/" className={styles.backButton} aria-label="Back to home">
-          <IconWrapper variant="wide">
-            <IconArrowLeft />
-          </IconWrapper>
-          <span>Back</span>
-        </Link>
+        <BackButton />
 
         <div className={styles.textBlock}>
           <p className={styles.lead}>
