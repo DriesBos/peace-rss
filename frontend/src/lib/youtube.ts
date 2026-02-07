@@ -61,13 +61,26 @@ export function getYouTubePosterUrl(videoId: string): string {
   return `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
 }
 
-export function getYouTubeEmbedUrl(videoId: string): string {
+export type YouTubeEmbedOptions = {
+  autoplay?: boolean;
+  controls?: 0 | 1;
+  mute?: boolean;
+};
+
+export function getYouTubeEmbedUrl(
+  videoId: string,
+  options: YouTubeEmbedOptions = {},
+): string {
   // Privacy-enhanced mode.
   const qs = new URLSearchParams({
     rel: '0',
     modestbranding: '1',
     playsinline: '1',
   });
+
+  if (options.autoplay) qs.set('autoplay', '1');
+  if (options.controls !== undefined) qs.set('controls', String(options.controls));
+  if (options.mute) qs.set('mute', '1');
+
   return `https://www.youtube-nocookie.com/embed/${videoId}?${qs.toString()}`;
 }
-

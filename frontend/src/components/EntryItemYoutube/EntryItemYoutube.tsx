@@ -1,9 +1,10 @@
 'use client';
 
-import { useMemo } from 'react';
+import Image from 'next/image';
+import { useMemo, useState } from 'react';
 import styles from './EntryItemYoutube.module.sass';
 import { FormattedDate } from '../FormattedDate';
-import { getYouTubeEmbedUrl } from '@/lib/youtube';
+import { getYouTubeEmbedUrl, getYouTubePosterUrl } from '@/lib/youtube';
 
 export type EntryItemYoutubeProps = {
   title?: string;
@@ -22,22 +23,47 @@ export function EntryItemYoutube({
   videoId,
   marked,
 }: EntryItemYoutubeProps) {
-  const embedUrl = useMemo(() => getYouTubeEmbedUrl(videoId), [videoId]);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const autoplayUrl = useMemo(
+    () => getYouTubeEmbedUrl(videoId, { autoplay: true }),
+    [videoId],
+  );
+  const posterUrl = useMemo(() => getYouTubePosterUrl(videoId), [videoId]);
   const byline = author ? `${author}${feedTitle ? `, ${feedTitle}` : ''}` : feedTitle;
 
   return (
     <div className={styles.entryItemYoutube} data-marked={marked ? 'true' : 'false'}>
       <div className={styles.entryItemYoutube_Player}>
-        <iframe
-          className={styles.entryItemYoutube_Iframe}
-          src={embedUrl}
-          title={title || 'YouTube video'}
-          loading="lazy"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-          referrerPolicy="strict-origin-when-cross-origin"
-          sandbox="allow-scripts allow-same-origin allow-presentation"
-          allowFullScreen
-        />
+        {isPlaying ? (
+          <iframe
+            className={styles.entryItemYoutube_Iframe}
+            src={autoplayUrl}
+            title={title || 'YouTube video'}
+            loading="lazy"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            referrerPolicy="strict-origin-when-cross-origin"
+            sandbox="allow-scripts allow-same-origin allow-presentation"
+            allowFullScreen
+          />
+        ) : (
+          <>
+            <Image
+              src={posterUrl}
+              alt=""
+              fill
+              sizes="(max-width: 745px) 100vw, 376px"
+              quality={60}
+              loading="lazy"
+              style={{ objectFit: 'cover' }}
+            />
+            <button
+              type="button"
+              className={styles.entryItemYoutube_PlayButton}
+              aria-label={title ? `Play: ${title}` : 'Play video'}
+              onClick={() => setIsPlaying(true)}
+            />
+          </>
+        )}
       </div>
 
       <div className={styles.entryItemYoutube_Body}>
@@ -62,4 +88,3 @@ export function EntryItemYoutube({
     </div>
   );
 }
-
