@@ -71,13 +71,13 @@
   &_LeadImageWrapper
     width: 100%
     max-width: 100%
-    aspect-ratio: 16 / 9
     position: relative
-    overflow: hidden
-    border-radius: var(--border-radius-image)
     margin-bottom: 1rem
-  &_LeadImage
-    object-fit: contain
+    padding: 0 var(--space-sides-general)
+    img
+      position: relative !important
+      width: 100%
+      height: auto !important
   &_noContent
     @include font-body
     display: flex

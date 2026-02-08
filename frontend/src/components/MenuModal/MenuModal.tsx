@@ -531,7 +531,7 @@ export function MenuModal({
                 <div className={styles.otherSettings_Body}>
                   <LabeledInput
                     id="global-filter-words"
-                    label="Filter words"
+                    label="Filter-out words"
                     value={globalFilterWords}
                     onChange={onGlobalFilterWordsChange}
                     placeholder="war, politics, ads"
