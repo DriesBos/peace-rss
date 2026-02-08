@@ -39,6 +39,12 @@ const proxySourceLimitPerMinute = (() => {
   return Math.floor(value);
 })();
 
+const proxyUpstreamTimeoutMs = (() => {
+  const value = Number(process.env.SOCIAL_PROXY_UPSTREAM_TIMEOUT_MS || '8000');
+  if (!Number.isFinite(value) || value <= 0) return 8000;
+  return Math.floor(value);
+})();
+
 function buildAuthorizationHeader(
   username?: string,
   password?: string
@@ -58,6 +64,25 @@ class UpstreamBridgeError extends Error {
     this.status = status;
     this.retryAfterSeconds = retryAfterSeconds;
   }
+}
+
+class UpstreamBridgeTimeoutError extends Error {
+  timeoutMs: number;
+
+  constructor(timeoutMs: number) {
+    super(`Upstream RSS-Bridge timed out after ${timeoutMs}ms`);
+    this.name = 'UpstreamBridgeTimeoutError';
+    this.timeoutMs = timeoutMs;
+  }
+}
+
+function isAbortError(err: unknown): boolean {
+  return (
+    typeof err === 'object' &&
+    err !== null &&
+    'name' in err &&
+    (err as { name?: string }).name === 'AbortError'
+  );
 }
 
 export async function GET(
@@ -155,11 +180,34 @@ export async function GET(
     if (authHeader) headers.set('Authorization', authHeader);
 
     const fresh = await coalesceSocialProxyRequest(sourceKey, async () => {
-      const res = await fetch(payload.bridgeFeedUrl, {
-        method: 'GET',
-        headers,
-        cache: 'no-store',
-      });
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        controller.abort();
+      }, proxyUpstreamTimeoutMs);
+
+      let res: Response;
+      try {
+        res = await fetch(payload.bridgeFeedUrl, {
+          method: 'GET',
+          headers,
+          cache: 'no-store',
+          signal: controller.signal,
+        });
+      } catch (fetchErr) {
+        if (isAbortError(fetchErr)) {
+          throw new UpstreamBridgeTimeoutError(proxyUpstreamTimeoutMs);
+        }
+        const message =
+          fetchErr instanceof Error
+            ? fetchErr.message
+            : 'Unknown upstream fetch error';
+        throw new UpstreamBridgeError(
+          `Failed to reach RSS-Bridge upstream: ${message}`,
+          503
+        );
+      } finally {
+        clearTimeout(timeoutId);
+      }
 
       if (!res.ok) {
         const text = await res.text().catch(() => '');
@@ -203,6 +251,23 @@ export async function GET(
       },
     });
   } catch (err) {
+    if (err instanceof UpstreamBridgeTimeoutError) {
+      incrementSocialMetric('social_proxy_upstream_errors_total', {
+        status: 504,
+      });
+      recordSocialEvent('social_proxy_upstream_error', {
+        status: 504,
+        message: err.message,
+      });
+
+      return new Response(err.message, {
+        status: 504,
+        headers: {
+          'Content-Type': 'text/plain; charset=utf-8',
+        },
+      });
+    }
+
     if (err instanceof UpstreamBridgeError) {
       incrementSocialMetric('social_proxy_upstream_errors_total', {
         status: err.status,

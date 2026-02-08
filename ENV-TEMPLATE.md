@@ -44,13 +44,6 @@ SOCIAL_FEED_TOKEN_SECRET=replace_with_a_long_random_secret
 # Optional token to protect /api/social/metrics (set to enable endpoint)
 SOCIAL_METRICS_TOKEN=replace_with_metrics_token
 
-# Phase 2/3 tuning (defaults shown)
-SOCIAL_CREATE_RATE_LIMIT_PER_MINUTE=20
-SOCIAL_PROXY_GLOBAL_RATE_LIMIT_PER_MINUTE=300
-SOCIAL_PROXY_SOURCE_RATE_LIMIT_PER_MINUTE=120
-SOCIAL_PROXY_CACHE_TTL_MS=120000
-SOCIAL_DISCOVERY_CACHE_TTL_MS=600000
-
 # ============================================
 # PostgreSQL Database
 # ============================================
@@ -109,6 +102,7 @@ docker compose exec frontend env | grep -E 'CLERK|MINIFLUX'
 # SOCIAL_CREATE_RATE_LIMIT_PER_MINUTE=20
 # SOCIAL_PROXY_GLOBAL_RATE_LIMIT_PER_MINUTE=300
 # SOCIAL_PROXY_SOURCE_RATE_LIMIT_PER_MINUTE=120
+# SOCIAL_PROXY_UPSTREAM_TIMEOUT_MS=8000
 # SOCIAL_PROXY_CACHE_TTL_MS=120000
 # SOCIAL_DISCOVERY_CACHE_TTL_MS=600000
 ```

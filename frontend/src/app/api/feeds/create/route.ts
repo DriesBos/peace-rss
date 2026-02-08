@@ -365,6 +365,7 @@ export async function POST(request: NextRequest) {
 
     // Provide more helpful error messages
     let errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    let status = 500;
 
     if (errorMessage.includes('unable to detect feed format')) {
       errorMessage =
@@ -374,6 +375,19 @@ export async function POST(request: NextRequest) {
         '• The page contains an RSS/Atom feed or links to one';
     }
 
-    return NextResponse.json({ error: errorMessage }, { status: 500 });
+    const isSocialProxyTimeout =
+      errorMessage.includes('/api/social/rss/') &&
+      (errorMessage.includes('context deadline exceeded') ||
+        errorMessage.includes('Upstream RSS-Bridge timed out') ||
+        errorMessage.includes('Failed to reach RSS-Bridge upstream'));
+
+    if (isSocialProxyTimeout) {
+      status = 504;
+      errorMessage =
+        'The social feed source is taking too long to respond. ' +
+        'Please try again in a moment. If this keeps happening, check RSS-Bridge availability.';
+    }
+
+    return NextResponse.json({ error: errorMessage }, { status });
   }
 }
