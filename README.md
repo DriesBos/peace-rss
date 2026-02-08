@@ -32,6 +32,7 @@ Note: the `frontend` container runs a production Next.js build, so edits to file
 - Architecture and data flow: `docs/ARCHITECTURE.md`
 - Project layout guide: `docs/PROJECT-STRUCTURE.md`
 - Development workflows: `docs/DEVELOPMENT.md`
+- App behavior notes: `docs/APP-BEHAVIOR.md`
 
 ## Social Feed Ops
 

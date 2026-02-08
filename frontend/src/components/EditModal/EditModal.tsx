@@ -9,6 +9,7 @@ import { Button } from '@/components/Button/Button';
 import { toast } from 'sonner';
 import { NOTIFICATION_COPY } from '@/lib/notificationCopy';
 import { useKeydown } from '@/hooks/useKeydown';
+import { isProtectedCategoryTitle } from '@/lib/protectedCategories';
 
 export type EditModalProps = {
   isOpen: boolean;
@@ -19,6 +20,8 @@ export type EditModalProps = {
   editFeedUrl: string;
   editCategoryId: number | null;
   editRemoveClickbait: boolean;
+  editFeedLayout: 'default' | 'youtube' | 'instagram' | 'twitter';
+  isEditingProtectedCategory: boolean;
   editLoading: boolean;
   editError: string | null;
   onClose: () => void;
@@ -41,6 +44,8 @@ export function EditModal({
   editFeedUrl,
   editCategoryId,
   editRemoveClickbait,
+  editFeedLayout,
+  isEditingProtectedCategory,
   editLoading,
   editError,
   onClose,
@@ -91,53 +96,76 @@ export function EditModal({
       <div className={styles.editModal}>
         {editType === 'category' ? (
           <form onSubmit={handleSubmitCategory} className={styles.editForm}>
-            <div className={styles.formField}>
-              <LabeledInput
-                id="edit-category-title"
-                label="Category name"
-                value={editTitle}
-                onChange={onChangeTitle as (value: string) => void}
-                placeholder="Category name"
-                disabled={editLoading}
-              />
-            </div>
+            {isEditingProtectedCategory ? (
+              <>
+                <div className={styles.formField}>
+                  <div className={styles.help}>
+                    This category is managed automatically and can’t be edited or
+                    deleted.
+                  </div>
+                </div>
+                <div className={styles.formActions}>
+                  <Button
+                    variant="primary"
+                    type="button"
+                    onClick={onClose}
+                    disabled={editLoading}
+                  >
+                    Close
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className={styles.formField}>
+                  <LabeledInput
+                    id="edit-category-title"
+                    label="Category name"
+                    value={editTitle}
+                    onChange={onChangeTitle as (value: string) => void}
+                    placeholder="Category name"
+                    disabled={editLoading}
+                  />
+                </div>
 
-            <div className={styles.formActions}>
-              <Button
-                variant="primary"
-                type="submit"
-                disabled={editLoading || !editTitle.trim()}
-              >
-                {editLoading ? 'Saving...' : 'Save changes'}
-              </Button>
-              <Button
-                variant="primary"
-                type="button"
-                onClick={() => {
-                  if (
-                    editItemId &&
-                    confirm('Are you sure you want to delete this category?')
-                  ) {
-                    onDeleteCategory(editItemId);
-                    toast(NOTIFICATION_COPY.app.categoryDeleted);
-                    onClose();
-                  }
-                }}
-                disabled={editLoading}
-              >
-                Delete
-              </Button>
-              <Button
-                variant="primary"
-                type="button"
-                onClick={onClose}
-                disabled={editLoading}
-              >
-                Cancel
-              </Button>
-            </div>
+                <div className={styles.formActions}>
+                  <Button
+                    variant="primary"
+                    type="submit"
+                    disabled={editLoading || !editTitle.trim()}
+                  >
+                    {editLoading ? 'Saving...' : 'Save changes'}
+                  </Button>
+                  <Button
+                    variant="primary"
+                    type="button"
+                    onClick={() => {
+                      if (
+                        editItemId &&
+                        confirm('Are you sure you want to delete this category?')
+                      ) {
+                        onDeleteCategory(editItemId);
+                        toast(NOTIFICATION_COPY.app.categoryDeleted);
+                        onClose();
+                      }
+                    }}
+                    disabled={editLoading}
+                  >
+                    Delete
+                  </Button>
+                  <Button
+                    variant="primary"
+                    type="button"
+                    onClick={onClose}
+                    disabled={editLoading}
+                  >
+                    Cancel
+                  </Button>
+                </div>
 
-            {editError && <div className={styles.error}>{editError}</div>}
+                {editError && <div className={styles.error}>{editError}</div>}
+              </>
+            )}
           </form>
         ) : (
           <form onSubmit={handleSubmitFeed} className={styles.editForm}>
@@ -163,32 +191,45 @@ export function EditModal({
               />
             </div>
 
-            <LabeledSelect
-              id="edit-feed-category"
-              label="Category"
-              value={editCategoryId ? String(editCategoryId) : ''}
-              onChange={(value) =>
-                onChangeCategoryId(value ? Number(value) : null)
-              }
-              placeholder="Select category"
-              options={categories.map((cat) => ({
-                value: String(cat.id),
-                label: cat.title,
-              }))}
-              disabled={editLoading}
-            />
+            {editFeedLayout === 'default' ? (
+              <>
+                <LabeledSelect
+                  id="edit-feed-category"
+                  label="Category"
+                  value={editCategoryId ? String(editCategoryId) : ''}
+                  onChange={(value) =>
+                    onChangeCategoryId(value ? Number(value) : null)
+                  }
+                  placeholder="Select category"
+                  options={categories
+                    .filter(
+                      (cat) => !isProtectedCategoryTitle(cat.title),
+                    )
+                    .map((cat) => ({
+                      value: String(cat.id),
+                      label: cat.title,
+                    }))}
+                  disabled={editLoading}
+                />
 
-            <label className={styles.checkboxRow}>
-              <input
-                type="checkbox"
-                checked={editRemoveClickbait}
-                onChange={(event) =>
-                  onChangeRemoveClickbait(event.currentTarget.checked)
-                }
-                disabled={editLoading}
-              />
-              <span>Apply Miniflux `remove_clickbait` title rewrite</span>
-            </label>
+                <label className={styles.checkboxRow}>
+                  <input
+                    type="checkbox"
+                    checked={editRemoveClickbait}
+                    onChange={(event) =>
+                      onChangeRemoveClickbait(event.currentTarget.checked)
+                    }
+                    disabled={editLoading}
+                  />
+                  <span>Apply Miniflux `remove_clickbait` title rewrite</span>
+                </label>
+              </>
+            ) : (
+              <div className={styles.help}>
+                This feed is assigned automatically and can’t be moved to a
+                different category.
+              </div>
+            )}
 
             <div className={styles.formActions}>
               <Button

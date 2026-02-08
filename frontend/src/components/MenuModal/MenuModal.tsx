@@ -25,6 +25,8 @@ import type { Category, Entry, Feed } from '@/app/_lib/types';
 import { toast } from 'sonner';
 import { NOTIFICATION_COPY } from '@/lib/notificationCopy';
 import { useKeydown } from '@/hooks/useKeydown';
+import { isYouTubeFeedUrl } from '@/lib/youtube';
+import { normalizeCategoryTitle } from '@/lib/protectedCategories';
 
 type MenuView = 'feeds' | 'look' | 'other';
 type StoriesWindowDays = 7 | 30 | 90;
@@ -219,6 +221,75 @@ export function MenuModal({
     [feeds, categories],
   );
 
+  const protectedCategoriesByKind = useMemo(() => {
+    const map = new Map<'youtube' | 'instagram' | 'twitter', Category>();
+    for (const cat of categories) {
+      const kind = normalizeCategoryTitle(cat.title);
+      if (kind === 'youtube' || kind === 'instagram' || kind === 'twitter') {
+        map.set(kind, cat);
+      }
+    }
+    return map;
+  }, [categories]);
+
+  const youtubeCategory = protectedCategoriesByKind.get('youtube') ?? null;
+  const instagramCategory = protectedCategoriesByKind.get('instagram') ?? null;
+  const twitterCategory = protectedCategoriesByKind.get('twitter') ?? null;
+
+  const protectedCategoryIds = useMemo(() => {
+    return new Set<number>(
+      Array.from(protectedCategoriesByKind.values()).map((cat) => cat.id),
+    );
+  }, [protectedCategoriesByKind]);
+
+  const youtubeFeeds = useMemo(() => {
+    return feeds.filter((feed) => {
+      if (youtubeCategory && feed.category?.id === youtubeCategory.id)
+        return true;
+      return Boolean(feed.feed_url && isYouTubeFeedUrl(feed.feed_url));
+    });
+  }, [feeds, youtubeCategory]);
+
+  const instagramFeeds = useMemo(() => {
+    if (!instagramCategory) return [];
+    return feeds.filter((feed) => feed.category?.id === instagramCategory.id);
+  }, [feeds, instagramCategory]);
+
+  const twitterFeeds = useMemo(() => {
+    if (!twitterCategory) return [];
+    return feeds.filter((feed) => feed.category?.id === twitterCategory.id);
+  }, [feeds, twitterCategory]);
+
+  const protectedFeedIds = useMemo(() => {
+    const ids = new Set<number>();
+    for (const feed of feeds) {
+      if (feed.category?.id && protectedCategoryIds.has(feed.category.id)) {
+        ids.add(feed.id);
+        continue;
+      }
+      if (feed.feed_url && isYouTubeFeedUrl(feed.feed_url)) {
+        ids.add(feed.id);
+      }
+    }
+    return ids;
+  }, [feeds, protectedCategoryIds]);
+
+  const nonProtectedFeeds = useMemo(() => {
+    if (protectedFeedIds.size === 0) return feeds;
+    return feeds.filter((feed) => !protectedFeedIds.has(feed.id));
+  }, [feeds, protectedFeedIds]);
+
+  const uncategorizedNonProtectedFeeds = useMemo(() => {
+    if (protectedFeedIds.size === 0) return uncategorizedFeeds;
+    return uncategorizedFeeds.filter((feed) => !protectedFeedIds.has(feed.id));
+  }, [uncategorizedFeeds, protectedFeedIds]);
+
+  const regularCategories = useMemo(() => {
+    const rest = categories.slice(1);
+    if (protectedCategoryIds.size === 0) return rest;
+    return rest.filter((cat) => !protectedCategoryIds.has(cat.id));
+  }, [categories, protectedCategoryIds]);
+
   const handleOpenAddModal = useCallback(() => {
     setActiveView('feeds');
     resetCollapsedCategories();
@@ -319,8 +390,10 @@ export function MenuModal({
           </LabelWithCount>
         </div>
 
+        {/* FEEDS VIEW (organise) */}
         {activeView === 'feeds' && (
           <div className={styles.viewFeeds}>
+            {/* ADD CONTENT BUTTON */}
             <Button
               type="button"
               onClick={handleOpenAddModal}
@@ -333,18 +406,8 @@ export function MenuModal({
               </IconWrapper>
               <span>Add content</span>
             </Button>
-            <Button
-              type="button"
-              onClick={handleRefreshFeeds}
-              disabled={isLoading}
-              variant="nav"
-              className={styles.refreshButton}
-            >
-              <span>Refresh feeds</span>
-              <span className={styles.refreshShortcut}>R</span>
-            </Button>
-            <div className={styles.refreshMeta}>{refreshMeta}</div>
 
+            {/* FEEDS LIST */}
             <div
               className={styles.categoriesFeedsList}
               ref={categoriesListRef}
@@ -356,7 +419,7 @@ export function MenuModal({
                   : undefined
               }
             >
-              <LabelWithCount count={feeds.length}>
+              <LabelWithCount count={nonProtectedFeeds.length}>
                 <span>All feeds</span>
               </LabelWithCount>
               {starredEntries.length > 0 && (
@@ -411,8 +474,8 @@ export function MenuModal({
                 </div>
               )}
 
-              {categories.slice(1).map((cat) => {
-                const categoryFeeds = feeds.filter(
+              {regularCategories.map((cat) => {
+                const categoryFeeds = nonProtectedFeeds.filter(
                   (feed) => feed.category?.id === cat.id,
                 );
                 const isCollapsed = collapsedCategories.has(cat.id);
@@ -482,14 +545,14 @@ export function MenuModal({
                 );
               })}
 
-              {uncategorizedFeeds.length > 0 && (
+              {uncategorizedNonProtectedFeeds.length > 0 && (
                 <div className={styles.categoryGroup}>
                   <Button
                     type="button"
                     variant="nav"
                     onClick={() => toggleCategoryCollapse('uncategorized')}
                     disabled={isLoading}
-                    count={uncategorizedFeeds.length}
+                    count={uncategorizedNonProtectedFeeds.length}
                     active={!collapsedCategories.has('uncategorized')}
                   >
                     <IconWrapper>
@@ -501,7 +564,7 @@ export function MenuModal({
                     className={styles.feedsUnderCategory}
                     data-open={!collapsedCategories.has('uncategorized')}
                   >
-                    {uncategorizedFeeds.map((feed) => (
+                    {uncategorizedNonProtectedFeeds.map((feed) => (
                       <div key={feed.id} className={styles.feedListItem}>
                         <span className={styles.feedListItem_Title}>
                           {feed.title}
@@ -522,13 +585,172 @@ export function MenuModal({
                   </div>
                 </div>
               )}
+            </div>
 
-              <div className={styles.otherSettings}>
-                <LabelWithCount count={0}>
-                  <span>Other Settings</span>
-                </LabelWithCount>
+            {/* YOUTUBE FEEDS LIST */}
+            {youtubeFeeds.length > 0 && (
+              <div className={styles.youtubeFeedsList}>
+                <div className={styles.categoryHeader}>
+                  <Button
+                    type="button"
+                    variant="nav"
+                    onClick={() =>
+                      toggleCategoryCollapse(youtubeCategory?.id ?? 'youtube')
+                    }
+                    disabled={isLoading}
+                    active={
+                      !collapsedCategories.has(youtubeCategory?.id ?? 'youtube')
+                    }
+                    count={youtubeFeeds.length}
+                  >
+                    <IconWrapper>
+                      <IconPlus />
+                    </IconWrapper>
+                    <span>{youtubeCategory?.title ?? 'YouTube'}</span>
+                  </Button>
+                </div>
+                <div
+                  className={styles.feedsUnderCategory}
+                  data-open={
+                    !collapsedCategories.has(youtubeCategory?.id ?? 'youtube')
+                  }
+                >
+                  {youtubeFeeds.map((feed) => (
+                    <div key={feed.id} className={styles.feedListItem}>
+                      <span className={styles.feedListItem_Title}>
+                        {feed.title}
+                      </span>
+                      <Button
+                        variant="icon"
+                        type="button"
+                        onClick={() => handleOpenEditModal('feed', feed)}
+                        disabled={isLoading}
+                        aria-label={`Edit feed ${feed.title}`}
+                      >
+                        <IconWrapper>
+                          <IconEdit />
+                        </IconWrapper>
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
-                <div className={styles.otherSettings_Body}>
+            {/* INSTAGRAM FEEDS LIST */}
+            {instagramFeeds.length > 0 && (
+              <div className={styles.youtubeFeedsList}>
+                <div className={styles.categoryHeader}>
+                  <Button
+                    type="button"
+                    variant="nav"
+                    onClick={() =>
+                      toggleCategoryCollapse(
+                        instagramCategory?.id ?? 'instagram',
+                      )
+                    }
+                    disabled={isLoading}
+                    active={
+                      !collapsedCategories.has(
+                        instagramCategory?.id ?? 'instagram',
+                      )
+                    }
+                    count={instagramFeeds.length}
+                  >
+                    <IconWrapper>
+                      <IconPlus />
+                    </IconWrapper>
+                    <span>{instagramCategory?.title ?? 'Instagram'}</span>
+                  </Button>
+                </div>
+                <div
+                  className={styles.feedsUnderCategory}
+                  data-open={
+                    !collapsedCategories.has(
+                      instagramCategory?.id ?? 'instagram',
+                    )
+                  }
+                >
+                  {instagramFeeds.map((feed) => (
+                    <div key={feed.id} className={styles.feedListItem}>
+                      <span className={styles.feedListItem_Title}>
+                        {feed.title}
+                      </span>
+                      <Button
+                        variant="icon"
+                        type="button"
+                        onClick={() => handleOpenEditModal('feed', feed)}
+                        disabled={isLoading}
+                        aria-label={`Edit feed ${feed.title}`}
+                      >
+                        <IconWrapper>
+                          <IconEdit />
+                        </IconWrapper>
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* TWITTER FEEDS LIST */}
+            {twitterFeeds.length > 0 && (
+              <div className={styles.youtubeFeedsList}>
+                <div className={styles.categoryHeader}>
+                  <Button
+                    type="button"
+                    variant="nav"
+                    onClick={() =>
+                      toggleCategoryCollapse(twitterCategory?.id ?? 'twitter')
+                    }
+                    disabled={isLoading}
+                    active={
+                      !collapsedCategories.has(twitterCategory?.id ?? 'twitter')
+                    }
+                    count={twitterFeeds.length}
+                  >
+                    <IconWrapper>
+                      <IconPlus />
+                    </IconWrapper>
+                    <span>{twitterCategory?.title ?? 'Twitter'}</span>
+                  </Button>
+                </div>
+                <div
+                  className={styles.feedsUnderCategory}
+                  data-open={
+                    !collapsedCategories.has(twitterCategory?.id ?? 'twitter')
+                  }
+                >
+                  {twitterFeeds.map((feed) => (
+                    <div key={feed.id} className={styles.feedListItem}>
+                      <span className={styles.feedListItem_Title}>
+                        {feed.title}
+                      </span>
+                      <Button
+                        variant="icon"
+                        type="button"
+                        onClick={() => handleOpenEditModal('feed', feed)}
+                        disabled={isLoading}
+                        aria-label={`Edit feed ${feed.title}`}
+                      >
+                        <IconWrapper>
+                          <IconEdit />
+                        </IconWrapper>
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* OTHER SETTINGS */}
+            <div className={styles.otherSettings}>
+              <LabelWithCount count={0}>
+                <span>Other Settings</span>
+              </LabelWithCount>
+
+              <div className={styles.otherSettings_Body}>
+                <div className={styles.otherSettings_FilterWords}>
                   <LabeledInput
                     id="global-filter-words"
                     label="Filter-out words"
@@ -537,10 +759,6 @@ export function MenuModal({
                     placeholder="war, politics, ads"
                     disabled={isLoading}
                   />
-                  <div className={styles.otherSettings_Help}>
-                    Comma-separated words to filter from all feed titles.
-                    Changes apply automatically to all feeds.
-                  </div>
                   <Button
                     type="button"
                     variant="nav"
@@ -549,12 +767,16 @@ export function MenuModal({
                   >
                     {isApplyingGlobalFilterWords ? 'Applying...' : 'Apply now'}
                   </Button>
-                  {globalFilterWordsError ? (
-                    <div className={styles.otherSettings_Error}>
-                      {globalFilterWordsError}
-                    </div>
-                  ) : null}
                 </div>
+                <div className={styles.otherSettings_Help}>
+                  Enter comma-separated words filter to filkter-out from all
+                  feeds.
+                </div>
+                {globalFilterWordsError ? (
+                  <div className={styles.otherSettings_Error}>
+                    {globalFilterWordsError}
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>

@@ -3,7 +3,6 @@
 import { useInView } from 'react-intersection-observer';
 import styles from './EntryList.module.sass';
 import { EntryItem } from '@/components/EntryItem/EntryItem';
-import { EntryItemYoutube } from '@/components/EntryItemYoutube/EntryItemYoutube';
 import { Button } from '@/components/Button/Button';
 import type { Entry, Feed } from '@/app/_lib/types';
 import { extractYouTubeVideoId } from '@/lib/youtube';
@@ -24,6 +23,7 @@ type LazyEntryItemProps = {
   selectedEntryId: number | null;
   feedsById: Map<number, Feed>;
   onEntryClick: (id: number) => void;
+  layout: 'default' | 'youtube' | 'instagram' | 'twitter';
 };
 
 function LazyEntryItem({
@@ -31,6 +31,7 @@ function LazyEntryItem({
   selectedEntryId,
   feedsById,
   onEntryClick,
+  layout,
 }: LazyEntryItemProps) {
   const { ref, inView } = useInView({
     threshold: 0.5,
@@ -44,32 +45,25 @@ function LazyEntryItem({
     feedsById.get(entry.feed_id)?.title;
   const published = formatDate(entry.published_at);
   const youtubeId = entry.url ? extractYouTubeVideoId(entry.url) : null;
+  const entryLayout =
+    layout === 'default' ? (youtubeId ? 'youtube' : 'default') : layout;
 
   return (
     <div ref={ref} className={styles.lazyEntryWrapper}>
       {inView && (
-        youtubeId ? (
-          <EntryItemYoutube
-            title={entry.title}
-            author={entry.author}
-            feedTitle={feedTitle}
-            publishedAt={published}
-            videoId={youtubeId}
-            marked={entry.status === 'read'}
-          />
-        ) : (
-          <EntryItem
-            title={entry.title}
-            author={entry.author}
-            feedTitle={feedTitle}
-            publishedAt={published}
-            active={isActive}
-            marked={entry.status === 'read'}
-            content={entry.content}
-            url={entry.url}
-            onClick={() => onEntryClick(entry.id)}
-          />
-        )
+        <EntryItem
+          layout={entryLayout}
+          youtubeVideoId={entryLayout === 'youtube' ? youtubeId ?? undefined : undefined}
+          title={entry.title}
+          author={entry.author}
+          feedTitle={feedTitle}
+          publishedAt={published}
+          active={entryLayout === 'youtube' ? false : isActive}
+          marked={entry.status === 'read'}
+          content={entryLayout === 'youtube' ? undefined : entry.content}
+          url={entry.url}
+          onClick={entryLayout === 'youtube' ? undefined : () => onEntryClick(entry.id)}
+        />
       )}
     </div>
   );
@@ -85,6 +79,7 @@ export type EntryListProps = {
   onLoadMore: () => void;
   searchMode: boolean;
   isStarredView: boolean;
+  layout?: 'default' | 'youtube' | 'instagram' | 'twitter';
 };
 
 export function EntryList({
@@ -97,9 +92,10 @@ export function EntryList({
   onLoadMore,
   searchMode,
   isStarredView,
+  layout = 'default',
 }: EntryListProps) {
   return (
-    <div className={styles.entryList}>
+    <div className={styles.entryList} data-layout={layout}>
       {entries.length === 0 ? (
         <div className={styles.muted}>
           {searchMode
@@ -116,6 +112,7 @@ export function EntryList({
             selectedEntryId={selectedEntryId}
             feedsById={feedsById}
             onEntryClick={onEntrySelect}
+            layout={layout}
           />
         ))
       )}

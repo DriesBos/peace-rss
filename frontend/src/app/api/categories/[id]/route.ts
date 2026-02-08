@@ -3,6 +3,7 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { mfFetchUser } from '@/lib/miniflux';
+import { isProtectedCategoryTitle } from '@/lib/protectedCategories';
 
 export const runtime = 'nodejs';
 
@@ -12,6 +13,12 @@ type RouteContext = {
 
 type UpdateCategoryRequest = {
   title?: string;
+};
+
+type MinifluxCategory = {
+  id: number;
+  user_id: number;
+  title: string;
 };
 
 export async function PUT(
@@ -51,6 +58,19 @@ export async function PUT(
       );
     }
 
+    // Disallow edits to protected categories (e.g. YouTube)
+    const categories = await mfFetchUser<MinifluxCategory[]>(
+      token,
+      '/v1/categories'
+    );
+    const existing = categories.find((cat) => cat.id === categoryId);
+    if (existing && isProtectedCategoryTitle(existing.title)) {
+      return NextResponse.json(
+        { error: 'This category is managed automatically and cannot be edited.' },
+        { status: 403 }
+      );
+    }
+
     // 4. Parse request body
     const body = await request.json().catch(() => null);
     if (!body || typeof body !== 'object') {
@@ -64,6 +84,13 @@ export async function PUT(
 
     if (!title || typeof title !== 'string' || !title.trim()) {
       return NextResponse.json({ error: 'title is required' }, { status: 400 });
+    }
+
+    if (isProtectedCategoryTitle(title)) {
+      return NextResponse.json(
+        { error: 'This category title is reserved.' },
+        { status: 400 }
+      );
     }
 
     // 5. Update category using Miniflux API
@@ -115,6 +142,19 @@ export async function DELETE(
       return NextResponse.json(
         { error: 'Invalid category ID' },
         { status: 400 }
+      );
+    }
+
+    // Disallow deletes to protected categories (e.g. YouTube)
+    const categories = await mfFetchUser<MinifluxCategory[]>(
+      token,
+      '/v1/categories'
+    );
+    const existing = categories.find((cat) => cat.id === categoryId);
+    if (existing && isProtectedCategoryTitle(existing.title)) {
+      return NextResponse.json(
+        { error: 'This category is managed automatically and cannot be deleted.' },
+        { status: 403 }
       );
     }
 

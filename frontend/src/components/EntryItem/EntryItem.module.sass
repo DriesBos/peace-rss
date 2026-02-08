@@ -19,13 +19,16 @@
     flex-direction: column
     gap: var(--space-titlemeta-gap)
   &_Meta
-    display: flex
-    gap: 8px
     padding: 0 var(--space-sides-general)
     color: var(--color-text-secondary)
+    span
+      margin-right: 4px
+      &:last-child
+        margin-right: 0
     @include font-meta
-    p, i
+    p, i, span
       @include font-meta
+      display: inline
   &_Preview
     @include font-summary
     display: -webkit-box
@@ -49,3 +52,119 @@
       height: 100%
       object-fit: cover
       display: block
+
+.entryItem[data-layout='youtube']
+  flex-direction: column
+  gap: var(--half-rem)
+  align-items: stretch
+  width: 100%
+  cursor: default
+
+.entryItem[data-layout='youtube'] .entryItem_Player
+  width: 100%
+  aspect-ratio: 16 / 9
+  overflow: hidden
+  position: relative
+
+.entryItem[data-layout='youtube'] .entryItem_Iframe
+  width: 100%
+  height: 100%
+  border: 0
+  display: block
+
+.entryItem[data-layout='youtube'] .entryItem_PlayButton
+  position: absolute
+  inset: 0
+  width: 100%
+  height: 100%
+  border: 0
+  padding: 0
+  background: transparent
+  cursor: pointer
+  display: block
+  &::before
+    content: ''
+    position: absolute
+    left: 50%
+    top: 50%
+    width: 56px
+    height: 56px
+    transform: translate(-50%, -50%)
+    border-radius: 999px
+    background: rgba(0, 0, 0, 0.55)
+    border: 1px solid rgba(255, 255, 255, 0.25)
+  &::after
+    content: ''
+    position: absolute
+    left: 50%
+    top: 50%
+    transform: translate(-42%, -50%)
+    width: 0
+    height: 0
+    border-style: solid
+    border-width: 10px 0 10px 16px
+    border-color: transparent transparent transparent rgba(255, 255, 255, 0.95)
+  &:hover::before
+    background: rgba(0, 0, 0, 0.7)
+  &:focus-visible
+    outline: 2px solid var(--color-text)
+    outline-offset: 2px
+
+.entryItem[data-layout='youtube'] .entryItem_Header
+  gap: var(--half-rem)
+
+.entryItem[data-layout='instagram'],
+.entryItem[data-layout='twitter']
+  flex-direction: column
+  gap: var(--half-rem)
+  align-items: stretch
+  width: 100%
+
+.entryItem[data-layout='instagram'] .entryItem_Media,
+.entryItem[data-layout='twitter'] .entryItem_Media
+  width: 100%
+  overflow: hidden
+  border-radius: var(--border-radius-image)
+  background: var(--color-app-secondary)
+  position: relative
+
+.entryItem[data-layout='instagram'] .entryItem_Media
+  aspect-ratio: 1 / 1
+
+.entryItem[data-layout='twitter'] .entryItem_Media
+  aspect-ratio: 16 / 9
+
+.entryItem[data-layout='instagram'] .entryItem_Header,
+.entryItem[data-layout='twitter'] .entryItem_Header
+  padding-right: var(--half-rem)
+  width: 100%
+
+.entryItem[data-layout='instagram'] .entryItem_Title,
+.entryItem[data-layout='twitter'] .entryItem_Title
+  @include font-title
+  font-weight: 400
+  line-height: 1
+  color: var(--color-text)
+  width: 100%
+  word-wrap: break-word
+  hyphens: auto
+
+.entryItem[data-layout='instagram'] .entryItem_Meta,
+.entryItem[data-layout='twitter'] .entryItem_Meta
+  gap: var(--half-rem)
+  align-items: center
+  padding-left: var(--space-sides-general)
+  font-size: 10px
+  p, i
+    font-size: 10px
+
+.entryItem[data-layout='instagram'] .entryItem_From,
+.entryItem[data-layout='twitter'] .entryItem_From
+  display: flex
+  gap: 2px
+  align-items: center
+  line-height: 1
+
+.entryItem[data-layout='instagram'] .entryItem_FromText,
+.entryItem[data-layout='twitter'] .entryItem_FromText
+  text-decoration: underline

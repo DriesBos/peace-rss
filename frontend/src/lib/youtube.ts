@@ -19,6 +19,17 @@ function normalizeMaybeUrl(value: string): URL | null {
   }
 }
 
+function isYouTubeHost(hostname: string): boolean {
+  const host = hostname.toLowerCase();
+  return (
+    host === 'youtube.com' ||
+    host === 'www.youtube.com' ||
+    host === 'm.youtube.com' ||
+    host === 'youtube-nocookie.com' ||
+    host === 'www.youtube-nocookie.com'
+  );
+}
+
 export function extractYouTubeVideoId(value: string): string | null {
   const url = normalizeMaybeUrl(value);
   if (!url) return null;
@@ -32,14 +43,7 @@ export function extractYouTubeVideoId(value: string): string | null {
     return YOUTUBE_ID_RE.test(id) ? id : null;
   }
 
-  const isYouTubeHost =
-    host === 'youtube.com' ||
-    host === 'www.youtube.com' ||
-    host === 'm.youtube.com' ||
-    host === 'youtube-nocookie.com' ||
-    host === 'www.youtube-nocookie.com';
-
-  if (!isYouTubeHost) return null;
+  if (!isYouTubeHost(host)) return null;
 
   // /watch?v=<id>
   const v = url.searchParams.get('v');
@@ -54,6 +58,13 @@ export function extractYouTubeVideoId(value: string): string | null {
   if (shortsMatch?.[1] && YOUTUBE_ID_RE.test(shortsMatch[1])) return shortsMatch[1];
 
   return null;
+}
+
+export function isYouTubeFeedUrl(value: string): boolean {
+  const url = normalizeMaybeUrl(value);
+  if (!url) return false;
+  if (!isYouTubeHost(url.hostname)) return false;
+  return url.pathname === '/feeds/videos.xml';
 }
 
 export function getYouTubePosterUrl(videoId: string): string {

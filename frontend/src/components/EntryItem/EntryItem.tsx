@@ -8,6 +8,7 @@ import {
   extractThumbnailFromHtml,
   resolveAbsoluteUrl,
 } from '@/lib/entryThumbnail';
+import { getYouTubeEmbedUrl, getYouTubePosterUrl } from '@/lib/youtube';
 
 type EntryItemProps = {
   title?: string;
@@ -19,6 +20,8 @@ type EntryItemProps = {
   active?: boolean;
   marked: boolean;
   onClick?: () => void;
+  layout?: 'default' | 'youtube' | 'instagram' | 'twitter';
+  youtubeVideoId?: string;
 };
 
 /**
@@ -29,7 +32,7 @@ type EntryItemProps = {
  */
 function createPreview(
   htmlContent: string | undefined,
-  maxLength = 200
+  maxLength = 200,
 ): string {
   if (!htmlContent) return '';
 
@@ -82,55 +85,197 @@ export function EntryItem({
   active,
   marked,
   onClick,
+  layout = 'default',
+  youtubeVideoId,
 }: EntryItemProps) {
-  const preview = useMemo(() => createPreview(content, 200), [content]);
-  const thumbnailUrl = useMemo(
-    () => extractThumbnailFromHtml(content),
-    [content],
-  );
-  const absoluteThumbnailUrl = useMemo(
-    () => resolveAbsoluteUrl(thumbnailUrl, url),
-    [thumbnailUrl, url],
-  );
+  const isSocialLayout = layout === 'instagram' || layout === 'twitter';
+
+  const preview = useMemo(() => {
+    if (layout !== 'default') return '';
+    return createPreview(content, 200);
+  }, [content, layout]);
+
+  const thumbnailUrl = useMemo(() => {
+    if (layout !== 'default') return null;
+    return extractThumbnailFromHtml(content);
+  }, [content, layout]);
+
+  const absoluteThumbnailUrl = useMemo(() => {
+    if (layout !== 'default') return null;
+    return resolveAbsoluteUrl(thumbnailUrl, url);
+  }, [thumbnailUrl, url, layout]);
+
+  const socialPreview = useMemo(() => {
+    if (layout !== 'twitter') return '';
+    return createPreview(content, 280);
+  }, [content, layout]);
+
+  const socialThumbnailUrl = useMemo(() => {
+    if (!isSocialLayout) return null;
+    return extractThumbnailFromHtml(content);
+  }, [content, isSocialLayout]);
+
+  const absoluteSocialThumbnailUrl = useMemo(() => {
+    if (!isSocialLayout) return null;
+    return resolveAbsoluteUrl(socialThumbnailUrl, url);
+  }, [isSocialLayout, socialThumbnailUrl, url]);
+
   const [isThumbnailErrored, setIsThumbnailErrored] = useState(false);
+
+  const [isYoutubePlaying, setIsYoutubePlaying] = useState(false);
+  const youtubeAutoplayUrl = useMemo(() => {
+    if (layout !== 'youtube' || !youtubeVideoId) return null;
+    return getYouTubeEmbedUrl(youtubeVideoId, { autoplay: true });
+  }, [layout, youtubeVideoId]);
+
+  const youtubePosterUrl = useMemo(() => {
+    if (layout !== 'youtube' || !youtubeVideoId) return null;
+    return getYouTubePosterUrl(youtubeVideoId);
+  }, [layout, youtubeVideoId]);
+
+  const byline = author
+    ? `${author}${feedTitle ? `, ${feedTitle}` : ''}`
+    : feedTitle;
 
   return (
     <div
       className={styles.entryItem}
       data-active={active}
       data-marked={marked ? 'true' : 'false'}
-      onClick={onClick}
-      role="button"
-      tabIndex={0}
+      data-layout={layout}
+      onClick={layout === 'youtube' ? undefined : onClick}
+      role={layout === 'youtube' ? undefined : 'button'}
+      tabIndex={layout === 'youtube' ? undefined : 0}
     >
-      <div className={styles.entryItem_Body}>
-        <div className={styles.entryItem_Header}>
-          <h1>{title}</h1>
-          <div className={styles.entryItem_Meta}>
-            <p>
-              <FormattedDate date={publishedAt} />
-            </p>
-            <p>
-              By: <i>{author ? `${author}, ${feedTitle}` : feedTitle}</i>
-            </p>
+      {layout === 'youtube' ? (
+        <>
+          <div className={styles.entryItem_Player}>
+            {youtubeVideoId && isYoutubePlaying && youtubeAutoplayUrl ? (
+              <iframe
+                className={styles.entryItem_Iframe}
+                src={youtubeAutoplayUrl}
+                title={title || 'YouTube video'}
+                loading="lazy"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                referrerPolicy="strict-origin-when-cross-origin"
+                sandbox="allow-scripts allow-same-origin allow-presentation"
+                allowFullScreen
+              />
+            ) : (
+              <>
+                {youtubePosterUrl ? (
+                  <Image
+                    src={youtubePosterUrl}
+                    alt=""
+                    fill
+                    sizes="(max-width: 745px) 100vw, 376px"
+                    quality={60}
+                    unoptimized
+                    loading="lazy"
+                    style={{ objectFit: 'cover' }}
+                  />
+                ) : null}
+                <button
+                  type="button"
+                  className={styles.entryItem_PlayButton}
+                  aria-label={title ? `Play: ${title}` : 'Play video'}
+                  onClick={() => setIsYoutubePlaying(true)}
+                  disabled={!youtubeVideoId}
+                />
+              </>
+            )}
           </div>
-        </div>
-        {preview && <p className={styles.entryItem_Preview}>{preview}</p>}
-      </div>
-      {absoluteThumbnailUrl && !isThumbnailErrored && (
-        <div className={styles.entryItem_Thumbnail}>
-          <Image
-            src={absoluteThumbnailUrl}
-            alt={title || 'Entry thumbnail'}
-            fill
-            sizes="(max-width: 745px) 23vw, 90px"
-            quality={60}
-            unoptimized
-            loading="lazy"
-            style={{ objectFit: 'cover' }}
-            onError={() => setIsThumbnailErrored(true)}
-          />
-        </div>
+
+          <div className={styles.entryItem_Body}>
+            <div className={styles.entryItem_Header}>
+              <div className={styles.entryItem_Title}>
+                {title || '(untitled)'}
+              </div>
+              <div className={styles.entryItem_Meta}>
+                <span>
+                  <FormattedDate date={publishedAt} />
+                  {' — '}
+                </span>
+                <span>By </span>
+                {byline ? (
+                  <i className={styles.entryItem_FromText}>{byline}</i>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        </>
+      ) : isSocialLayout ? (
+        <>
+          {absoluteSocialThumbnailUrl && !isThumbnailErrored ? (
+            <div className={styles.entryItem_Media}>
+              <Image
+                src={absoluteSocialThumbnailUrl}
+                alt=""
+                fill
+                sizes="(max-width: 745px) 100vw, 420px"
+                quality={60}
+                unoptimized
+                loading="lazy"
+                style={{ objectFit: 'cover' }}
+                onError={() => setIsThumbnailErrored(true)}
+              />
+            </div>
+          ) : null}
+
+          <div className={styles.entryItem_Body}>
+            <div className={styles.entryItem_Header}>
+              <div className={styles.entryItem_Title}>
+                {title || '(untitled)'}
+              </div>
+              <div className={styles.entryItem_Meta}>
+                <span>
+                  <FormattedDate date={publishedAt} />
+                  {' — '}
+                </span>
+                <span>By </span>
+                {byline ? (
+                  <i className={styles.entryItem_FromText}>{byline}</i>
+                ) : null}
+              </div>
+            </div>
+            {socialPreview ? (
+              <p className={styles.entryItem_Preview}>{socialPreview}</p>
+            ) : null}
+          </div>
+        </>
+      ) : (
+        <>
+          <div className={styles.entryItem_Body}>
+            <div className={styles.entryItem_Header}>
+              <h1>{title}</h1>
+              <div className={styles.entryItem_Meta}>
+                <span>
+                  <FormattedDate date={publishedAt} />
+                  {' — '}
+                </span>
+                <span>
+                  By: <i>{author ? `${author}, ${feedTitle}` : feedTitle}</i>
+                </span>
+              </div>
+            </div>
+            {preview && <p className={styles.entryItem_Preview}>{preview}</p>}
+          </div>
+          {absoluteThumbnailUrl && !isThumbnailErrored && (
+            <div className={styles.entryItem_Thumbnail}>
+              <Image
+                src={absoluteThumbnailUrl}
+                alt={title || 'Entry thumbnail'}
+                fill
+                sizes="(max-width: 745px) 23vw, 90px"
+                quality={60}
+                unoptimized
+                loading="lazy"
+                style={{ objectFit: 'cover' }}
+                onError={() => setIsThumbnailErrored(true)}
+              />
+            </div>
+          )}
+        </>
       )}
     </div>
   );

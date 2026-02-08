@@ -1,5 +1,6 @@
 'use client';
 
+import { useMemo } from 'react';
 import styles from './AddModal.module.sass';
 import { ModalContainer } from '@/components/ModalContainer/ModalContainer';
 import { LabeledInput } from '@/components/LabeledInput/LabeledInput';
@@ -10,6 +11,8 @@ import { NOTIFICATION_COPY } from '@/lib/notificationCopy';
 import { useKeydown } from '@/hooks/useKeydown';
 import { Button } from '@/components/Button/Button';
 import type { SocialPlatform } from '@/lib/social/types';
+import { isYouTubeFeedUrl } from '@/lib/youtube';
+import { isProtectedCategoryTitle } from '@/lib/protectedCategories';
 
 export type AddModalProps = {
   isOpen: boolean;
@@ -20,6 +23,21 @@ export type AddModalProps = {
   addCategoryLoading: boolean;
   addCategoryError: string | null;
   addCategory: (e: React.FormEvent) => Promise<boolean>;
+  newYoutubeFeedUrl: string;
+  setNewYoutubeFeedUrl: (value: string) => void;
+  addYoutubeFeedLoading: boolean;
+  addYoutubeFeedError: string | null;
+  addYoutubeFeed: (e: React.FormEvent) => Promise<boolean>;
+  newInstagramHandle: string;
+  setNewInstagramHandle: (value: string) => void;
+  addInstagramFeedLoading: boolean;
+  addInstagramFeedError: string | null;
+  addInstagramFeed: (e: React.FormEvent) => Promise<boolean>;
+  newTwitterHandle: string;
+  setNewTwitterHandle: (value: string) => void;
+  addTwitterFeedLoading: boolean;
+  addTwitterFeedError: string | null;
+  addTwitterFeed: (e: React.FormEvent) => Promise<boolean>;
   newFeedUrl: string;
   setNewFeedUrl: (value: string) => void;
   newFeedPlatform: '' | SocialPlatform;
@@ -47,6 +65,21 @@ export function AddModal({
   addCategoryLoading,
   addCategoryError,
   addCategory,
+  newYoutubeFeedUrl,
+  setNewYoutubeFeedUrl,
+  addYoutubeFeedLoading,
+  addYoutubeFeedError,
+  addYoutubeFeed,
+  newInstagramHandle,
+  setNewInstagramHandle,
+  addInstagramFeedLoading,
+  addInstagramFeedError,
+  addInstagramFeed,
+  newTwitterHandle,
+  setNewTwitterHandle,
+  addTwitterFeedLoading,
+  addTwitterFeedError,
+  addTwitterFeed,
   newFeedUrl,
   setNewFeedUrl,
   newFeedPlatform,
@@ -64,14 +97,50 @@ export function AddModal({
   addFeed,
   isLoading,
 }: AddModalProps) {
+  const isAddingYoutubeFromMainForm = useMemo(() => {
+    const trimmed = newFeedUrl.trim();
+    return Boolean(trimmed && isYouTubeFeedUrl(trimmed));
+  }, [newFeedUrl]);
+
+  const isAddingProtectedSocialFromMainForm = useMemo(() => {
+    return newFeedPlatform === 'instagram' || newFeedPlatform === 'twitter';
+  }, [newFeedPlatform]);
+
   const canSubmitFeed = Boolean(
     newFeedUrl.trim() || (newFeedPlatform && newFeedHandle.trim())
   );
+  const canSubmitYoutube = Boolean(newYoutubeFeedUrl.trim());
+  const canSubmitInstagram = Boolean(newInstagramHandle.trim());
+  const canSubmitTwitter = Boolean(newTwitterHandle.trim());
 
   const handleAddCategory = async (event: React.FormEvent) => {
     const didSucceed = await addCategory(event);
     if (didSucceed) {
       toast.success(NOTIFICATION_COPY.app.categoryAdded);
+      onClose();
+    }
+  };
+
+  const handleAddYoutubeFeed = async (event: React.FormEvent) => {
+    const didSucceed = await addYoutubeFeed(event);
+    if (didSucceed) {
+      toast.success(NOTIFICATION_COPY.app.feedAdded);
+      onClose();
+    }
+  };
+
+  const handleAddInstagramFeed = async (event: React.FormEvent) => {
+    const didSucceed = await addInstagramFeed(event);
+    if (didSucceed) {
+      toast.success(NOTIFICATION_COPY.app.feedAdded);
+      onClose();
+    }
+  };
+
+  const handleAddTwitterFeed = async (event: React.FormEvent) => {
+    const didSucceed = await addTwitterFeed(event);
+    if (didSucceed) {
+      toast.success(NOTIFICATION_COPY.app.feedAdded);
       onClose();
     }
   };
@@ -97,6 +166,15 @@ export function AddModal({
     },
   );
 
+  const categoryOptions = useMemo(() => {
+    return categories
+      .filter((cat) => !isProtectedCategoryTitle(cat.title))
+      .map((cat) => ({
+        value: String(cat.id),
+        label: cat.title,
+      }));
+  }, [categories]);
+
   return (
     <ModalContainer isOpen={isOpen} onClose={onClose} ariaLabel="Add">
       <div className={styles.modalAdd}>
@@ -120,6 +198,76 @@ export function AddModal({
           </Button>
           {addCategoryError && (
             <div className={styles.error}>{addCategoryError}</div>
+          )}
+        </form>
+
+        <form onSubmit={handleAddYoutubeFeed} className={styles.formBlock}>
+          <LabeledInput
+            id="add-youtube-feed-url"
+            label="YouTube feed URL"
+            value={newYoutubeFeedUrl}
+            onChange={setNewYoutubeFeedUrl}
+            placeholder="https://www.youtube.com/feeds/videos.xml?channel_id=…"
+            disabled={addYoutubeFeedLoading || isLoading}
+          />
+          <div className={styles.help}>
+            Paste a YouTube RSS feed URL (it should contain <code>/feeds/videos.xml</code>).
+          </div>
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={
+              addYoutubeFeedLoading || isLoading || !canSubmitYoutube
+            }
+          >
+            {addYoutubeFeedLoading ? 'Adding...' : 'Add feed'}
+          </Button>
+          {addYoutubeFeedError && (
+            <div className={styles.error}>{addYoutubeFeedError}</div>
+          )}
+        </form>
+
+        <form onSubmit={handleAddInstagramFeed} className={styles.formBlock}>
+          <LabeledInput
+            id="add-instagram-handle"
+            label="Instagram handle"
+            value={newInstagramHandle}
+            onChange={setNewInstagramHandle}
+            placeholder="@username or profile URL"
+            disabled={addInstagramFeedLoading || isLoading}
+          />
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={
+              addInstagramFeedLoading || isLoading || !canSubmitInstagram
+            }
+          >
+            {addInstagramFeedLoading ? 'Adding...' : 'Add feed'}
+          </Button>
+          {addInstagramFeedError && (
+            <div className={styles.error}>{addInstagramFeedError}</div>
+          )}
+        </form>
+
+        <form onSubmit={handleAddTwitterFeed} className={styles.formBlock}>
+          <LabeledInput
+            id="add-twitter-handle"
+            label="Twitter / X handle"
+            value={newTwitterHandle}
+            onChange={setNewTwitterHandle}
+            placeholder="@username or profile URL"
+            disabled={addTwitterFeedLoading || isLoading}
+          />
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={addTwitterFeedLoading || isLoading || !canSubmitTwitter}
+          >
+            {addTwitterFeedLoading ? 'Adding...' : 'Add feed'}
+          </Button>
+          {addTwitterFeedError && (
+            <div className={styles.error}>{addTwitterFeedError}</div>
           )}
         </form>
 
@@ -176,20 +324,29 @@ export function AddModal({
           <div className={styles.help}>
             Login fields are optional and used as RSS-Bridge HTTP auth.
           </div>
-          <LabeledSelect
-            id="add-feed-category"
-            value={newFeedCategoryId ? String(newFeedCategoryId) : ''}
-            onChange={(value) =>
-              setNewFeedCategoryId(value ? Number(value) : null)
-            }
-            placeholder="Select category"
-            optionalHint="(optional)"
-            options={categories.map((cat) => ({
-              value: String(cat.id),
-              label: cat.title,
-            }))}
-            disabled={addFeedLoading || isLoading}
-          />
+          {!isAddingYoutubeFromMainForm && !isAddingProtectedSocialFromMainForm ? (
+            <LabeledSelect
+              id="add-feed-category"
+              value={newFeedCategoryId ? String(newFeedCategoryId) : ''}
+              onChange={(value) =>
+                setNewFeedCategoryId(value ? Number(value) : null)
+              }
+              placeholder="Select category"
+              optionalHint="(optional)"
+              options={categoryOptions}
+              disabled={addFeedLoading || isLoading}
+            />
+          ) : isAddingYoutubeFromMainForm ? (
+            <div className={styles.help}>
+              This looks like a YouTube feed. Use the YouTube form above (YouTube
+              feeds are assigned automatically).
+            </div>
+          ) : (
+            <div className={styles.help}>
+              Social feeds are assigned automatically (use the Instagram/Twitter
+              forms above).
+            </div>
+          )}
           <button
             type="submit"
             disabled={addFeedLoading || isLoading || !canSubmitFeed}

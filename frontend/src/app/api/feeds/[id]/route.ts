@@ -3,11 +3,31 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { mfFetchUser } from '@/lib/miniflux';
+import { isYouTubeFeedUrl } from '@/lib/youtube';
+import {
+  isProtectedCategoryTitle,
+  normalizeCategoryTitle,
+  protectedCategoryTitleForKind,
+  type ProtectedCategoryKind,
+} from '@/lib/protectedCategories';
 
 export const runtime = 'nodejs';
 
 type RouteContext = {
   params: Promise<{ id: string }>;
+};
+
+type MinifluxCategory = {
+  id: number;
+  user_id: number;
+  title: string;
+};
+
+type MinifluxFeed = {
+  id: number;
+  feed_url: string;
+  category?: { id: number; title: string };
+  hide_globally?: boolean;
 };
 
 type UpdateFeedRequest = {
@@ -64,6 +84,55 @@ export async function PUT(
     const { title, feed_url, category_id, blocklist_rules, rewrite_rules } =
       body as UpdateFeedRequest;
 
+    const nextFeedUrl =
+      typeof feed_url === 'string' && feed_url.trim() ? feed_url.trim() : null;
+
+    let forcedKind: ProtectedCategoryKind | null = null;
+    let existingFeed: MinifluxFeed | null = null;
+
+    if (nextFeedUrl) {
+      if (isYouTubeFeedUrl(nextFeedUrl)) {
+        forcedKind = 'youtube';
+      } else {
+        existingFeed = await mfFetchUser<MinifluxFeed>(
+          token,
+          `/v1/feeds/${feedId}`,
+        );
+        const existingCategoryKind = existingFeed.category?.title
+          ? normalizeCategoryTitle(existingFeed.category.title)
+          : null;
+        const existingIsProtected =
+          Boolean(existingCategoryKind && isProtectedCategoryTitle(existingCategoryKind)) ||
+          isYouTubeFeedUrl(existingFeed.feed_url);
+
+        if (existingIsProtected && existingCategoryKind && isProtectedCategoryTitle(existingCategoryKind)) {
+          forcedKind = existingCategoryKind as ProtectedCategoryKind;
+        } else if (existingIsProtected) {
+          forcedKind = 'youtube';
+        }
+
+        if (forcedKind === 'youtube') {
+          return NextResponse.json(
+            {
+              error:
+                'YouTube feeds must use a YouTube RSS URL (/feeds/videos.xml).',
+            },
+            { status: 400 },
+          );
+        }
+      }
+    } else {
+      existingFeed = await mfFetchUser<MinifluxFeed>(token, `/v1/feeds/${feedId}`);
+      const existingCategoryKind = existingFeed.category?.title
+        ? normalizeCategoryTitle(existingFeed.category.title)
+        : null;
+      if (existingCategoryKind && isProtectedCategoryTitle(existingCategoryKind)) {
+        forcedKind = existingCategoryKind as ProtectedCategoryKind;
+      } else if (isYouTubeFeedUrl(existingFeed.feed_url)) {
+        forcedKind = 'youtube';
+      }
+    }
+
     // Build update payload
     const updatePayload: Record<string, unknown> = {};
     if (title !== undefined) updatePayload.title = title;
@@ -74,7 +143,39 @@ export async function PUT(
     if (rewrite_rules !== undefined) {
       updatePayload.rewrite_rules = rewrite_rules;
     }
-    if (category_id !== undefined) {
+
+    if (forcedKind) {
+      const categories = await mfFetchUser<MinifluxCategory[]>(
+        token,
+        '/v1/categories',
+      );
+      const existing = categories.find(
+        (cat) => normalizeCategoryTitle(cat.title) === forcedKind,
+      );
+      const protectedCategoryId = existing
+        ? existing.id
+        : (
+            await mfFetchUser<MinifluxCategory>(token, '/v1/categories', {
+              method: 'POST',
+              body: JSON.stringify({ title: protectedCategoryTitleForKind(forcedKind) }),
+            })
+          ).id;
+
+      updatePayload.hide_globally = true;
+      updatePayload.category = { id: protectedCategoryId };
+    } else if (category_id !== undefined) {
+      // Disallow moving feeds into protected categories.
+      const categories = await mfFetchUser<MinifluxCategory[]>(
+        token,
+        '/v1/categories',
+      );
+      const target = categories.find((cat) => cat.id === category_id);
+      if (target && isProtectedCategoryTitle(target.title)) {
+        return NextResponse.json(
+          { error: `${target.title.trim()} category is managed automatically.` },
+          { status: 400 },
+        );
+      }
       updatePayload.category = { id: category_id };
     }
 

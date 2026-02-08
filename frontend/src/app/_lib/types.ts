@@ -8,10 +8,12 @@ export type Feed = {
   id: number;
   title: string;
   feed_url?: string;
+  site_url?: string;
   blocklist_rules?: string;
   rewrite_rules?: string;
   unread_count?: number;
   category?: { id: number; title: string };
+  hide_globally?: boolean;
 };
 
 export type Entry = {

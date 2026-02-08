@@ -20,6 +20,8 @@ import { fetchStarredEntries } from '@/lib/readerApi';
 import { ENTRIES_PAGE_SIZE, INITIAL_ENTRIES_LIMIT } from '@/lib/entriesQuery';
 import { NOTIFICATION_COPY } from '@/lib/notificationCopy';
 import type { SocialPlatform } from '@/lib/social/types';
+import { isYouTubeFeedUrl } from '@/lib/youtube';
+import { isProtectedCategoryTitle, normalizeCategoryTitle } from '@/lib/protectedCategories';
 import {
   hasRemoveClickbaitRule,
   mergeManagedFilterWordsIntoBlocklistRules,
@@ -92,6 +94,21 @@ export default function Home() {
   const [isProvisioned, setIsProvisioned] = useState(false);
   const [provisionError, setProvisionError] = useState<string | null>(null);
   const [newFeedUrl, setNewFeedUrl] = useState('');
+  const [newYoutubeFeedUrl, setNewYoutubeFeedUrl] = useState('');
+  const [addYoutubeFeedLoading, setAddYoutubeFeedLoading] = useState(false);
+  const [addYoutubeFeedError, setAddYoutubeFeedError] = useState<string | null>(
+    null,
+  );
+  const [newInstagramHandle, setNewInstagramHandle] = useState('');
+  const [addInstagramFeedLoading, setAddInstagramFeedLoading] = useState(false);
+  const [addInstagramFeedError, setAddInstagramFeedError] = useState<string | null>(
+    null,
+  );
+  const [newTwitterHandle, setNewTwitterHandle] = useState('');
+  const [addTwitterFeedLoading, setAddTwitterFeedLoading] = useState(false);
+  const [addTwitterFeedError, setAddTwitterFeedError] = useState<string | null>(
+    null,
+  );
   const [newFeedPlatform, setNewFeedPlatform] = useState<'' | SocialPlatform>(
     '',
   );
@@ -156,6 +173,11 @@ export default function Home() {
   const [editFeedUrl, setEditFeedUrl] = useState('');
   const [editCategoryId, setEditCategoryId] = useState<number | null>(null);
   const [editRemoveClickbait, setEditRemoveClickbait] = useState(false);
+  const [editOriginalFeedLayout, setEditOriginalFeedLayout] = useState<
+    'default' | 'youtube' | 'instagram' | 'twitter'
+  >('default');
+  const [isEditingProtectedCategory, setIsEditingProtectedCategory] =
+    useState(false);
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const [globalFilterWords, setGlobalFilterWords] = useState('');
@@ -339,6 +361,10 @@ export default function Home() {
   }, []);
 
   const openAddModal = useCallback(() => {
+    setAddFeedError(null);
+    setAddYoutubeFeedError(null);
+    setAddInstagramFeedError(null);
+    setAddTwitterFeedError(null);
     setIsAddModalOpen(true);
     setIsMenuModalOpen(false);
     setIsEditModalOpen(false);
@@ -386,14 +412,41 @@ export default function Home() {
 
   const openEditModal = useCallback(
     (type: 'feed' | 'category', item: Feed | Category) => {
+      if (type === 'category') {
+        const cat = item as Category;
+        if (isProtectedCategoryTitle(cat.title)) {
+          toast.error('This category is managed automatically.');
+          return;
+        }
+      }
       setEditType(type);
       setEditItemId(item.id);
       setEditTitle(item.title);
+      setIsEditingProtectedCategory(
+        type === 'category' && isProtectedCategoryTitle(item.title),
+      );
       if (type === 'feed') {
         const feed = item as Feed;
         setEditFeedUrl(feed.feed_url || '');
-        setEditCategoryId(feed.category?.id || null);
-        setEditRemoveClickbait(hasRemoveClickbaitRule(feed.rewrite_rules));
+        const originalKind = feed.category?.title
+          ? normalizeCategoryTitle(feed.category.title)
+          : null;
+        const originalLayout =
+          originalKind && isProtectedCategoryTitle(originalKind)
+            ? (originalKind as 'youtube' | 'instagram' | 'twitter')
+            : feed.feed_url && isYouTubeFeedUrl(feed.feed_url)
+              ? 'youtube'
+              : 'default';
+
+        setEditOriginalFeedLayout(originalLayout);
+        setEditCategoryId(originalLayout === 'default' ? feed.category?.id || null : null);
+        setEditRemoveClickbait(
+          originalLayout === 'default'
+            ? hasRemoveClickbaitRule(feed.rewrite_rules)
+            : false,
+        );
+      } else {
+        setEditOriginalFeedLayout('default');
       }
       setIsEditModalOpen(true);
       setIsMenuModalOpen(false);
@@ -414,6 +467,8 @@ export default function Home() {
     setEditFeedUrl('');
     setEditCategoryId(null);
     setEditRemoveClickbait(false);
+    setEditOriginalFeedLayout('default');
+    setIsEditingProtectedCategory(false);
     setEditError(null);
   }, [returnToMenuAfterSubModal]);
 
@@ -422,6 +477,40 @@ export default function Home() {
     for (const feed of feeds) map.set(feed.id, feed);
     return map;
   }, [feeds]);
+
+  const editFeedLayout = useMemo(() => {
+    if (editType !== 'feed') return 'default';
+    if (editOriginalFeedLayout !== 'default') return editOriginalFeedLayout;
+    return editFeedUrl.trim() && isYouTubeFeedUrl(editFeedUrl.trim())
+      ? 'youtube'
+      : 'default';
+  }, [editFeedUrl, editOriginalFeedLayout, editType]);
+
+  useEffect(() => {
+    if (!isEditModalOpen) return;
+    if (editType !== 'feed') return;
+    if (editFeedLayout === 'default') return;
+    if (editCategoryId !== null) setEditCategoryId(null);
+    if (editRemoveClickbait) setEditRemoveClickbait(false);
+  }, [
+    editCategoryId,
+    editRemoveClickbait,
+    editType,
+    isEditModalOpen,
+    editFeedLayout,
+  ]);
+
+  const selectedCategoryLayout = useMemo(() => {
+    if (searchMode || isStarredView) return 'default';
+    if (selectedCategoryId === null) return 'default';
+    const cat = categories.find((c) => c.id === selectedCategoryId);
+    if (!cat) return 'default';
+    const kind = normalizeCategoryTitle(cat.title);
+    if (kind === 'youtube' || kind === 'instagram' || kind === 'twitter') {
+      return kind;
+    }
+    return 'default';
+  }, [categories, isStarredView, searchMode, selectedCategoryId]);
 
   const selectedEntry = useMemo(() => {
     return entries.find((e) => e.id === selectedEntryId) ?? null;
@@ -878,7 +967,7 @@ export default function Home() {
         requestBody.feed_url = trimmedUrl;
       }
 
-      if (newFeedCategoryId) {
+      if (newFeedCategoryId && !isYouTubeFeedUrl(trimmedUrl) && !hasSocialInput) {
         requestBody.category_id = newFeedCategoryId;
       }
 
@@ -895,13 +984,152 @@ export default function Home() {
       setNewFeedLoginUsername('');
       setNewFeedLoginPassword('');
       setNewFeedCategoryId(null);
-      await Promise.all([loadFeeds(), refreshUnreadCounters()]);
+      await Promise.all([loadFeeds(), loadCategories(), refreshUnreadCounters()]);
       return true;
     } catch (e) {
       setAddFeedError(e instanceof Error ? e.message : 'Failed to add feed');
       return false;
     } finally {
       setAddFeedLoading(false);
+    }
+  }
+
+  async function addYoutubeFeed(e: React.FormEvent): Promise<boolean> {
+    e.preventDefault();
+
+    const trimmedUrl = newYoutubeFeedUrl.trim();
+    if (!trimmedUrl) {
+      setAddYoutubeFeedError('Enter a YouTube feed URL.');
+      return false;
+    }
+    if (!isYouTubeFeedUrl(trimmedUrl)) {
+      setAddYoutubeFeedError(
+        'That does not look like a YouTube RSS feed URL. It should contain /feeds/videos.xml',
+      );
+      return false;
+    }
+
+    setAddYoutubeFeedLoading(true);
+    setAddYoutubeFeedError(null);
+
+    try {
+      await fetchJson<unknown>('/api/feeds/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ feed_url: trimmedUrl }),
+      });
+      setNewYoutubeFeedUrl('');
+      await Promise.all([loadFeeds(), loadCategories(), refreshUnreadCounters()]);
+      return true;
+    } catch (e) {
+      setAddYoutubeFeedError(
+        e instanceof Error ? e.message : 'Failed to add feed',
+      );
+      return false;
+    } finally {
+      setAddYoutubeFeedLoading(false);
+    }
+  }
+
+  async function addInstagramFeed(e: React.FormEvent): Promise<boolean> {
+    e.preventDefault();
+
+    const trimmedHandle = newInstagramHandle.trim();
+    const trimmedLoginUsername = newFeedLoginUsername.trim();
+    const trimmedLoginPassword = newFeedLoginPassword.trim();
+
+    if (!trimmedHandle) {
+      setAddInstagramFeedError('Enter an Instagram handle or profile URL.');
+      return false;
+    }
+
+    if (
+      (trimmedLoginUsername && !trimmedLoginPassword) ||
+      (!trimmedLoginUsername && trimmedLoginPassword)
+    ) {
+      setAddInstagramFeedError(
+        'Provide both login username and login password, or leave both empty.'
+      );
+      return false;
+    }
+
+    setAddInstagramFeedLoading(true);
+    setAddInstagramFeedError(null);
+
+    try {
+      await fetchJson<unknown>('/api/feeds/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          social: {
+            platform: 'instagram' as const,
+            handle: trimmedHandle,
+            login_username: trimmedLoginUsername || undefined,
+            login_password: trimmedLoginPassword || undefined,
+          },
+        }),
+      });
+      setNewInstagramHandle('');
+      await Promise.all([loadFeeds(), loadCategories(), refreshUnreadCounters()]);
+      return true;
+    } catch (e) {
+      setAddInstagramFeedError(
+        e instanceof Error ? e.message : 'Failed to add feed',
+      );
+      return false;
+    } finally {
+      setAddInstagramFeedLoading(false);
+    }
+  }
+
+  async function addTwitterFeed(e: React.FormEvent): Promise<boolean> {
+    e.preventDefault();
+
+    const trimmedHandle = newTwitterHandle.trim();
+    const trimmedLoginUsername = newFeedLoginUsername.trim();
+    const trimmedLoginPassword = newFeedLoginPassword.trim();
+
+    if (!trimmedHandle) {
+      setAddTwitterFeedError('Enter a Twitter / X handle or profile URL.');
+      return false;
+    }
+
+    if (
+      (trimmedLoginUsername && !trimmedLoginPassword) ||
+      (!trimmedLoginUsername && trimmedLoginPassword)
+    ) {
+      setAddTwitterFeedError(
+        'Provide both login username and login password, or leave both empty.'
+      );
+      return false;
+    }
+
+    setAddTwitterFeedLoading(true);
+    setAddTwitterFeedError(null);
+
+    try {
+      await fetchJson<unknown>('/api/feeds/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          social: {
+            platform: 'twitter' as const,
+            handle: trimmedHandle,
+            login_username: trimmedLoginUsername || undefined,
+            login_password: trimmedLoginPassword || undefined,
+          },
+        }),
+      });
+      setNewTwitterHandle('');
+      await Promise.all([loadFeeds(), loadCategories(), refreshUnreadCounters()]);
+      return true;
+    } catch (e) {
+      setAddTwitterFeedError(
+        e instanceof Error ? e.message : 'Failed to add feed',
+      );
+      return false;
+    } finally {
+      setAddTwitterFeedLoading(false);
     }
   }
 
@@ -936,6 +1164,11 @@ export default function Home() {
   }
 
   async function deleteCategory(categoryId: number) {
+    const category = categories.find((cat) => cat.id === categoryId);
+    if (category && isProtectedCategoryTitle(category.title)) {
+      toast.error('This category is managed automatically.');
+      return;
+    }
     if (!confirm('Are you sure you want to delete this category?')) {
       return;
     }
@@ -996,6 +1229,10 @@ export default function Home() {
     e.preventDefault();
 
     if (!editItemId) return false;
+    if (isEditingProtectedCategory) {
+      setEditError('This category is managed automatically.');
+      return false;
+    }
 
     const trimmedTitle = editTitle.trim();
     if (!trimmedTitle) return false;
@@ -1032,30 +1269,40 @@ export default function Home() {
     const trimmedUrl = editFeedUrl.trim();
 
     if (!trimmedTitle || !trimmedUrl) return false;
+    if (editOriginalFeedLayout === 'youtube' && !isYouTubeFeedUrl(trimmedUrl)) {
+      setEditError(
+        'YouTube feeds must use a YouTube RSS URL (it should contain /feeds/videos.xml).',
+      );
+      return false;
+    }
 
     setEditLoading(true);
     setEditError(null);
 
     try {
-      const existingFeed = feedsById.get(editItemId);
-      const rewriteRules = setRemoveClickbaitRule(
-        existingFeed?.rewrite_rules,
-        editRemoveClickbait,
-      );
-
       await fetchJson<{ ok: boolean }>(`/api/feeds/${editItemId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: trimmedTitle,
-          feed_url: trimmedUrl,
-          category_id: editCategoryId,
-          rewrite_rules: rewriteRules,
-        }),
+        body: JSON.stringify(
+          editFeedLayout !== 'default'
+            ? {
+                title: trimmedTitle,
+                feed_url: trimmedUrl,
+              }
+            : {
+                title: trimmedTitle,
+                feed_url: trimmedUrl,
+                category_id: editCategoryId,
+                rewrite_rules: setRemoveClickbaitRule(
+                  feedsById.get(editItemId)?.rewrite_rules,
+                  editRemoveClickbait,
+                ),
+              },
+        ),
       });
 
-      // Success: refresh feeds
-      await Promise.all([loadFeeds(), refreshUnreadCounters()]);
+      // Success: refresh feeds/categories (category may be created/forced server-side)
+      await Promise.all([loadFeeds(), loadCategories(), refreshUnreadCounters()]);
       return true;
     } catch (e) {
       setEditError(e instanceof Error ? e.message : 'Failed to update feed');
@@ -1759,6 +2006,21 @@ export default function Home() {
               addCategoryLoading={addCategoryLoading}
               addCategoryError={addCategoryError}
               addCategory={addCategory}
+              newYoutubeFeedUrl={newYoutubeFeedUrl}
+              setNewYoutubeFeedUrl={setNewYoutubeFeedUrl}
+              addYoutubeFeedLoading={addYoutubeFeedLoading}
+              addYoutubeFeedError={addYoutubeFeedError}
+              addYoutubeFeed={addYoutubeFeed}
+              newInstagramHandle={newInstagramHandle}
+              setNewInstagramHandle={setNewInstagramHandle}
+              addInstagramFeedLoading={addInstagramFeedLoading}
+              addInstagramFeedError={addInstagramFeedError}
+              addInstagramFeed={addInstagramFeed}
+              newTwitterHandle={newTwitterHandle}
+              setNewTwitterHandle={setNewTwitterHandle}
+              addTwitterFeedLoading={addTwitterFeedLoading}
+              addTwitterFeedError={addTwitterFeedError}
+              addTwitterFeed={addTwitterFeed}
               newFeedUrl={newFeedUrl}
               setNewFeedUrl={setNewFeedUrl}
               newFeedPlatform={newFeedPlatform}
@@ -1786,6 +2048,8 @@ export default function Home() {
               editFeedUrl={editFeedUrl}
               editCategoryId={editCategoryId}
               editRemoveClickbait={editRemoveClickbait}
+              editFeedLayout={editFeedLayout}
+              isEditingProtectedCategory={isEditingProtectedCategory}
               editLoading={editLoading}
               editError={editError}
               onClose={closeEditModal}
@@ -1852,6 +2116,7 @@ export default function Home() {
               onLoadMore={handleLoadMore}
               searchMode={searchMode}
               isStarredView={isStarredView}
+              layout={selectedCategoryLayout}
             />
 
             <EntryPanel

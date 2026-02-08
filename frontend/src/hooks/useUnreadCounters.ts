@@ -2,6 +2,14 @@ import { useCallback, useMemo, useState } from 'react';
 import type { Feed } from '@/app/_lib/types';
 import type { ReaderView } from '@/hooks/useReaderData';
 import { fetchFeedCounters, fetchStarredCount } from '@/lib/readerApi';
+import { isProtectedCategoryTitle } from '@/lib/protectedCategories';
+
+function isGloballyVisible(feed: Feed): boolean {
+  if (feed.category?.title && isProtectedCategoryTitle(feed.category.title)) {
+    return false;
+  }
+  return feed.hide_globally !== true;
+}
 
 export function useUnreadCounters({
   isProvisioned,
@@ -22,17 +30,20 @@ export function useUnreadCounters({
       const counters = await fetchFeedCounters();
       const unreads = counters.unreads ?? {};
       setUnreadsByFeed(unreads);
-      const total = Object.values(unreads).reduce(
-        (sum, value) => sum + value,
-        0
-      );
+      const total = feeds.reduce((sum, feed) => {
+        if (!isGloballyVisible(feed)) return sum;
+        const fallback =
+          typeof feed.unread_count === 'number' ? feed.unread_count : 0;
+        const count = unreads[String(feed.id)] ?? fallback;
+        return sum + count;
+      }, 0);
       setTotalUnreadCount(total);
       return total;
     } catch (err) {
       console.error('Failed to load unread counters', err);
       return null;
     }
-  }, [isProvisioned]);
+  }, [feeds, isProvisioned]);
 
   const refreshStarredCount = useCallback(async () => {
     if (!isProvisioned) return;
@@ -66,6 +77,7 @@ export function useUnreadCounters({
       }
       if (totalUnreadCount > 0) return totalUnreadCount;
       return feeds.reduce((sum, feed) => {
+        if (!isGloballyVisible(feed)) return sum;
         if (typeof feed.unread_count !== 'number') return sum;
         return sum + feed.unread_count;
       }, 0);

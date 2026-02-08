@@ -12,6 +12,13 @@ import {
   incrementSocialMetric,
   recordSocialEvent,
 } from '@/lib/social/metrics';
+import { isYouTubeFeedUrl } from '@/lib/youtube';
+import {
+  isProtectedCategoryTitle,
+  normalizeCategoryTitle,
+  protectedCategoryTitleForKind,
+  type ProtectedCategoryKind,
+} from '@/lib/protectedCategories';
 import type {
   NormalizedSocialFeedInput,
   SocialFeedRequestInput,
@@ -29,6 +36,12 @@ type CreateFeedRequest = {
   feed_url?: string;
   category_id?: number;
   social?: SocialFeedRequestInput;
+};
+
+type MinifluxCategory = {
+  id: number;
+  user_id: number;
+  title: string;
 };
 
 type DiscoveredFeed = {
@@ -225,12 +238,74 @@ export async function POST(request: NextRequest) {
     }
 
     // 6. Create feed using the discovered or resolved URL
-    const requestBody: { feed_url: string; category_id?: number } = {
+    const requestBody: {
+      feed_url: string;
+      category_id?: number;
+      hide_globally?: boolean;
+    } = {
       feed_url: feedUrlToCreate,
     };
 
-    // Add category_id if provided
-    if (category_id && typeof category_id === 'number') {
+    const isYoutubeFeed =
+      isYouTubeFeedUrl(feedUrlToCreate) ||
+      (trimmedUrl ? isYouTubeFeedUrl(trimmedUrl) : false);
+
+    const forcedKind: ProtectedCategoryKind | null = isYoutubeFeed
+      ? 'youtube'
+      : socialSourceContext?.platform === 'instagram'
+        ? 'instagram'
+        : socialSourceContext?.platform === 'twitter'
+          ? 'twitter'
+          : null;
+
+    let forcedCategoryId: number | null = null;
+    let forcedCategoryTitle: string | null = null;
+
+    if (forcedKind) {
+      forcedCategoryTitle = protectedCategoryTitleForKind(forcedKind);
+      requestBody.hide_globally = true;
+      try {
+        const categories = await mfFetchUser<MinifluxCategory[]>(
+          token,
+          '/v1/categories',
+        );
+        const existing = categories.find(
+          (cat) => normalizeCategoryTitle(cat.title) === forcedKind,
+        );
+        if (existing) {
+          forcedCategoryId = existing.id;
+        } else {
+          const created = await mfFetchUser<MinifluxCategory>(
+            token,
+            '/v1/categories',
+            {
+              method: 'POST',
+              body: JSON.stringify({ title: forcedCategoryTitle }),
+            },
+          );
+          forcedCategoryId = created.id;
+        }
+        requestBody.category_id = forcedCategoryId;
+      } catch (categoryErr) {
+        console.warn('Failed to ensure protected category:', categoryErr);
+        return NextResponse.json(
+          { error: `Failed to ensure ${forcedCategoryTitle} category.` },
+          { status: 500 },
+        );
+      }
+    } else if (category_id && typeof category_id === 'number') {
+      // Disallow assigning feeds into protected categories directly.
+      const categories = await mfFetchUser<MinifluxCategory[]>(
+        token,
+        '/v1/categories',
+      );
+      const target = categories.find((cat) => cat.id === category_id);
+      if (target && isProtectedCategoryTitle(target.title)) {
+        return NextResponse.json(
+          { error: `${target.title.trim()} category is managed automatically.` },
+          { status: 400 },
+        );
+      }
       requestBody.category_id = category_id;
     }
 
@@ -251,6 +326,26 @@ export async function POST(request: NextRequest) {
         platform: socialSourceContext.platform,
         source_key: socialSourceContext.sourceKey,
       });
+    }
+
+    if (forcedKind && forcedCategoryId) {
+      try {
+        await mfFetchUser(token, `/v1/feeds/${createdFeed.id}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            hide_globally: true,
+            category: { id: forcedCategoryId },
+          }),
+        });
+        createdFeed.hide_globally = true;
+        createdFeed.category =
+          createdFeed.category ??
+          (forcedCategoryTitle
+            ? { id: forcedCategoryId, title: forcedCategoryTitle }
+            : createdFeed.category);
+      } catch (updateErr) {
+        console.warn('Failed to mark protected feed as hidden globally:', updateErr);
+      }
     }
 
     return NextResponse.json(createdFeed);

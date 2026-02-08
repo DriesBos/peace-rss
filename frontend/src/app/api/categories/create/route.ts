@@ -3,6 +3,7 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { mfFetchUser } from '@/lib/miniflux';
+import { isProtectedCategoryTitle } from '@/lib/protectedCategories';
 
 export const runtime = 'nodejs';
 
@@ -56,6 +57,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (isProtectedCategoryTitle(title)) {
+      return NextResponse.json(
+        { error: 'This category is managed automatically.' },
+        { status: 400 }
+      );
+    }
+
     console.log('Creating category with title:', title.trim());
 
     // 4. Create category using per-user token
@@ -73,4 +81,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
