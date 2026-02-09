@@ -22,6 +22,7 @@
 - In the current add-feed flow, "auto-discover" means this discovery step runs automatically and the first discovered feed URL is used when results are returned.
 - If discovery returns no results or fails, the backend falls back to creating the feed with the original URL directly.
 - For `medium.com` URLs only, the backend now tries an RSS-Bridge `findfeed` fallback before the final direct-URL fallback.
+- For `medium.com` URLs, the backend first rewrites page/profile URLs to canonical feed URLs (for example, `https://mres.medium.com/` → `https://mres.medium.com/feed`, `https://medium.com/@name` → `https://medium.com/feed/@name`).
 
 ## Protected Categories
 

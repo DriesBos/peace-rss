@@ -305,6 +305,35 @@ function isMediumHostname(hostname: string): boolean {
   return host === 'medium.com' || host === 'www.medium.com' || host.endsWith('.medium.com');
 }
 
+function resolveMediumFeedUrlFromInput(input: string): string | null {
+  const parsed = parseHttpUrl(input);
+  if (!parsed || !isMediumHostname(parsed.hostname)) return null;
+
+  const host = parsed.hostname.toLowerCase();
+  const pathname = normalizePathname(parsed.pathname);
+
+  if (host !== 'medium.com' && host !== 'www.medium.com') {
+    if (pathname === '/feed' || pathname.startsWith('/feed/')) {
+      return parsed.toString();
+    }
+    return `${parsed.origin}/feed`;
+  }
+
+  if (pathname === '/' || pathname === '/feed') {
+    return pathname === '/feed' ? parsed.toString() : null;
+  }
+
+  if (pathname.startsWith('/feed/')) {
+    return parsed.toString();
+  }
+
+  const segments = pathname.split('/').filter(Boolean);
+  if (segments.length === 0) return null;
+  const target = segments[0];
+  if (!target) return null;
+  return `https://medium.com/feed/${encodeURIComponent(target)}`;
+}
+
 function hasSlugPath(url: URL): boolean {
   return normalizePathname(url.pathname) !== '/';
 }
@@ -405,12 +434,24 @@ async function tryDiscoverMediumFeedViaBridge(
   }
 }
 
+function isMinifluxForbiddenFetcherError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  const message = err.message.toLowerCase();
+  return (
+    message.includes('(/v1/feeds)') &&
+    (message.includes('access forbidden (403') ||
+      message.includes('403 status code') ||
+      message.includes('status code 403'))
+  );
+}
+
 export async function POST(request: NextRequest) {
   let socialSourceContext: { platform: string; sourceKey: string } | null =
     null;
   let nonSocialSelectionDebug:
     | {
         strategy:
+          | 'medium_url_rewrite'
           | 'input_slug_or_path_match'
           | 'input_discovery_first_result'
           | 'base_discovery_fallback'
@@ -567,103 +608,121 @@ export async function POST(request: NextRequest) {
       } else {
         // 5. Standard URL path: prefer slug-aware discovery, then fallback to base URL
         const parsedInputUrl = parseHttpUrl(trimmedUrl);
-        const inputHasSlugPath = parsedInputUrl ? hasSlugPath(parsedInputUrl) : false;
-        const baseUrl = parsedInputUrl ? `${parsedInputUrl.origin}/` : '';
-        let strategy:
-          | 'input_slug_or_path_match'
-          | 'input_discovery_first_result'
-          | 'base_discovery_fallback'
-          | 'medium_rss_bridge_fallback'
-          | 'base_url_direct_fallback'
-          | 'input_direct_fallback' = 'input_direct_fallback';
-        let inputDiscoveryCount: number | null = null;
-        let baseDiscoveryCount: number | null = null;
+        const resolvedMediumFeedUrl = resolveMediumFeedUrlFromInput(trimmedUrl);
+        if (resolvedMediumFeedUrl) {
+          feedUrlToCreate = resolvedMediumFeedUrl;
+          nonSocialSelectionDebug = {
+            strategy: 'medium_url_rewrite',
+            inputUrl: trimmedUrl,
+            resolvedUrl: feedUrlToCreate,
+            inputHasSlugPath: Boolean(parsedInputUrl && hasSlugPath(parsedInputUrl)),
+            baseUrl: parsedInputUrl ? `${parsedInputUrl.origin}/` : null,
+            inputDiscoveryCount: null,
+            baseDiscoveryCount: null,
+          };
+          console.log(
+            'Resolved Medium input to canonical feed URL:',
+            nonSocialSelectionDebug,
+          );
+        } else {
+          const inputHasSlugPath = parsedInputUrl ? hasSlugPath(parsedInputUrl) : false;
+          const baseUrl = parsedInputUrl ? `${parsedInputUrl.origin}/` : '';
+          let strategy:
+            | 'input_slug_or_path_match'
+            | 'input_discovery_first_result'
+            | 'base_discovery_fallback'
+            | 'medium_rss_bridge_fallback'
+            | 'base_url_direct_fallback'
+            | 'input_direct_fallback' = 'input_direct_fallback';
+          let inputDiscoveryCount: number | null = null;
+          let baseDiscoveryCount: number | null = null;
 
-        const discoveredFromInput = await tryDiscoverFeedsForUrl(
-          token,
-          trimmedUrl,
-          'input URL'
-        );
-        inputDiscoveryCount = discoveredFromInput ? discoveredFromInput.length : null;
+          const discoveredFromInput = await tryDiscoverFeedsForUrl(
+            token,
+            trimmedUrl,
+            'input URL'
+          );
+          inputDiscoveryCount = discoveredFromInput ? discoveredFromInput.length : null;
 
-        let shouldFallbackToBase = false;
-        if (discoveredFromInput && discoveredFromInput.length > 0) {
-          const preferredFeedUrl =
-            parsedInputUrl && inputHasSlugPath
-              ? pickDiscoveredFeedForSlugPath(parsedInputUrl, discoveredFromInput)
-              : discoveredFromInput[0].url;
+          let shouldFallbackToBase = false;
+          if (discoveredFromInput && discoveredFromInput.length > 0) {
+            const preferredFeedUrl =
+              parsedInputUrl && inputHasSlugPath
+                ? pickDiscoveredFeedForSlugPath(parsedInputUrl, discoveredFromInput)
+                : discoveredFromInput[0].url;
 
-          if (preferredFeedUrl) {
-            feedUrlToCreate = preferredFeedUrl;
-            strategy = inputHasSlugPath
-              ? 'input_slug_or_path_match'
-              : 'input_discovery_first_result';
-            console.log(
-              `Discovered ${discoveredFromInput.length} feed(s) for input URL, using:`,
-              feedUrlToCreate
-            );
+            if (preferredFeedUrl) {
+              feedUrlToCreate = preferredFeedUrl;
+              strategy = inputHasSlugPath
+                ? 'input_slug_or_path_match'
+                : 'input_discovery_first_result';
+              console.log(
+                `Discovered ${discoveredFromInput.length} feed(s) for input URL, using:`,
+                feedUrlToCreate
+              );
+            } else {
+              shouldFallbackToBase = Boolean(baseUrl && inputHasSlugPath);
+              if (shouldFallbackToBase) {
+                console.log(
+                  'Input discovery returned feeds but none matched slug path; trying base URL fallback...'
+                );
+              }
+            }
           } else {
             shouldFallbackToBase = Boolean(baseUrl && inputHasSlugPath);
-            if (shouldFallbackToBase) {
-              console.log(
-                'Input discovery returned feeds but none matched slug path; trying base URL fallback...'
-              );
+            if (!shouldFallbackToBase) {
+              console.log('No feeds discovered for input URL, will try direct URL');
             }
           }
-        } else {
-          shouldFallbackToBase = Boolean(baseUrl && inputHasSlugPath);
-          if (!shouldFallbackToBase) {
-            console.log('No feeds discovered for input URL, will try direct URL');
-          }
-        }
 
-        if (shouldFallbackToBase && baseUrl) {
-          const discoveredFromBase = await tryDiscoverFeedsForUrl(
-            token,
-            baseUrl,
-            'base URL'
-          );
-          baseDiscoveryCount = discoveredFromBase ? discoveredFromBase.length : null;
-          if (discoveredFromBase && discoveredFromBase.length > 0) {
-            feedUrlToCreate = discoveredFromBase[0].url;
-            strategy = 'base_discovery_fallback';
-            console.log(
-              `Discovered ${discoveredFromBase.length} feed(s) for base URL, using:`,
-              feedUrlToCreate
+          if (shouldFallbackToBase && baseUrl) {
+            const discoveredFromBase = await tryDiscoverFeedsForUrl(
+              token,
+              baseUrl,
+              'base URL'
             );
-          } else {
-            feedUrlToCreate = baseUrl;
-            strategy = 'base_url_direct_fallback';
-            console.log('No base URL feeds discovered, falling back to base URL');
+            baseDiscoveryCount = discoveredFromBase ? discoveredFromBase.length : null;
+            if (discoveredFromBase && discoveredFromBase.length > 0) {
+              feedUrlToCreate = discoveredFromBase[0].url;
+              strategy = 'base_discovery_fallback';
+              console.log(
+                `Discovered ${discoveredFromBase.length} feed(s) for base URL, using:`,
+                feedUrlToCreate
+              );
+            } else {
+              feedUrlToCreate = baseUrl;
+              strategy = 'base_url_direct_fallback';
+              console.log('No base URL feeds discovered, falling back to base URL');
+            }
           }
-        }
 
-        const canTryMediumBridgeFallback = Boolean(
-          parsedInputUrl &&
-            isMediumHostname(parsedInputUrl.hostname) &&
-            (strategy === 'input_direct_fallback' ||
-              strategy === 'base_url_direct_fallback')
-        );
+          const canTryMediumBridgeFallback = Boolean(
+            parsedInputUrl &&
+              isMediumHostname(parsedInputUrl.hostname) &&
+              (strategy === 'input_direct_fallback' ||
+                strategy === 'base_url_direct_fallback')
+          );
 
-        if (canTryMediumBridgeFallback) {
-          const mediumBridgeFeedUrl = await tryDiscoverMediumFeedViaBridge(trimmedUrl);
-          if (mediumBridgeFeedUrl) {
-            feedUrlToCreate = mediumBridgeFeedUrl;
-            strategy = 'medium_rss_bridge_fallback';
-            console.log('Using RSS-Bridge Medium feed URL:', mediumBridgeFeedUrl);
+          if (canTryMediumBridgeFallback) {
+            const mediumBridgeFeedUrl = await tryDiscoverMediumFeedViaBridge(trimmedUrl);
+            if (mediumBridgeFeedUrl) {
+              feedUrlToCreate = mediumBridgeFeedUrl;
+              strategy = 'medium_rss_bridge_fallback';
+              console.log('Using RSS-Bridge Medium feed URL:', mediumBridgeFeedUrl);
+            }
           }
-        }
 
-        nonSocialSelectionDebug = {
-          strategy,
-          inputUrl: trimmedUrl,
-          resolvedUrl: feedUrlToCreate,
-          inputHasSlugPath,
-          baseUrl: baseUrl || null,
-          inputDiscoveryCount,
-          baseDiscoveryCount,
-        };
-        console.log('Non-social feed selection debug:', nonSocialSelectionDebug);
+          nonSocialSelectionDebug = {
+            strategy,
+            inputUrl: trimmedUrl,
+            resolvedUrl: feedUrlToCreate,
+            inputHasSlugPath,
+            baseUrl: baseUrl || null,
+            inputDiscoveryCount,
+            baseDiscoveryCount,
+          };
+          console.log('Non-social feed selection debug:', nonSocialSelectionDebug);
+        }
       }
     }
 
@@ -743,14 +802,52 @@ export async function POST(request: NextRequest) {
       requestBody.category_id = category_id;
     }
 
-    const createdFeed = await mfFetchUser<CreateFeedResponse>(
-      token,
-      '/v1/feeds',
-      {
+    let createdFeed: CreateFeedResponse;
+    try {
+      createdFeed = await mfFetchUser<CreateFeedResponse>(
+        token,
+        '/v1/feeds',
+        {
+          method: 'POST',
+          body: JSON.stringify(requestBody),
+        }
+      );
+    } catch (createErr) {
+      const parsedInputForRetry = parseHttpUrl(trimmedUrl);
+      const isMediumInput = Boolean(
+        parsedInputForRetry && isMediumHostname(parsedInputForRetry.hostname)
+      );
+      const alreadyUsingMediumBridge =
+        nonSocialSelectionDebug?.strategy === 'medium_rss_bridge_fallback';
+      const canRetryWithMediumBridge =
+        !hasSocialPayload &&
+        isMediumInput &&
+        !alreadyUsingMediumBridge &&
+        isMinifluxForbiddenFetcherError(createErr);
+
+      if (!canRetryWithMediumBridge) {
+        throw createErr;
+      }
+
+      console.log(
+        'Miniflux rejected Medium feed URL; retrying via RSS-Bridge fallback...'
+      );
+      const mediumBridgeFeedUrl = await tryDiscoverMediumFeedViaBridge(trimmedUrl);
+      if (!mediumBridgeFeedUrl) {
+        throw createErr;
+      }
+
+      requestBody.feed_url = mediumBridgeFeedUrl;
+      if (nonSocialSelectionDebug) {
+        nonSocialSelectionDebug.strategy = 'medium_rss_bridge_fallback';
+        nonSocialSelectionDebug.resolvedUrl = mediumBridgeFeedUrl;
+      }
+
+      createdFeed = await mfFetchUser<CreateFeedResponse>(token, '/v1/feeds', {
         method: 'POST',
         body: JSON.stringify(requestBody),
-      }
-    );
+      });
+    }
 
     if (socialSourceContext) {
       incrementSocialMetric('social_create_success_total', {
