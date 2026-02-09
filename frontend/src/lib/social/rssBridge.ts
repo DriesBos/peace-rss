@@ -315,6 +315,94 @@ export async function discoverBridgeFeedUrl(
   return discoveryPromise;
 }
 
+function bridgeNameFromUrl(bridgeUrl: string): string {
+  try {
+    return new URL(bridgeUrl).searchParams.get('bridge') || '';
+  } catch {
+    return '';
+  }
+}
+
+async function discoverBridgeFeedCandidatesForUrl(
+  sourceUrl: string
+): Promise<string[]> {
+  assertRssBridgeBaseUrl();
+
+  const discoveryUrl = new URL('/?action=findfeed&format=Atom', `${rssBridgeBaseUrl}/`);
+  discoveryUrl.searchParams.set('url', sourceUrl);
+
+  const res = await fetch(discoveryUrl.toString(), {
+    method: 'GET',
+    headers: {
+      Accept: 'application/json, text/plain;q=0.9, */*;q=0.8',
+    },
+    cache: 'no-store',
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(
+      `findfeed(${sourceUrl}) -> ${res.status} ${res.statusText} ${text}`.trim()
+    );
+  }
+
+  const contentType = res.headers.get('content-type') || '';
+  if (!contentType.includes('application/json')) {
+    const text = await res.text().catch(() => '');
+    throw new Error(
+      `findfeed(${sourceUrl}) returned non-JSON response: ${text}`.trim()
+    );
+  }
+
+  const items = (await res.json()) as FindFeedItem[];
+  if (!Array.isArray(items) || items.length === 0) {
+    throw new Error(`findfeed(${sourceUrl}) returned no feed candidates`);
+  }
+
+  const candidates = items
+    .map((item) => item?.url)
+    .filter((value): value is string => Boolean(value))
+    .map((value) => {
+      try {
+        return toAbsoluteBridgeUrl(value);
+      } catch {
+        return null;
+      }
+    })
+    .filter((value): value is string => Boolean(value));
+
+  if (candidates.length === 0) {
+    throw new Error(`findfeed(${sourceUrl}) returned no valid bridge URLs`);
+  }
+
+  return Array.from(new Set(candidates));
+}
+
+export async function discoverMediumBridgeFeedUrl(sourceUrl: string): Promise<string> {
+  const candidates = await discoverBridgeFeedCandidatesForUrl(sourceUrl);
+
+  const prioritized = [...candidates].sort((left, right) => {
+    const leftBridge = bridgeNameFromUrl(left);
+    const rightBridge = bridgeNameFromUrl(right);
+
+    const leftScore = leftBridge === 'MediumBridge' ? 0 : 1;
+    const rightScore = rightBridge === 'MediumBridge' ? 0 : 1;
+    if (leftScore !== rightScore) return leftScore - rightScore;
+    return left.localeCompare(right);
+  });
+
+  const errors: string[] = [];
+  for (const candidate of prioritized) {
+    const probeError = await probeBridgeFeedCandidate(candidate);
+    if (!probeError) return candidate;
+    errors.push(probeError);
+  }
+
+  throw new Error(
+    `RSS-Bridge Medium fallback failed for ${sourceUrl}. ${errors.join(' | ')}`.trim()
+  );
+}
+
 export function buildSocialProxyFeedUrl(token: string): string {
   assertSocialFeedsBaseUrl();
   return `${socialFeedsBaseUrl}/api/social/rss/${encodeURIComponent(token)}`;

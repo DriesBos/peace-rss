@@ -21,6 +21,8 @@ export const Button: React.FC<ButtonProps> = ({
   collapse,
   ...props
 }) => {
+  const shouldShowCount = typeof count === 'number' && count > 0;
+
   return (
     <button
       className={`${styles.button} ${styles[variant]} ${className}`}
@@ -30,7 +32,7 @@ export const Button: React.FC<ButtonProps> = ({
       {...props}
     >
       {children}
-      {count && count > 0 && <span className={styles.count}>{count}</span>}
+      {shouldShowCount && <span className={styles.count}>{count}</span>}
     </button>
   );
 };

@@ -21,6 +21,7 @@
 - For a standard website URL, the backend first calls Miniflux discovery (`POST /v1/discover`) to ask Miniflux which RSS/Atom feeds it can detect for that page.
 - In the current add-feed flow, "auto-discover" means this discovery step runs automatically and the first discovered feed URL is used when results are returned.
 - If discovery returns no results or fails, the backend falls back to creating the feed with the original URL directly.
+- For `medium.com` URLs only, the backend now tries an RSS-Bridge `findfeed` fallback before the final direct-URL fallback.
 
 ## Protected Categories
 

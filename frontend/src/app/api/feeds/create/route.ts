@@ -4,7 +4,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { mfFetchUser } from '@/lib/miniflux';
 import { normalizeSocialInput } from '@/lib/social/normalize';
-import { buildSocialProxyFeedUrl, discoverBridgeFeedUrl } from '@/lib/social/rssBridge';
+import {
+  buildSocialProxyFeedUrl,
+  discoverBridgeFeedUrl,
+  discoverMediumBridgeFeedUrl,
+} from '@/lib/social/rssBridge';
 import { checkRateLimit } from '@/lib/social/rateLimit';
 import { encodeSocialFeedToken } from '@/lib/social/token';
 import { buildSocialSourceKeyFromInput } from '@/lib/social/source';
@@ -296,6 +300,11 @@ function parseHttpUrl(value: string): URL | null {
   }
 }
 
+function isMediumHostname(hostname: string): boolean {
+  const host = hostname.toLowerCase();
+  return host === 'medium.com' || host === 'www.medium.com' || host.endsWith('.medium.com');
+}
+
 function hasSlugPath(url: URL): boolean {
   return normalizePathname(url.pathname) !== '/';
 }
@@ -384,6 +393,18 @@ async function tryDiscoverFeedsForUrl(
   }
 }
 
+async function tryDiscoverMediumFeedViaBridge(
+  inputUrl: string
+): Promise<string | null> {
+  try {
+    console.log('Attempting RSS-Bridge fallback for Medium URL...');
+    return await discoverMediumBridgeFeedUrl(inputUrl);
+  } catch (bridgeErr) {
+    console.log('RSS-Bridge Medium fallback failed:', bridgeErr);
+    return null;
+  }
+}
+
 export async function POST(request: NextRequest) {
   let socialSourceContext: { platform: string; sourceKey: string } | null =
     null;
@@ -393,6 +414,7 @@ export async function POST(request: NextRequest) {
           | 'input_slug_or_path_match'
           | 'input_discovery_first_result'
           | 'base_discovery_fallback'
+          | 'medium_rss_bridge_fallback'
           | 'base_url_direct_fallback'
           | 'youtube_input_resolved'
           | 'input_direct_fallback';
@@ -551,6 +573,7 @@ export async function POST(request: NextRequest) {
           | 'input_slug_or_path_match'
           | 'input_discovery_first_result'
           | 'base_discovery_fallback'
+          | 'medium_rss_bridge_fallback'
           | 'base_url_direct_fallback'
           | 'input_direct_fallback' = 'input_direct_fallback';
         let inputDiscoveryCount: number | null = null;
@@ -612,6 +635,22 @@ export async function POST(request: NextRequest) {
             feedUrlToCreate = baseUrl;
             strategy = 'base_url_direct_fallback';
             console.log('No base URL feeds discovered, falling back to base URL');
+          }
+        }
+
+        const canTryMediumBridgeFallback = Boolean(
+          parsedInputUrl &&
+            isMediumHostname(parsedInputUrl.hostname) &&
+            (strategy === 'input_direct_fallback' ||
+              strategy === 'base_url_direct_fallback')
+        );
+
+        if (canTryMediumBridgeFallback) {
+          const mediumBridgeFeedUrl = await tryDiscoverMediumFeedViaBridge(trimmedUrl);
+          if (mediumBridgeFeedUrl) {
+            feedUrlToCreate = mediumBridgeFeedUrl;
+            strategy = 'medium_rss_bridge_fallback';
+            console.log('Using RSS-Bridge Medium feed URL:', mediumBridgeFeedUrl);
           }
         }
 
