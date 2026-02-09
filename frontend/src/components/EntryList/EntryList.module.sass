@@ -22,13 +22,16 @@
 
 .entryList[data-layout='youtube']
   grid-template-columns: repeat(2, 1fr)
+  gap: 16px
   @media (min-width: 750px)
     grid-template-columns: repeat(3, 1fr)
+    gap: 24px
   @media (min-width: 1000px)
     grid-template-columns: repeat(4, 1fr)
   @media (min-width: 1250px)
     grid-template-columns: repeat(5, 1fr)
   @media (min-width: 1500px)
+    gap: 32px
     grid-template-columns: repeat(6, 1fr)
 
 .entryList[data-layout='instagram']

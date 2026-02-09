@@ -204,15 +204,12 @@ export function AddModal({
         <form onSubmit={handleAddYoutubeFeed} className={styles.formBlock}>
           <LabeledInput
             id="add-youtube-feed-url"
-            label="YouTube URL or handle"
+            label="YouTube handle"
             value={newYoutubeFeedUrl}
             onChange={setNewYoutubeFeedUrl}
-            placeholder="https://www.youtube.com/@channel or @channel"
+            placeholder="Add handle..."
             disabled={addYoutubeFeedLoading || isLoading}
           />
-          <div className={styles.help}>
-            Supports feed URLs, channel URLs, and handles.
-          </div>
           <Button
             type="submit"
             variant="primary"

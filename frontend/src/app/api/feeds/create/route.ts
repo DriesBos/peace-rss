@@ -36,6 +36,11 @@ const youtubeResolveTimeoutMs = (() => {
   if (!Number.isFinite(value) || value <= 0) return 6000;
   return Math.floor(value);
 })();
+const YOUTUBE_SHORTS_BLOCKLIST_RULES = [
+  'EntryURL=(?i)youtube\\.com/shorts/',
+  'EntryTitle=(?i)(?:^|\\s)#shorts(?:\\s|$)',
+  'EntryContent=(?i)(?:^|\\s)#shorts(?:\\s|$)',
+].join('\n');
 
 type CreateFeedRequest = {
   feed_url?: string;
@@ -89,6 +94,7 @@ type CreateFeedResponse = {
 };
 const YOUTUBE_CHANNEL_ID_RE = /^UC[a-zA-Z0-9_-]{22}$/;
 const YOUTUBE_HANDLE_RE = /^@?[a-zA-Z0-9._-]{3,30}$/;
+const YOUTUBE_BARE_WORD_RE = /^[a-zA-Z0-9._-]{1,30}$/;
 
 function isYouTubeHostName(hostname: string): boolean {
   const host = hostname.toLowerCase();
@@ -99,8 +105,13 @@ function isYouTubeHostName(hostname: string): boolean {
   );
 }
 
+function buildYouTubeLongFormPlaylistId(channelId: string): string {
+  return `UULF${channelId.slice(2)}`;
+}
+
 function buildYouTubeFeedUrl(channelId: string): string {
-  return `https://www.youtube.com/feeds/videos.xml?channel_id=${encodeURIComponent(channelId)}`;
+  const playlistId = buildYouTubeLongFormPlaylistId(channelId);
+  return `https://www.youtube.com/feeds/videos.xml?playlist_id=${encodeURIComponent(playlistId)}`;
 }
 
 function extractYouTubeChannelIdFromPath(url: URL): string | null {
@@ -119,13 +130,23 @@ function normalizeYouTubeLookupUrl(input: string): URL | null {
   const trimmed = input.trim();
   if (!trimmed) return null;
 
+  // Treat bare one-word input as a YouTube handle.
+  if (
+    YOUTUBE_BARE_WORD_RE.test(trimmed) &&
+    !trimmed.startsWith('@') &&
+    !trimmed.includes('/') &&
+    !trimmed.includes('://')
+  ) {
+    return new URL(`https://www.youtube.com/@${trimmed}/videos`);
+  }
+
   if (
     YOUTUBE_HANDLE_RE.test(trimmed) &&
     !trimmed.includes('/') &&
     !trimmed.includes('://')
   ) {
     const handle = trimmed.startsWith('@') ? trimmed : `@${trimmed}`;
-    return new URL(`https://www.youtube.com/${handle}`);
+    return new URL(`https://www.youtube.com/${handle}/videos`);
   }
 
   const parsed = parseHttpUrl(trimmed);
@@ -137,7 +158,7 @@ function normalizeYouTubeLookupUrl(input: string): URL | null {
   const second = segments[1] || '';
 
   if (first.startsWith('@')) {
-    return new URL(`https://www.youtube.com/${segments[0]}`);
+    return new URL(`https://www.youtube.com/${segments[0]}/videos`);
   }
   if (first === 'channel' && second) {
     return new URL(`https://www.youtube.com/channel/${second}`);
@@ -169,7 +190,24 @@ function extractYouTubeChannelIdFromHtml(html: string): string | null {
   return null;
 }
 
-async function fetchYouTubeChannelIdFromLookupUrl(
+function buildYouTubeLookupCandidates(lookupUrl: URL): URL[] {
+  const candidates: URL[] = [new URL(lookupUrl.toString())];
+  const segments = lookupUrl.pathname.split('/').filter(Boolean);
+  const first = segments[0] || '';
+  const second = (segments[1] || '').toLowerCase();
+
+  if (first.startsWith('@') && second !== 'videos') {
+    candidates.push(new URL(`https://www.youtube.com/${first}/videos`));
+  }
+
+  const deduped = new Map<string, URL>();
+  for (const candidate of candidates) {
+    deduped.set(candidate.toString(), candidate);
+  }
+  return Array.from(deduped.values());
+}
+
+async function fetchYouTubeChannelIdFromUrl(
   lookupUrl: URL
 ): Promise<string | null> {
   const direct = extractYouTubeChannelIdFromPath(lookupUrl);
@@ -208,12 +246,31 @@ async function fetchYouTubeChannelIdFromLookupUrl(
   }
 }
 
+async function fetchYouTubeChannelIdFromLookupUrl(
+  lookupUrl: URL
+): Promise<string | null> {
+  const candidates = buildYouTubeLookupCandidates(lookupUrl);
+  for (const candidate of candidates) {
+    const channelId = await fetchYouTubeChannelIdFromUrl(candidate);
+    if (channelId) return channelId;
+  }
+  return null;
+}
+
 async function resolveYouTubeFeedUrlFromInput(
   input: string
 ): Promise<string | null> {
   const trimmed = input.trim();
   if (!trimmed) return null;
-  if (isYouTubeFeedUrl(trimmed)) return trimmed;
+  if (isYouTubeFeedUrl(trimmed)) {
+    const parsed = parseHttpUrl(trimmed);
+    if (!parsed) return trimmed;
+    const channelId = parsed.searchParams.get('channel_id');
+    if (channelId && YOUTUBE_CHANNEL_ID_RE.test(channelId)) {
+      return buildYouTubeFeedUrl(channelId);
+    }
+    return trimmed;
+  }
 
   const lookupUrl = normalizeYouTubeLookupUrl(trimmed);
   if (!lookupUrl) return null;
@@ -576,6 +633,7 @@ export async function POST(request: NextRequest) {
       feed_url: string;
       category_id?: number;
       hide_globally?: boolean;
+      blocklist_rules?: string;
     } = {
       feed_url: feedUrlToCreate,
     };
@@ -598,6 +656,9 @@ export async function POST(request: NextRequest) {
     if (forcedKind) {
       forcedCategoryTitle = protectedCategoryTitleForKind(forcedKind);
       requestBody.hide_globally = true;
+      if (forcedKind === 'youtube') {
+        requestBody.blocklist_rules = YOUTUBE_SHORTS_BLOCKLIST_RULES;
+      }
       try {
         const categories = await mfFetchUser<MinifluxCategory[]>(
           token,

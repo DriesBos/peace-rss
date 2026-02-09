@@ -1817,6 +1817,8 @@ export default function Home() {
 
       // r or R = refresh all feeds
       if (e.key === 'r' || e.key === 'R') {
+        // Preserve browser hard/soft reload shortcuts (Cmd/Ctrl + R).
+        if (e.metaKey || e.ctrlKey) return;
         e.preventDefault();
         void refreshAllDataWithToast();
         return;
