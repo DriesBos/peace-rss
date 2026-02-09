@@ -1,4 +1,5 @@
 const YOUTUBE_ID_RE = /^[a-zA-Z0-9_-]{11}$/;
+const YOUTUBE_HANDLE_RE = /^@?[a-zA-Z0-9._-]{3,30}$/;
 
 function normalizeMaybeUrl(value: string): URL | null {
   const trimmed = value.trim();
@@ -67,6 +68,35 @@ export function isYouTubeFeedUrl(value: string): boolean {
   return url.pathname === '/feeds/videos.xml';
 }
 
+export function isLikelyYouTubeChannelInput(value: string): boolean {
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  if (isYouTubeFeedUrl(trimmed)) return true;
+
+  if (
+    YOUTUBE_HANDLE_RE.test(trimmed) &&
+    !trimmed.includes('/') &&
+    !trimmed.includes('://')
+  ) {
+    return true;
+  }
+
+  const url = normalizeMaybeUrl(trimmed);
+  if (!url) return false;
+  if (!isYouTubeHost(url.hostname)) return false;
+
+  const segments = url.pathname.split('/').filter(Boolean);
+  if (segments.length === 0) return false;
+  const first = segments[0]?.toLowerCase() || '';
+
+  return (
+    first.startsWith('@') ||
+    first === 'channel' ||
+    first === 'c' ||
+    first === 'user'
+  );
+}
+
 export function getYouTubePosterUrl(videoId: string): string {
   // hqdefault exists reliably; maxresdefault is often missing.
   return `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
@@ -84,9 +114,17 @@ export function getYouTubeEmbedUrl(
 ): string {
   // Privacy-enhanced mode.
   const qs = new URLSearchParams({
+    // Keep related videos scoped and reduce branding noise.
     rel: '0',
     modestbranding: '1',
-    playsinline: '1',
+    color: 'white',
+    controls: '1',
+    fs: '1',
+    loop: '0',
+    playsinline: '0',
+    // Best-effort to reduce overlays/cards on compact embeds.
+    iv_load_policy: '3',
+    cc_load_policy: '0',
   });
 
   if (options.autoplay) qs.set('autoplay', '1');

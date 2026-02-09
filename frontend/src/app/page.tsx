@@ -20,7 +20,7 @@ import { fetchStarredEntries } from '@/lib/readerApi';
 import { ENTRIES_PAGE_SIZE, INITIAL_ENTRIES_LIMIT } from '@/lib/entriesQuery';
 import { NOTIFICATION_COPY } from '@/lib/notificationCopy';
 import type { SocialPlatform } from '@/lib/social/types';
-import { isYouTubeFeedUrl } from '@/lib/youtube';
+import { isLikelyYouTubeChannelInput, isYouTubeFeedUrl } from '@/lib/youtube';
 import { isProtectedCategoryTitle, normalizeCategoryTitle } from '@/lib/protectedCategories';
 import {
   hasRemoveClickbaitRule,
@@ -1027,12 +1027,12 @@ export default function Home() {
 
     const trimmedUrl = newYoutubeFeedUrl.trim();
     if (!trimmedUrl) {
-      setAddYoutubeFeedError('Enter a YouTube feed URL.');
+      setAddYoutubeFeedError('Enter a YouTube feed URL, channel URL, or handle.');
       return false;
     }
-    if (!isYouTubeFeedUrl(trimmedUrl)) {
+    if (!isLikelyYouTubeChannelInput(trimmedUrl)) {
       setAddYoutubeFeedError(
-        'That does not look like a YouTube RSS feed URL. It should contain /feeds/videos.xml',
+        'Enter a YouTube feed URL, channel URL, or handle (for example @channel).',
       );
       return false;
     }

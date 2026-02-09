@@ -107,7 +107,7 @@ export function AddModal({
   }, [newFeedPlatform]);
 
   const canSubmitFeed = Boolean(
-    newFeedUrl.trim() || (newFeedPlatform && newFeedHandle.trim())
+    newFeedUrl.trim() || (newFeedPlatform && newFeedHandle.trim()),
   );
   const canSubmitYoutube = Boolean(newYoutubeFeedUrl.trim());
   const canSubmitInstagram = Boolean(newInstagramHandle.trim());
@@ -204,21 +204,19 @@ export function AddModal({
         <form onSubmit={handleAddYoutubeFeed} className={styles.formBlock}>
           <LabeledInput
             id="add-youtube-feed-url"
-            label="YouTube feed URL"
+            label="YouTube URL or handle"
             value={newYoutubeFeedUrl}
             onChange={setNewYoutubeFeedUrl}
-            placeholder="https://www.youtube.com/feeds/videos.xml?channel_id=…"
+            placeholder="https://www.youtube.com/@channel or @channel"
             disabled={addYoutubeFeedLoading || isLoading}
           />
           <div className={styles.help}>
-            Paste a YouTube RSS feed URL (it should contain <code>/feeds/videos.xml</code>).
+            Supports feed URLs, channel URLs, and handles.
           </div>
           <Button
             type="submit"
             variant="primary"
-            disabled={
-              addYoutubeFeedLoading || isLoading || !canSubmitYoutube
-            }
+            disabled={addYoutubeFeedLoading || isLoading || !canSubmitYoutube}
           >
             {addYoutubeFeedLoading ? 'Adding...' : 'Add feed'}
           </Button>
@@ -287,7 +285,9 @@ export function AddModal({
             id="add-feed-platform"
             label="Social platform"
             value={newFeedPlatform}
-            onChange={(value) => setNewFeedPlatform(value as '' | SocialPlatform)}
+            onChange={(value) =>
+              setNewFeedPlatform(value as '' | SocialPlatform)
+            }
             placeholder="Select platform"
             optionalHint="(optional)"
             options={[
@@ -324,7 +324,8 @@ export function AddModal({
           <div className={styles.help}>
             Login fields are optional and used as RSS-Bridge HTTP auth.
           </div>
-          {!isAddingYoutubeFromMainForm && !isAddingProtectedSocialFromMainForm ? (
+          {!isAddingYoutubeFromMainForm &&
+          !isAddingProtectedSocialFromMainForm ? (
             <LabeledSelect
               id="add-feed-category"
               value={newFeedCategoryId ? String(newFeedCategoryId) : ''}
@@ -338,8 +339,8 @@ export function AddModal({
             />
           ) : isAddingYoutubeFromMainForm ? (
             <div className={styles.help}>
-              This looks like a YouTube feed. Use the YouTube form above (YouTube
-              feeds are assigned automatically).
+              This looks like a YouTube feed. Use the YouTube form above
+              (YouTube feeds are assigned automatically).
             </div>
           ) : (
             <div className={styles.help}>

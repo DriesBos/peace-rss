@@ -31,6 +31,11 @@ const socialCreateLimitPerMinute = (() => {
   if (!Number.isFinite(value) || value <= 0) return 20;
   return Math.floor(value);
 })();
+const youtubeResolveTimeoutMs = (() => {
+  const value = Number(process.env.YOUTUBE_RESOLVE_TIMEOUT_MS || '6000');
+  if (!Number.isFinite(value) || value <= 0) return 6000;
+  return Math.floor(value);
+})();
 
 type CreateFeedRequest = {
   feed_url?: string;
@@ -82,6 +87,142 @@ type CreateFeedResponse = {
   };
   hide_globally: boolean;
 };
+const YOUTUBE_CHANNEL_ID_RE = /^UC[a-zA-Z0-9_-]{22}$/;
+const YOUTUBE_HANDLE_RE = /^@?[a-zA-Z0-9._-]{3,30}$/;
+
+function isYouTubeHostName(hostname: string): boolean {
+  const host = hostname.toLowerCase();
+  return (
+    host === 'youtube.com' ||
+    host === 'www.youtube.com' ||
+    host === 'm.youtube.com'
+  );
+}
+
+function buildYouTubeFeedUrl(channelId: string): string {
+  return `https://www.youtube.com/feeds/videos.xml?channel_id=${encodeURIComponent(channelId)}`;
+}
+
+function extractYouTubeChannelIdFromPath(url: URL): string | null {
+  const segments = url.pathname.split('/').filter(Boolean);
+  if (
+    segments.length >= 2 &&
+    segments[0]?.toLowerCase() === 'channel' &&
+    YOUTUBE_CHANNEL_ID_RE.test(segments[1] || '')
+  ) {
+    return segments[1] || null;
+  }
+  return null;
+}
+
+function normalizeYouTubeLookupUrl(input: string): URL | null {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+
+  if (
+    YOUTUBE_HANDLE_RE.test(trimmed) &&
+    !trimmed.includes('/') &&
+    !trimmed.includes('://')
+  ) {
+    const handle = trimmed.startsWith('@') ? trimmed : `@${trimmed}`;
+    return new URL(`https://www.youtube.com/${handle}`);
+  }
+
+  const parsed = parseHttpUrl(trimmed);
+  if (!parsed || !isYouTubeHostName(parsed.hostname)) return null;
+
+  const segments = parsed.pathname.split('/').filter(Boolean);
+  if (segments.length === 0) return null;
+  const first = (segments[0] || '').toLowerCase();
+  const second = segments[1] || '';
+
+  if (first.startsWith('@')) {
+    return new URL(`https://www.youtube.com/${segments[0]}`);
+  }
+  if (first === 'channel' && second) {
+    return new URL(`https://www.youtube.com/channel/${second}`);
+  }
+  if ((first === 'c' || first === 'user') && second) {
+    return new URL(`https://www.youtube.com/${first}/${second}`);
+  }
+
+  return null;
+}
+
+function extractYouTubeChannelIdFromHtml(html: string): string | null {
+  const patterns = [
+    /"channelId":"(UC[a-zA-Z0-9_-]{22})"/,
+    /"externalId":"(UC[a-zA-Z0-9_-]{22})"/,
+    /"browseId":"(UC[a-zA-Z0-9_-]{22})"/,
+    /itemprop="identifier"\s+content="(UC[a-zA-Z0-9_-]{22})"/i,
+    /\/channel\/(UC[a-zA-Z0-9_-]{22})/,
+  ];
+
+  for (const pattern of patterns) {
+    const match = html.match(pattern);
+    const candidate = match?.[1];
+    if (candidate && YOUTUBE_CHANNEL_ID_RE.test(candidate)) {
+      return candidate;
+    }
+  }
+
+  return null;
+}
+
+async function fetchYouTubeChannelIdFromLookupUrl(
+  lookupUrl: URL
+): Promise<string | null> {
+  const direct = extractYouTubeChannelIdFromPath(lookupUrl);
+  if (direct) return direct;
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+  }, youtubeResolveTimeoutMs);
+
+  try {
+    const res = await fetch(lookupUrl.toString(), {
+      method: 'GET',
+      headers: {
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      },
+      cache: 'no-store',
+      redirect: 'follow',
+      signal: controller.signal,
+    });
+    if (!res.ok) return null;
+
+    const finalUrl = parseHttpUrl(res.url);
+    const finalChannelId = finalUrl
+      ? extractYouTubeChannelIdFromPath(finalUrl)
+      : null;
+    if (finalChannelId) return finalChannelId;
+
+    const html = await res.text();
+    return extractYouTubeChannelIdFromHtml(html);
+  } catch (err) {
+    console.log('YouTube channel resolution failed:', err);
+    return null;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+async function resolveYouTubeFeedUrlFromInput(
+  input: string
+): Promise<string | null> {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+  if (isYouTubeFeedUrl(trimmed)) return trimmed;
+
+  const lookupUrl = normalizeYouTubeLookupUrl(trimmed);
+  if (!lookupUrl) return null;
+
+  const channelId = await fetchYouTubeChannelIdFromLookupUrl(lookupUrl);
+  if (!channelId) return null;
+
+  return buildYouTubeFeedUrl(channelId);
+}
 
 function normalizePathname(pathname: string): string {
   const normalized = pathname.replace(/\/+$/, '');
@@ -196,6 +337,7 @@ export async function POST(request: NextRequest) {
           | 'input_discovery_first_result'
           | 'base_discovery_fallback'
           | 'base_url_direct_fallback'
+          | 'youtube_input_resolved'
           | 'input_direct_fallback';
         inputUrl: string;
         resolvedUrl: string;
@@ -327,88 +469,106 @@ export async function POST(request: NextRequest) {
       const socialToken = encodeSocialFeedToken(tokenPayload);
       feedUrlToCreate = buildSocialProxyFeedUrl(socialToken);
     } else {
-      // 5. Standard URL path: prefer slug-aware discovery, then fallback to base URL
-      const parsedInputUrl = parseHttpUrl(trimmedUrl);
-      const inputHasSlugPath = parsedInputUrl ? hasSlugPath(parsedInputUrl) : false;
-      const baseUrl = parsedInputUrl ? `${parsedInputUrl.origin}/` : '';
-      let strategy:
-        | 'input_slug_or_path_match'
-        | 'input_discovery_first_result'
-        | 'base_discovery_fallback'
-        | 'base_url_direct_fallback'
-        | 'input_direct_fallback' = 'input_direct_fallback';
-      let inputDiscoveryCount: number | null = null;
-      let baseDiscoveryCount: number | null = null;
+      const resolvedYouTubeFeedUrl = await resolveYouTubeFeedUrlFromInput(trimmedUrl);
+      if (resolvedYouTubeFeedUrl) {
+        feedUrlToCreate = resolvedYouTubeFeedUrl;
+        nonSocialSelectionDebug = {
+          strategy: 'youtube_input_resolved',
+          inputUrl: trimmedUrl,
+          resolvedUrl: feedUrlToCreate,
+          inputHasSlugPath: false,
+          baseUrl: null,
+          inputDiscoveryCount: null,
+          baseDiscoveryCount: null,
+        };
+        console.log(
+          'Resolved YouTube input to feed URL:',
+          nonSocialSelectionDebug,
+        );
+      } else {
+        // 5. Standard URL path: prefer slug-aware discovery, then fallback to base URL
+        const parsedInputUrl = parseHttpUrl(trimmedUrl);
+        const inputHasSlugPath = parsedInputUrl ? hasSlugPath(parsedInputUrl) : false;
+        const baseUrl = parsedInputUrl ? `${parsedInputUrl.origin}/` : '';
+        let strategy:
+          | 'input_slug_or_path_match'
+          | 'input_discovery_first_result'
+          | 'base_discovery_fallback'
+          | 'base_url_direct_fallback'
+          | 'input_direct_fallback' = 'input_direct_fallback';
+        let inputDiscoveryCount: number | null = null;
+        let baseDiscoveryCount: number | null = null;
 
-      const discoveredFromInput = await tryDiscoverFeedsForUrl(
-        token,
-        trimmedUrl,
-        'input URL'
-      );
-      inputDiscoveryCount = discoveredFromInput ? discoveredFromInput.length : null;
+        const discoveredFromInput = await tryDiscoverFeedsForUrl(
+          token,
+          trimmedUrl,
+          'input URL'
+        );
+        inputDiscoveryCount = discoveredFromInput ? discoveredFromInput.length : null;
 
-      let shouldFallbackToBase = false;
-      if (discoveredFromInput && discoveredFromInput.length > 0) {
-        const preferredFeedUrl =
-          parsedInputUrl && inputHasSlugPath
-            ? pickDiscoveredFeedForSlugPath(parsedInputUrl, discoveredFromInput)
-            : discoveredFromInput[0].url;
+        let shouldFallbackToBase = false;
+        if (discoveredFromInput && discoveredFromInput.length > 0) {
+          const preferredFeedUrl =
+            parsedInputUrl && inputHasSlugPath
+              ? pickDiscoveredFeedForSlugPath(parsedInputUrl, discoveredFromInput)
+              : discoveredFromInput[0].url;
 
-        if (preferredFeedUrl) {
-          feedUrlToCreate = preferredFeedUrl;
-          strategy = inputHasSlugPath
-            ? 'input_slug_or_path_match'
-            : 'input_discovery_first_result';
-          console.log(
-            `Discovered ${discoveredFromInput.length} feed(s) for input URL, using:`,
-            feedUrlToCreate
-          );
+          if (preferredFeedUrl) {
+            feedUrlToCreate = preferredFeedUrl;
+            strategy = inputHasSlugPath
+              ? 'input_slug_or_path_match'
+              : 'input_discovery_first_result';
+            console.log(
+              `Discovered ${discoveredFromInput.length} feed(s) for input URL, using:`,
+              feedUrlToCreate
+            );
+          } else {
+            shouldFallbackToBase = Boolean(baseUrl && inputHasSlugPath);
+            if (shouldFallbackToBase) {
+              console.log(
+                'Input discovery returned feeds but none matched slug path; trying base URL fallback...'
+              );
+            }
+          }
         } else {
           shouldFallbackToBase = Boolean(baseUrl && inputHasSlugPath);
-          if (shouldFallbackToBase) {
-            console.log(
-              'Input discovery returned feeds but none matched slug path; trying base URL fallback...'
-            );
+          if (!shouldFallbackToBase) {
+            console.log('No feeds discovered for input URL, will try direct URL');
           }
         }
-      } else {
-        shouldFallbackToBase = Boolean(baseUrl && inputHasSlugPath);
-        if (!shouldFallbackToBase) {
-          console.log('No feeds discovered for input URL, will try direct URL');
-        }
-      }
 
-      if (shouldFallbackToBase && baseUrl) {
-        const discoveredFromBase = await tryDiscoverFeedsForUrl(
-          token,
-          baseUrl,
-          'base URL'
-        );
-        baseDiscoveryCount = discoveredFromBase ? discoveredFromBase.length : null;
-        if (discoveredFromBase && discoveredFromBase.length > 0) {
-          feedUrlToCreate = discoveredFromBase[0].url;
-          strategy = 'base_discovery_fallback';
-          console.log(
-            `Discovered ${discoveredFromBase.length} feed(s) for base URL, using:`,
-            feedUrlToCreate
+        if (shouldFallbackToBase && baseUrl) {
+          const discoveredFromBase = await tryDiscoverFeedsForUrl(
+            token,
+            baseUrl,
+            'base URL'
           );
-        } else {
-          feedUrlToCreate = baseUrl;
-          strategy = 'base_url_direct_fallback';
-          console.log('No base URL feeds discovered, falling back to base URL');
+          baseDiscoveryCount = discoveredFromBase ? discoveredFromBase.length : null;
+          if (discoveredFromBase && discoveredFromBase.length > 0) {
+            feedUrlToCreate = discoveredFromBase[0].url;
+            strategy = 'base_discovery_fallback';
+            console.log(
+              `Discovered ${discoveredFromBase.length} feed(s) for base URL, using:`,
+              feedUrlToCreate
+            );
+          } else {
+            feedUrlToCreate = baseUrl;
+            strategy = 'base_url_direct_fallback';
+            console.log('No base URL feeds discovered, falling back to base URL');
+          }
         }
-      }
 
-      nonSocialSelectionDebug = {
-        strategy,
-        inputUrl: trimmedUrl,
-        resolvedUrl: feedUrlToCreate,
-        inputHasSlugPath,
-        baseUrl: baseUrl || null,
-        inputDiscoveryCount,
-        baseDiscoveryCount,
-      };
-      console.log('Non-social feed selection debug:', nonSocialSelectionDebug);
+        nonSocialSelectionDebug = {
+          strategy,
+          inputUrl: trimmedUrl,
+          resolvedUrl: feedUrlToCreate,
+          inputHasSlugPath,
+          baseUrl: baseUrl || null,
+          inputDiscoveryCount,
+          baseDiscoveryCount,
+        };
+        console.log('Non-social feed selection debug:', nonSocialSelectionDebug);
+      }
     }
 
     // 6. Create feed using the discovered or resolved URL
