@@ -40,8 +40,6 @@ export type MenuModalProps = {
   onStoriesWindowDaysChange: (days: StoriesWindowDays) => void;
   openEditModal: (type: 'feed' | 'category', item: Feed | Category) => void;
   openAddModal: () => void;
-  onRefreshFeeds: () => Promise<void> | void;
-  isRefreshingFeeds: boolean;
   isLoading: boolean;
   globalFilterWords: string;
   onGlobalFilterWordsChange: (value: string) => void;
@@ -82,9 +80,6 @@ export function MenuModal({
   onStoriesWindowDaysChange,
   openEditModal,
   openAddModal,
-  onRefreshFeeds,
-  isRefreshingFeeds,
-
   isLoading,
   globalFilterWords,
   onGlobalFilterWordsChange,
@@ -325,12 +320,6 @@ export function MenuModal({
     },
     [queueThemeToast, setTheme, theme],
   );
-
-  const handleRefreshFeeds = useCallback(() => {
-    if (isLoading) return;
-    toast(NOTIFICATION_COPY.app.feedRefreshing);
-    void onRefreshFeeds();
-  }, [isLoading, onRefreshFeeds]);
 
   const handleApplyGlobalFilterWords = useCallback(async () => {
     const didSucceed = await onApplyGlobalFilterWords(globalFilterWords);

@@ -242,7 +242,6 @@ export default function Home() {
     isLoading,
     isRefreshingFeeds,
     error,
-    lastRefreshedAt,
     setEntries,
     setIsLoading,
     setError,
@@ -590,7 +589,7 @@ export default function Home() {
     );
   }, []);
 
-  const refreshAllData = useCallback(async () => {
+  const refreshAllData = useCallback(async (): Promise<boolean> => {
     const now = Math.floor(Date.now() / 1000);
     const previousEntriesSnapshot = entriesRef.current;
     const sessionReadSnapshot = previousEntriesSnapshot.filter(
@@ -630,7 +629,7 @@ export default function Home() {
         }
 
         setLastSync(now);
-        return;
+        return true;
       } catch (e) {
         console.error('Incremental refresh failed, falling back', e);
       }
@@ -654,7 +653,9 @@ export default function Home() {
       setEntries(merged);
       syncSelection(merged);
     }
+    if (!data) return false;
     setLastSync(now);
+    return true;
   }, [
     fetchEntriesData,
     getTotalForView,
@@ -678,6 +679,16 @@ export default function Home() {
     view,
     fetchedOriginalSuccessIds,
   ]);
+
+  const refreshAllDataWithToast = useCallback(async () => {
+    const didSucceed = await refreshAllData();
+    if (didSucceed) {
+      toast(NOTIFICATION_COPY.app.feedRefreshed);
+    } else {
+      toast.error(NOTIFICATION_COPY.app.feedRefreshFailed);
+    }
+    return didSucceed;
+  }, [refreshAllData]);
 
   const reloadCurrentEntries = useCallback(async () => {
     const current = entriesRef.current;
@@ -765,14 +776,6 @@ export default function Home() {
         : pullState === 'done'
           ? 'done'
           : '';
-
-  const lastRefreshedLabel = useMemo(() => {
-    if (!lastRefreshedAt) return null;
-    return new Date(lastRefreshedAt).toLocaleTimeString(undefined, {
-      hour: 'numeric',
-      minute: '2-digit',
-    });
-  }, [lastRefreshedAt]);
 
   const markEntryStatus = useCallback(
     async (entryIds: number[], status: 'read' | 'unread') => {
@@ -1623,7 +1626,7 @@ export default function Home() {
           setPullDistance(0);
           pullDistanceRef.current = 0;
           try {
-            await refreshAllData();
+            await refreshAllDataWithToast();
           } finally {
             setPullState('done');
             const win = getBrowserWindow();
@@ -1669,7 +1672,7 @@ export default function Home() {
       hasPrev,
       navigateToNext,
       navigateToPrev,
-      refreshAllData,
+      refreshAllDataWithToast,
     ],
   );
 
@@ -1790,7 +1793,7 @@ export default function Home() {
       // r or R = refresh all feeds
       if (e.key === 'r' || e.key === 'R') {
         e.preventDefault();
-        void refreshAllData();
+        void refreshAllDataWithToast();
         return;
       }
 
@@ -1984,9 +1987,6 @@ export default function Home() {
               onStoriesWindowDaysChange={setStoriesWindowDays}
               openEditModal={openEditModal}
               openAddModal={openAddModal}
-              onRefreshFeeds={() => refreshAllData()}
-              isRefreshingFeeds={isRefreshingFeeds}
-              lastRefreshedAt={lastRefreshedAt}
               isLoading={isLoading}
               globalFilterWords={globalFilterWords}
               onGlobalFilterWordsChange={handleGlobalFilterWordsChange}
@@ -2097,12 +2097,6 @@ export default function Home() {
                 setSelectedFeedId(null);
               }}
             />
-
-            {!isRefreshingFeeds && lastRefreshedLabel ? (
-              <div className={styles.refreshStatus}>
-                Last refreshed {lastRefreshedLabel}
-              </div>
-            ) : null}
 
             {error ? <div className={styles.error}>{error}</div> : null}
 

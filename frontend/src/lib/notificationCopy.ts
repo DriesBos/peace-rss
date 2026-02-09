@@ -4,6 +4,8 @@ export const NOTIFICATION_COPY = {
     starRemoved: 'Story removed from starred.',
     starRemoveError: 'Could not update starred entry.',
     feedRefreshing: 'Refreshing feeds...',
+    feedRefreshed: 'Feeds refreshed.',
+    feedRefreshFailed: 'Could not refresh feeds.',
     articleMarked: 'Article marked',
     articleUnmarked: 'Article unmarked',
     categoryUpdated: 'Category updated.',
