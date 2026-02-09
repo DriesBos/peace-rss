@@ -149,6 +149,7 @@ export default function Home() {
   const hasInitialLoadRef = useRef(false);
   const lastSyncRef = useRef<number | null>(null);
   const autoMarkTimeoutRef = useRef<number | null>(null);
+  const autoMarkInitializedEntryIdRef = useRef<number | null>(null);
 
   const setLastSync = useCallback((timestamp: number | null) => {
     lastSyncRef.current = timestamp;
@@ -851,14 +852,30 @@ export default function Home() {
   }
 
   async function toggleSelectedStar() {
-    if (!selectedEntry) return;
+    const current = selectedEntryRef.current;
+    if (!current) return;
     if (isTogglingStar) return;
+
+    const entryId = current.id;
+    const previousStarred = Boolean(current.starred);
+    const optimisticStarred = !previousStarred;
+
     setIsTogglingStar(true);
     setError(null);
+
+    // Optimistic UI update so EntryPanel button text flips immediately.
+    setEntries((prev) =>
+      prev.map((entry) =>
+        entry.id === entryId ? { ...entry, starred: optimisticStarred } : entry,
+      ),
+    );
+
+    let didToggleOnServer = false;
     try {
-      await fetchJson<{ ok: true }>(`/api/entries/${selectedEntry.id}/star`, {
+      await fetchJson<{ ok: true }>(`/api/entries/${entryId}/star`, {
         method: 'POST',
       });
+      didToggleOnServer = true;
       // Refresh list + star metadata
       await Promise.all([
         reloadCurrentEntries(),
@@ -866,6 +883,14 @@ export default function Home() {
         loadStarredEntries(),
       ]);
     } catch (e) {
+      if (!didToggleOnServer) {
+        // Revert only when the toggle request itself failed.
+        setEntries((prev) =>
+          prev.map((entry) =>
+            entry.id === entryId ? { ...entry, starred: previousStarred } : entry,
+          ),
+        );
+      }
       setError(e instanceof Error ? e.message : 'Failed to toggle star');
     } finally {
       setIsTogglingStar(false);
@@ -1844,6 +1869,11 @@ export default function Home() {
 
   // Auto-mark entry as read after 5s on the entry page
   useEffect(() => {
+    if (selectedEntryId !== null) return;
+    autoMarkInitializedEntryIdRef.current = null;
+  }, [selectedEntryId]);
+
+  useEffect(() => {
     const win = getBrowserWindow();
     if (!win) return;
     if (!isProvisioned) return;
@@ -1851,6 +1881,8 @@ export default function Home() {
 
     const entry = selectedEntryRef.current;
     if (!entry) return;
+    if (autoMarkInitializedEntryIdRef.current === entry.id) return;
+    autoMarkInitializedEntryIdRef.current = entry.id;
     if ((entry.status ?? 'unread') !== 'unread') return;
 
     const entryId = entry.id;
@@ -1875,7 +1907,7 @@ export default function Home() {
     };
   }, [
     selectedEntry?.id,
-    selectedEntry?.status,
+    selectedEntryId,
     isProvisioned,
     isMenuModalOpen,
     isAddModalOpen,
