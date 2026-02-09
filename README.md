@@ -36,6 +36,7 @@ Note: the `frontend` container runs a production Next.js build, so edits to file
 
 ## Social Feed Ops
 
-- Social feeds (`instagram` / `twitter`) run through private RSS-Bridge + app proxy routes.
+- RSS-Bridge is used only for social feeds (`instagram` / `twitter` / X) via app proxy routes.
+- Non-social feed URLs do not use RSS-Bridge; they go through Miniflux discovery (`/v1/discover`) and feed creation (`/v1/feeds`).
 - `/api/social/rss/[token]` includes in-memory cache, per-source/global rate limits, and request coalescing.
 - `/api/social/metrics` is available when `SOCIAL_METRICS_TOKEN` is set.

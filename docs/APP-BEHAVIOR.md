@@ -14,6 +14,13 @@
 
 - Instagram and Twitter/X feeds are created via the app’s social feed flow and are auto-assigned to `Instagram` / `Twitter` categories (created if needed).
 - Instagram/Twitter feeds are marked `hide_globally=true` so they do not appear in the global “All” view.
+- RSS-Bridge is only used for these social feeds (Instagram and Twitter/X).
+
+## Feed Discovery (Non-Social URLs)
+
+- For a standard website URL, the backend first calls Miniflux discovery (`POST /v1/discover`) to ask Miniflux which RSS/Atom feeds it can detect for that page.
+- In the current add-feed flow, "auto-discover" means this discovery step runs automatically and the first discovered feed URL is used when results are returned.
+- If discovery returns no results or fails, the backend falls back to creating the feed with the original URL directly.
 
 ## Protected Categories
 

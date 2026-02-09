@@ -83,9 +83,128 @@ type CreateFeedResponse = {
   hide_globally: boolean;
 };
 
+function normalizePathname(pathname: string): string {
+  const normalized = pathname.replace(/\/+$/, '');
+  return normalized || '/';
+}
+
+function parseHttpUrl(value: string): URL | null {
+  try {
+    const parsed = new URL(value);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function hasSlugPath(url: URL): boolean {
+  return normalizePathname(url.pathname) !== '/';
+}
+
+function buildLowercaseHaystack(url: URL): string {
+  return `${normalizePathname(url.pathname)}${url.search}`.toLowerCase();
+}
+
+function extractPathTerms(pathname: string): string[] {
+  return pathname
+    .split('/')
+    .filter(Boolean)
+    .map((segment) => {
+      try {
+        return decodeURIComponent(segment).trim().toLowerCase();
+      } catch {
+        return segment.trim().toLowerCase();
+      }
+    })
+    .filter(Boolean);
+}
+
+function pickDiscoveredFeedForSlugPath(
+  inputUrl: URL,
+  discovered: DiscoverResponse
+): string | null {
+  if (discovered.length === 0) return null;
+  if (!hasSlugPath(inputUrl)) return discovered[0].url;
+
+  const inputTerms = extractPathTerms(normalizePathname(inputUrl.pathname));
+  if (inputTerms.length === 0) return null;
+
+  const inputHref = inputUrl.toString();
+  const inputOrigin = inputUrl.origin;
+
+  for (const item of discovered) {
+    if (item.url === inputHref) return item.url;
+  }
+
+  for (const item of discovered) {
+    const candidate = parseHttpUrl(item.url);
+    if (!candidate || candidate.origin !== inputOrigin) continue;
+    const candidatePath = normalizePathname(candidate.pathname);
+    if (candidatePath === '/') continue;
+    const haystack = buildLowercaseHaystack(candidate);
+    if (inputTerms.every((term) => haystack.includes(term))) {
+      return item.url;
+    }
+  }
+
+  for (const item of discovered) {
+    const candidate = parseHttpUrl(item.url);
+    if (!candidate || candidate.origin !== inputOrigin) continue;
+    const candidatePath = normalizePathname(candidate.pathname);
+    if (candidatePath === '/') continue;
+    const haystack = buildLowercaseHaystack(candidate);
+    if (inputTerms.some((term) => haystack.includes(term))) {
+      return item.url;
+    }
+  }
+
+  return null;
+}
+
+async function discoverFeedsForUrl(
+  token: string,
+  url: string
+): Promise<DiscoverResponse> {
+  return mfFetchUser<DiscoverResponse>(token, '/v1/discover', {
+    method: 'POST',
+    body: JSON.stringify({ url }),
+  });
+}
+
+async function tryDiscoverFeedsForUrl(
+  token: string,
+  url: string,
+  label: string
+): Promise<DiscoverResponse | null> {
+  try {
+    console.log(`Attempting feed discovery for ${label}...`);
+    return await discoverFeedsForUrl(token, url);
+  } catch (discoverErr) {
+    console.log(`Feed discovery failed for ${label}:`, discoverErr);
+    return null;
+  }
+}
+
 export async function POST(request: NextRequest) {
   let socialSourceContext: { platform: string; sourceKey: string } | null =
     null;
+  let nonSocialSelectionDebug:
+    | {
+        strategy:
+          | 'input_slug_or_path_match'
+          | 'input_discovery_first_result'
+          | 'base_discovery_fallback'
+          | 'base_url_direct_fallback'
+          | 'input_direct_fallback';
+        inputUrl: string;
+        resolvedUrl: string;
+        inputHasSlugPath: boolean;
+        baseUrl: string | null;
+        inputDiscoveryCount: number | null;
+        baseDiscoveryCount: number | null;
+      }
+    | null = null;
 
   try {
     // 1. Require Clerk authentication
@@ -208,33 +327,88 @@ export async function POST(request: NextRequest) {
       const socialToken = encodeSocialFeedToken(tokenPayload);
       feedUrlToCreate = buildSocialProxyFeedUrl(socialToken);
     } else {
-      // 5. Standard URL path: discover feed first, then fallback to direct URL
-      try {
-        console.log('Attempting feed discovery...');
-        const discovered = await mfFetchUser<DiscoverResponse>(
-          token,
-          '/v1/discover',
-          {
-            method: 'POST',
-            body: JSON.stringify({ url: trimmedUrl }),
-          }
-        );
+      // 5. Standard URL path: prefer slug-aware discovery, then fallback to base URL
+      const parsedInputUrl = parseHttpUrl(trimmedUrl);
+      const inputHasSlugPath = parsedInputUrl ? hasSlugPath(parsedInputUrl) : false;
+      const baseUrl = parsedInputUrl ? `${parsedInputUrl.origin}/` : '';
+      let strategy:
+        | 'input_slug_or_path_match'
+        | 'input_discovery_first_result'
+        | 'base_discovery_fallback'
+        | 'base_url_direct_fallback'
+        | 'input_direct_fallback' = 'input_direct_fallback';
+      let inputDiscoveryCount: number | null = null;
+      let baseDiscoveryCount: number | null = null;
 
-        if (discovered && discovered.length > 0) {
-          feedUrlToCreate = discovered[0].url;
+      const discoveredFromInput = await tryDiscoverFeedsForUrl(
+        token,
+        trimmedUrl,
+        'input URL'
+      );
+      inputDiscoveryCount = discoveredFromInput ? discoveredFromInput.length : null;
+
+      let shouldFallbackToBase = false;
+      if (discoveredFromInput && discoveredFromInput.length > 0) {
+        const preferredFeedUrl =
+          parsedInputUrl && inputHasSlugPath
+            ? pickDiscoveredFeedForSlugPath(parsedInputUrl, discoveredFromInput)
+            : discoveredFromInput[0].url;
+
+        if (preferredFeedUrl) {
+          feedUrlToCreate = preferredFeedUrl;
+          strategy = inputHasSlugPath
+            ? 'input_slug_or_path_match'
+            : 'input_discovery_first_result';
           console.log(
-            `Discovered ${discovered.length} feed(s), using:`,
+            `Discovered ${discoveredFromInput.length} feed(s) for input URL, using:`,
             feedUrlToCreate
           );
         } else {
-          console.log('No feeds discovered, will try direct URL');
+          shouldFallbackToBase = Boolean(baseUrl && inputHasSlugPath);
+          if (shouldFallbackToBase) {
+            console.log(
+              'Input discovery returned feeds but none matched slug path; trying base URL fallback...'
+            );
+          }
         }
-      } catch (discoverErr) {
-        console.log(
-          'Feed discovery failed or not available, trying direct URL:',
-          discoverErr
-        );
+      } else {
+        shouldFallbackToBase = Boolean(baseUrl && inputHasSlugPath);
+        if (!shouldFallbackToBase) {
+          console.log('No feeds discovered for input URL, will try direct URL');
+        }
       }
+
+      if (shouldFallbackToBase && baseUrl) {
+        const discoveredFromBase = await tryDiscoverFeedsForUrl(
+          token,
+          baseUrl,
+          'base URL'
+        );
+        baseDiscoveryCount = discoveredFromBase ? discoveredFromBase.length : null;
+        if (discoveredFromBase && discoveredFromBase.length > 0) {
+          feedUrlToCreate = discoveredFromBase[0].url;
+          strategy = 'base_discovery_fallback';
+          console.log(
+            `Discovered ${discoveredFromBase.length} feed(s) for base URL, using:`,
+            feedUrlToCreate
+          );
+        } else {
+          feedUrlToCreate = baseUrl;
+          strategy = 'base_url_direct_fallback';
+          console.log('No base URL feeds discovered, falling back to base URL');
+        }
+      }
+
+      nonSocialSelectionDebug = {
+        strategy,
+        inputUrl: trimmedUrl,
+        resolvedUrl: feedUrlToCreate,
+        inputHasSlugPath,
+        baseUrl: baseUrl || null,
+        inputDiscoveryCount,
+        baseDiscoveryCount,
+      };
+      console.log('Non-social feed selection debug:', nonSocialSelectionDebug);
     }
 
     // 6. Create feed using the discovered or resolved URL
