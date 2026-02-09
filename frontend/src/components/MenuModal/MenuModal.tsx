@@ -42,7 +42,6 @@ export type MenuModalProps = {
   openAddModal: () => void;
   onRefreshFeeds: () => Promise<void> | void;
   isRefreshingFeeds: boolean;
-  lastRefreshedAt: number | null;
   isLoading: boolean;
   globalFilterWords: string;
   onGlobalFilterWordsChange: (value: string) => void;
@@ -85,7 +84,7 @@ export function MenuModal({
   openAddModal,
   onRefreshFeeds,
   isRefreshingFeeds,
-  lastRefreshedAt,
+
   isLoading,
   globalFilterWords,
   onGlobalFilterWordsChange,
@@ -339,16 +338,6 @@ export function MenuModal({
       toast(NOTIFICATION_COPY.app.feedUpdated);
     }
   }, [globalFilterWords, onApplyGlobalFilterWords]);
-
-  const refreshMeta = useMemo(() => {
-    if (isRefreshingFeeds) return 'Refreshing feeds...';
-    if (!lastRefreshedAt) return 'Not refreshed yet.';
-    const label = new Date(lastRefreshedAt).toLocaleTimeString(undefined, {
-      hour: 'numeric',
-      minute: '2-digit',
-    });
-    return `Last refreshed ${label}`;
-  }, [isRefreshingFeeds, lastRefreshedAt]);
 
   return (
     <ModalContainer isOpen={isOpen} onClose={handleClose} ariaLabel="Menu">

@@ -378,6 +378,7 @@ export async function POST(request: NextRequest) {
     const isSocialProxyTimeout =
       errorMessage.includes('/api/social/rss/') &&
       (errorMessage.includes('context deadline exceeded') ||
+        errorMessage.includes('gateway timeout (504 status code)') ||
         errorMessage.includes('Upstream RSS-Bridge timed out') ||
         errorMessage.includes('Failed to reach RSS-Bridge upstream'));
 

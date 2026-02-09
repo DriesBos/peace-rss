@@ -14,6 +14,11 @@ const discoverCacheTtlMs = (() => {
   if (!Number.isFinite(value) || value <= 0) return 600000;
   return Math.floor(value);
 })();
+const discoveryProbeTimeoutMs = (() => {
+  const value = Number(process.env.SOCIAL_DISCOVERY_PROBE_TIMEOUT_MS || '5000');
+  if (!Number.isFinite(value) || value <= 0) return 5000;
+  return Math.floor(value);
+})();
 const discoverCacheBySource = new Map<
   string,
   { feedUrl: string; expiresAt: number }
@@ -94,6 +99,87 @@ function toAbsoluteBridgeUrl(value: string): string {
   return resolved.toString();
 }
 
+function bridgePriorityForCandidate(
+  platform: NormalizedSocialFeedInput['platform'],
+  bridgeUrl: string
+): number {
+  let bridgeName = '';
+  try {
+    bridgeName = (new URL(bridgeUrl)).searchParams.get('bridge') || '';
+  } catch {
+    bridgeName = '';
+  }
+
+  if (platform === 'twitter') {
+    if (bridgeName === 'TwitterV2Bridge') return 0;
+    if (bridgeName === 'TwitterBridge') return 1;
+    if (bridgeName === 'NitterBridge') return 2;
+    if (bridgeName === 'FarsideNitterBridge') return 9;
+    return 5;
+  }
+
+  if (platform === 'instagram') {
+    if (bridgeName === 'ImgsedBridge') return 0;
+    if (bridgeName === 'InstagramBridge') return 1;
+    return 5;
+  }
+
+  return 5;
+}
+
+async function probeBridgeFeedCandidate(
+  bridgeUrl: string,
+  authHeader?: string
+): Promise<string | null> {
+  const headers = new Headers({
+    Accept: 'application/atom+xml, application/rss+xml, application/xml;q=0.9, */*;q=0.8',
+  });
+  if (authHeader) headers.set('Authorization', authHeader);
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+  }, discoveryProbeTimeoutMs);
+
+  try {
+    const res = await fetch(bridgeUrl, {
+      method: 'GET',
+      headers,
+      cache: 'no-store',
+      signal: controller.signal,
+    });
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      return `probe(${bridgeUrl}) -> ${res.status} ${res.statusText} ${text}`.trim();
+    }
+
+    const contentType = (res.headers.get('content-type') || '').toLowerCase();
+    if (
+      !contentType.includes('xml') &&
+      !contentType.includes('atom') &&
+      !contentType.includes('rss')
+    ) {
+      return `probe(${bridgeUrl}) returned non-feed content-type: ${contentType || 'unknown'}`;
+    }
+
+    return null;
+  } catch (err) {
+    if (
+      typeof err === 'object' &&
+      err !== null &&
+      'name' in err &&
+      (err as { name?: string }).name === 'AbortError'
+    ) {
+      return `probe(${bridgeUrl}) timed out after ${discoveryProbeTimeoutMs}ms`;
+    }
+    const message = err instanceof Error ? err.message : 'Unknown probe error';
+    return `probe(${bridgeUrl}) failed: ${message}`;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 export function isBridgeFeedUrl(value: string): boolean {
   if (!rssBridgeBaseUrl) return false;
   try {
@@ -162,17 +248,52 @@ export async function discoverBridgeFeedUrl(
       }
 
       const items = (await res.json()) as FindFeedItem[];
-      if (!Array.isArray(items) || items.length === 0 || !items[0]?.url) {
+      if (!Array.isArray(items) || items.length === 0) {
         errors.push(`findfeed(${profileUrl}) returned no feed candidates`);
         continue;
       }
 
-      const bridgeFeedUrl = toAbsoluteBridgeUrl(items[0].url);
-      discoverCacheBySource.set(sourceKey, {
-        feedUrl: bridgeFeedUrl,
-        expiresAt: Date.now() + discoverCacheTtlMs,
+      const absoluteCandidates = items
+        .map((item) => item?.url)
+        .filter((value): value is string => Boolean(value))
+        .map((value) => {
+          try {
+            return toAbsoluteBridgeUrl(value);
+          } catch {
+            return null;
+          }
+        })
+        .filter((value): value is string => Boolean(value));
+
+      if (absoluteCandidates.length === 0) {
+        errors.push(`findfeed(${profileUrl}) returned no valid bridge URLs`);
+        continue;
+      }
+
+      const sortedCandidates = [...absoluteCandidates].sort((left, right) => {
+        return (
+          bridgePriorityForCandidate(input.platform, left) -
+          bridgePriorityForCandidate(input.platform, right)
+        );
       });
-      return bridgeFeedUrl;
+
+      const candidateErrors: string[] = [];
+      for (const bridgeFeedUrl of sortedCandidates) {
+        const probeError = await probeBridgeFeedCandidate(
+          bridgeFeedUrl,
+          authHeader
+        );
+        if (!probeError) {
+          discoverCacheBySource.set(sourceKey, {
+            feedUrl: bridgeFeedUrl,
+            expiresAt: Date.now() + discoverCacheTtlMs,
+          });
+          return bridgeFeedUrl;
+        }
+        candidateErrors.push(probeError);
+      }
+
+      errors.push(...candidateErrors);
     }
 
     const joinedErrors = errors.join(' | ');
