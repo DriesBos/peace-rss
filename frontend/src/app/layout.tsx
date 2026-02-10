@@ -2,20 +2,17 @@ import type { Metadata } from 'next';
 import localFont from 'next/font/local';
 import {
   ClerkProvider,
-  SignInButton,
-  SignUpButton,
   SignedIn,
   SignedOut,
 } from '@clerk/nextjs';
-import { Button } from '@/components/Button/Button';
 import '@/styles/vars.sass';
 import '@/styles/reset.css';
 import '@/styles/globals.sass';
 import { ThemeProvider } from '@/components/ThemeProvider';
-import KomorebiShader from '@/components/KomorebiShader/KomorebiShader';
 import { SerwistProvider } from './serwist';
 import Notifications from '@/components/Notifications/Notifications';
 import { GlobalKeybindings } from '@/components/GlobalKeybindings/GlobalKeybindings';
+import { LandingPage } from '@/components/LandingPage/LandingPage';
 
 const untitledSans = localFont({
   src: [
@@ -140,28 +137,7 @@ export default function RootLayout({
               <Notifications />
               <main>
                 <SignedOut>
-                  <KomorebiShader opacity={0.1} />
-                  <div className="landingPage">
-                    <div className="landingPage_Content">
-                      <div className="landingPage_Intro">
-                        <h1 className="soulSister">Komorebi</h1>
-                        <p>Enjoy your reading</p>
-                      </div>
-                      <ul className="landingPage_Buttons">
-                        <li>
-                          <Button variant="primary">
-                            <SignInButton />
-                          </Button>
-                        </li>
-                        <li>/</li>
-                        <li>
-                          <Button variant="primary">
-                            <SignUpButton />
-                          </Button>
-                        </li>
-                      </ul>
-                    </div>
-                  </div>
+                  <LandingPage />
                 </SignedOut>
                 <SignedIn>
                   <GlobalKeybindings />
