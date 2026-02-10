@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef } from 'react';
-import styles from './HeaderCategories.module.sass';
+import styles from './TheHeader.module.sass';
 import { Button } from '@/components/Button/Button';
 import { IconMenu } from '@/components/icons/IconMenu';
 import { IconWrapper } from '@/components/icons/IconWrapper/IconWrapper';
@@ -10,7 +10,7 @@ import { IconSearch } from '@/components/icons/IconSearch';
 import { IconCategories } from '../icons/IconCategories';
 import { IconStar } from '../icons/IconStar';
 
-export type HeaderCategoriesProps = {
+export type TheHeaderProps = {
   isMenuOpen: boolean;
   onOpenMenu: () => void;
   isCategoriesOpen: boolean;
@@ -33,7 +33,7 @@ export type HeaderCategoriesProps = {
   onSelectCategory: (categoryId: number) => void;
 };
 
-export function HeaderCategories({
+export function TheHeader({
   isMenuOpen,
   onOpenMenu,
   isCategoriesOpen,
@@ -54,7 +54,7 @@ export function HeaderCategories({
   onSelectAll,
   onSelectStarred,
   onSelectCategory,
-}: HeaderCategoriesProps) {
+}: TheHeaderProps) {
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   const categoriesWithFeeds = useMemo(() => {

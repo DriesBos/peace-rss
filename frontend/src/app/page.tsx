@@ -9,7 +9,7 @@ import { AddModal } from '@/components/AddModal/AddModal';
 import { EditModal } from '@/components/EditModal/EditModal';
 import { EntryList } from '@/components/EntryList/EntryList';
 import { EntryPanel } from '@/components/EntryPanel/EntryPanel';
-import { HeaderCategories } from '@/components/HeaderCategories/HeaderCategories';
+import { TheHeader } from '@/components/TheHeader/TheHeader';
 import { MenuModal } from '@/components/MenuModal/MenuModal';
 import { useKeydown } from '@/hooks/useKeydown';
 import { fetchJson } from '@/app/_lib/fetchJson';
@@ -2097,7 +2097,7 @@ export default function Home() {
               onChangeRemoveClickbait={setEditRemoveClickbait}
             />
 
-            <HeaderCategories
+            <TheHeader
               isMenuOpen={isMenuModalOpen}
               onOpenMenu={openMenuModal}
               isCategoriesOpen={isCategoriesOpen}
