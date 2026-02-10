@@ -21,7 +21,10 @@ import { ENTRIES_PAGE_SIZE, INITIAL_ENTRIES_LIMIT } from '@/lib/entriesQuery';
 import { NOTIFICATION_COPY } from '@/lib/notificationCopy';
 import type { SocialPlatform } from '@/lib/social/types';
 import { isLikelyYouTubeChannelInput, isYouTubeFeedUrl } from '@/lib/youtube';
-import { isProtectedCategoryTitle, normalizeCategoryTitle } from '@/lib/protectedCategories';
+import {
+  isProtectedCategoryTitle,
+  normalizeCategoryTitle,
+} from '@/lib/protectedCategories';
 import {
   hasRemoveClickbaitRule,
   mergeManagedFilterWordsIntoBlocklistRules,
@@ -85,8 +88,9 @@ export default function Home() {
   const [isStarredView, setIsStarredView] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchMode, setSearchMode] = useState(false);
-  const [storiesWindowDays, setStoriesWindowDays] =
-    useState<StoriesWindowDays>(DEFAULT_STORIES_WINDOW_DAYS);
+  const [storiesWindowDays, setStoriesWindowDays] = useState<StoriesWindowDays>(
+    DEFAULT_STORIES_WINDOW_DAYS,
+  );
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isCategoriesOpen, setIsCategoriesOpen] = useState(false);
   const [isTogglingStar, setIsTogglingStar] = useState(false);
@@ -101,9 +105,9 @@ export default function Home() {
   );
   const [newInstagramHandle, setNewInstagramHandle] = useState('');
   const [addInstagramFeedLoading, setAddInstagramFeedLoading] = useState(false);
-  const [addInstagramFeedError, setAddInstagramFeedError] = useState<string | null>(
-    null,
-  );
+  const [addInstagramFeedError, setAddInstagramFeedError] = useState<
+    string | null
+  >(null);
   const [newTwitterHandle, setNewTwitterHandle] = useState('');
   const [addTwitterFeedLoading, setAddTwitterFeedLoading] = useState(false);
   const [addTwitterFeedError, setAddTwitterFeedError] = useState<string | null>(
@@ -306,7 +310,11 @@ export default function Home() {
   );
 
   const preserveOriginalContent = useCallback(
-    (nextEntries: Entry[], previousEntries: Entry[], originalIds: Set<number>) => {
+    (
+      nextEntries: Entry[],
+      previousEntries: Entry[],
+      originalIds: Set<number>,
+    ) => {
       if (originalIds.size === 0) return nextEntries;
 
       const previousById = new Map<number, Entry>();
@@ -439,7 +447,9 @@ export default function Home() {
               : 'default';
 
         setEditOriginalFeedLayout(originalLayout);
-        setEditCategoryId(originalLayout === 'default' ? feed.category?.id || null : null);
+        setEditCategoryId(
+          originalLayout === 'default' ? feed.category?.id || null : null,
+        );
         setEditRemoveClickbait(
           originalLayout === 'default'
             ? hasRemoveClickbaitRule(feed.rewrite_rules)
@@ -577,7 +587,7 @@ export default function Home() {
   const loadStarredEntries = useCallback(async () => {
     if (!isProvisioned) return;
     try {
-      const data = await fetchStarredEntries(50);
+      const data = await fetchStarredEntries();
       setStarredEntries(data.entries);
     } catch (err) {
       console.error('Failed to load starred entries', err);
@@ -887,7 +897,9 @@ export default function Home() {
         // Revert only when the toggle request itself failed.
         setEntries((prev) =>
           prev.map((entry) =>
-            entry.id === entryId ? { ...entry, starred: previousStarred } : entry,
+            entry.id === entryId
+              ? { ...entry, starred: previousStarred }
+              : entry,
           ),
         );
       }
@@ -954,7 +966,7 @@ export default function Home() {
 
     if (!trimmedUrl && !hasSocialInput) {
       setAddFeedError(
-        'Enter a feed URL, or choose a social platform and handle.'
+        'Enter a feed URL, or choose a social platform and handle.',
       );
       return false;
     }
@@ -964,7 +976,7 @@ export default function Home() {
       (!trimmedLoginUsername && trimmedLoginPassword)
     ) {
       setAddFeedError(
-        'Provide both login username and login password, or leave both empty.'
+        'Provide both login username and login password, or leave both empty.',
       );
       return false;
     }
@@ -995,7 +1007,11 @@ export default function Home() {
         requestBody.feed_url = trimmedUrl;
       }
 
-      if (newFeedCategoryId && !isYouTubeFeedUrl(trimmedUrl) && !hasSocialInput) {
+      if (
+        newFeedCategoryId &&
+        !isYouTubeFeedUrl(trimmedUrl) &&
+        !hasSocialInput
+      ) {
         requestBody.category_id = newFeedCategoryId;
       }
 
@@ -1012,7 +1028,11 @@ export default function Home() {
       setNewFeedLoginUsername('');
       setNewFeedLoginPassword('');
       setNewFeedCategoryId(null);
-      await Promise.all([loadFeeds(), loadCategories(), refreshUnreadCounters()]);
+      await Promise.all([
+        loadFeeds(),
+        loadCategories(),
+        refreshUnreadCounters(),
+      ]);
       return true;
     } catch (e) {
       setAddFeedError(e instanceof Error ? e.message : 'Failed to add feed');
@@ -1027,7 +1047,9 @@ export default function Home() {
 
     const trimmedUrl = newYoutubeFeedUrl.trim();
     if (!trimmedUrl) {
-      setAddYoutubeFeedError('Enter a YouTube feed URL, channel URL, or handle.');
+      setAddYoutubeFeedError(
+        'Enter a YouTube feed URL, channel URL, or handle.',
+      );
       return false;
     }
     if (!isLikelyYouTubeChannelInput(trimmedUrl)) {
@@ -1047,7 +1069,11 @@ export default function Home() {
         body: JSON.stringify({ feed_url: trimmedUrl }),
       });
       setNewYoutubeFeedUrl('');
-      await Promise.all([loadFeeds(), loadCategories(), refreshUnreadCounters()]);
+      await Promise.all([
+        loadFeeds(),
+        loadCategories(),
+        refreshUnreadCounters(),
+      ]);
       return true;
     } catch (e) {
       setAddYoutubeFeedError(
@@ -1076,7 +1102,7 @@ export default function Home() {
       (!trimmedLoginUsername && trimmedLoginPassword)
     ) {
       setAddInstagramFeedError(
-        'Provide both login username and login password, or leave both empty.'
+        'Provide both login username and login password, or leave both empty.',
       );
       return false;
     }
@@ -1098,7 +1124,11 @@ export default function Home() {
         }),
       });
       setNewInstagramHandle('');
-      await Promise.all([loadFeeds(), loadCategories(), refreshUnreadCounters()]);
+      await Promise.all([
+        loadFeeds(),
+        loadCategories(),
+        refreshUnreadCounters(),
+      ]);
       return true;
     } catch (e) {
       setAddInstagramFeedError(
@@ -1127,7 +1157,7 @@ export default function Home() {
       (!trimmedLoginUsername && trimmedLoginPassword)
     ) {
       setAddTwitterFeedError(
-        'Provide both login username and login password, or leave both empty.'
+        'Provide both login username and login password, or leave both empty.',
       );
       return false;
     }
@@ -1149,7 +1179,11 @@ export default function Home() {
         }),
       });
       setNewTwitterHandle('');
-      await Promise.all([loadFeeds(), loadCategories(), refreshUnreadCounters()]);
+      await Promise.all([
+        loadFeeds(),
+        loadCategories(),
+        refreshUnreadCounters(),
+      ]);
       return true;
     } catch (e) {
       setAddTwitterFeedError(
@@ -1330,7 +1364,11 @@ export default function Home() {
       });
 
       // Success: refresh feeds/categories (category may be created/forced server-side)
-      await Promise.all([loadFeeds(), loadCategories(), refreshUnreadCounters()]);
+      await Promise.all([
+        loadFeeds(),
+        loadCategories(),
+        refreshUnreadCounters(),
+      ]);
       return true;
     } catch (e) {
       setEditError(e instanceof Error ? e.message : 'Failed to update feed');
@@ -1387,9 +1425,8 @@ export default function Home() {
 
         await Promise.all([loadFeeds(), refreshUnreadCounters()]);
         setGlobalFilterWords((currentValue) => {
-          const currentCanonical = parseFilterWordsInput(currentValue).words.join(
-            ',',
-          );
+          const currentCanonical =
+            parseFilterWordsInput(currentValue).words.join(',');
           return currentCanonical === nextCanonical
             ? normalizedWords
             : currentValue;
@@ -1440,6 +1477,25 @@ export default function Home() {
 
   const toggleCategories = useCallback(() => {
     setIsCategoriesOpen((prev) => !prev);
+  }, []);
+
+  const handleSelectStarred = useCallback(() => {
+    // Starred view is exclusive from search/category/feed filters.
+    setIsSearchOpen(false);
+    setSearchQuery('');
+    setSearchMode(false);
+    setSelectedCategoryId(null);
+    setSelectedFeedId(null);
+    setIsStarredView(true);
+  }, []);
+
+  const handleSelectCategory = useCallback((categoryId: number) => {
+    setIsSearchOpen(false);
+    setSearchQuery('');
+    setSearchMode(false);
+    setIsStarredView(false);
+    setSelectedCategoryId(categoryId);
+    setSelectedFeedId(null);
   }, []);
 
   useEffect(() => {
@@ -1530,7 +1586,9 @@ export default function Home() {
         }));
       } finally {
         fetchingOriginalEntryIdsRef.current.delete(targetEntry.id);
-        setFetchingOriginalEntryIds(new Set(fetchingOriginalEntryIdsRef.current));
+        setFetchingOriginalEntryIds(
+          new Set(fetchingOriginalEntryIdsRef.current),
+        );
       }
     },
     [
@@ -2104,7 +2162,6 @@ export default function Home() {
               onToggleCategories={toggleCategories}
               isOffline={isOffline}
               categories={categories}
-              feeds={feeds}
               selectedCategoryId={selectedCategoryId}
               isStarredView={isStarredView}
               categoryUnreadCounts={categoryUnreadCounts}
@@ -2115,21 +2172,8 @@ export default function Home() {
               searchQuery={searchQuery}
               onSearchQueryChange={setSearchQuery}
               onToggleSearch={toggleSearch}
-              onSelectAll={() => {
-                setSelectedCategoryId(null);
-                setSelectedFeedId(null);
-                setIsStarredView(false);
-              }}
-              onSelectStarred={() => {
-                setSelectedCategoryId(null);
-                setSelectedFeedId(null);
-                setIsStarredView(true);
-                setSearchMode(false);
-              }}
-              onSelectCategory={(categoryId) => {
-                setSelectedCategoryId(categoryId);
-                setSelectedFeedId(null);
-              }}
+              onSelectStarred={handleSelectStarred}
+              onSelectCategory={handleSelectCategory}
             />
 
             {error ? <div className={styles.error}>{error}</div> : null}

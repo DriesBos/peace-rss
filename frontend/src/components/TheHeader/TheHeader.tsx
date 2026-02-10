@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import styles from './TheHeader.module.sass';
 import { Button } from '@/components/Button/Button';
 import { IconMenu } from '@/components/icons/IconMenu';
 import { IconWrapper } from '@/components/icons/IconWrapper/IconWrapper';
-import type { Category, Feed } from '@/app/_lib/types';
+import type { Category } from '@/app/_lib/types';
 import { IconSearch } from '@/components/icons/IconSearch';
 import { IconCategories } from '../icons/IconCategories';
 import { IconStar } from '../icons/IconStar';
@@ -17,7 +17,6 @@ export type TheHeaderProps = {
   onToggleCategories: () => void;
   isOffline: boolean;
   categories: Category[];
-  feeds: Feed[];
   selectedCategoryId: number | null;
   isStarredView: boolean;
   categoryUnreadCounts: Map<number, number>;
@@ -28,7 +27,6 @@ export type TheHeaderProps = {
   searchQuery: string;
   onSearchQueryChange: (value: string) => void;
   onToggleSearch: () => void;
-  onSelectAll: () => void;
   onSelectStarred: () => void;
   onSelectCategory: (categoryId: number) => void;
 };
@@ -40,37 +38,19 @@ export function TheHeader({
   onToggleCategories,
   isOffline,
   categories,
-  feeds,
   selectedCategoryId,
   isStarredView,
   categoryUnreadCounts,
-  totalUnreadCount,
   totalStarredCount,
   isLoading,
   isSearchOpen,
   searchQuery,
   onSearchQueryChange,
   onToggleSearch,
-  onSelectAll,
   onSelectStarred,
   onSelectCategory,
 }: TheHeaderProps) {
   const searchInputRef = useRef<HTMLInputElement | null>(null);
-
-  const categoriesWithFeeds = useMemo(() => {
-    const categoryFeedCounts = new Map<number, number>();
-    for (const feed of feeds) {
-      const categoryId = feed.category?.id;
-      if (categoryId == null) continue;
-      categoryFeedCounts.set(
-        categoryId,
-        (categoryFeedCounts.get(categoryId) ?? 0) + 1,
-      );
-    }
-    return categories.filter(
-      (cat) => (categoryFeedCounts.get(cat.id) ?? 0) > 0,
-    );
-  }, [categories, feeds]);
 
   useEffect(() => {
     if (!isSearchOpen) return;
@@ -154,30 +134,13 @@ export function TheHeader({
               <Button
                 type="button"
                 variant="nav"
-                active={selectedCategoryId === null && !isStarredView}
-                className={`${styles.header_CategoryList_Item} ${
-                  selectedCategoryId === null && !isStarredView
-                    ? styles.categoryItemActive
-                    : ''
-                }`}
-                onClick={onSelectAll}
-                disabled={isLoading}
-                count={totalUnreadCount}
-              >
-                <span>All</span>
-              </Button>
-            </li>
-            <li>
-              <Button
-                type="button"
-                variant="nav"
                 active={isStarredView}
                 className={`${styles.header_CategoryList_Item} ${
                   isStarredView ? styles.categoryItemActive : ''
                 }`}
                 onClick={onSelectStarred}
                 disabled={isLoading}
-                count={totalStarredCount}
+                count={totalStarredCount ?? 0}
               >
                 <IconWrapper>
                   <IconStar />
@@ -185,7 +148,7 @@ export function TheHeader({
                 <span>Starred</span>
               </Button>
             </li>
-            {categoriesWithFeeds.map((cat) => (
+            {categories.map((cat) => (
               <li key={cat.id}>
                 <Button
                   type="button"

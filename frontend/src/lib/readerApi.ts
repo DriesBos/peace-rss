@@ -22,16 +22,10 @@ export async function fetchFeedCounters(): Promise<FeedCountersResponse> {
   return fetchJson<FeedCountersResponse>('/api/feeds/counters');
 }
 
-export async function fetchStarredEntries(
-  limit = 50
-): Promise<EntriesResponse> {
-  return fetchJson<EntriesResponse>(
-    `/api/entries?starred=true&limit=${limit}&offset=0`
-  );
+export async function fetchStarredEntries(): Promise<EntriesResponse> {
+  return fetchJson<EntriesResponse>(`/api/entries?starred=true&offset=0`);
 }
 
 export async function fetchStarredCount(): Promise<EntriesResponse> {
-  return fetchJson<EntriesResponse>(
-    '/api/entries?starred=true&limit=1&offset=0'
-  );
+  return fetchJson<EntriesResponse>('/api/entries?starred=true&offset=0');
 }
