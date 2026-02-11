@@ -40,11 +40,6 @@ const youtubeResolveTimeoutMs = (() => {
   if (!Number.isFinite(value) || value <= 0) return 6000;
   return Math.floor(value);
 })();
-const YOUTUBE_SHORTS_BLOCKLIST_RULES = [
-  'EntryURL=(?i)youtube\\.com/shorts/',
-  'EntryTitle=(?i)(?:^|\\s)#shorts(?:\\s|$)',
-  'EntryContent=(?i)(?:^|\\s)#shorts(?:\\s|$)',
-].join('\n');
 
 type CreateFeedRequest = {
   feed_url?: string;
@@ -736,13 +731,8 @@ export async function POST(request: NextRequest) {
       feed_url: feedUrlToCreate,
     };
 
-    const isYoutubeFeed =
-      isYouTubeFeedUrl(feedUrlToCreate) ||
-      (trimmedUrl ? isYouTubeFeedUrl(trimmedUrl) : false);
-
-    const forcedKind: ProtectedCategoryKind | null = isYoutubeFeed
-      ? 'youtube'
-      : socialSourceContext?.platform === 'instagram'
+    const forcedKind: ProtectedCategoryKind | null =
+      socialSourceContext?.platform === 'instagram'
         ? 'instagram'
         : socialSourceContext?.platform === 'twitter'
           ? 'twitter'
@@ -754,9 +744,6 @@ export async function POST(request: NextRequest) {
     if (forcedKind) {
       forcedCategoryTitle = protectedCategoryTitleForKind(forcedKind);
       requestBody.hide_globally = true;
-      if (forcedKind === 'youtube') {
-        requestBody.blocklist_rules = YOUTUBE_SHORTS_BLOCKLIST_RULES;
-      }
       try {
         const categories = await mfFetchUser<MinifluxCategory[]>(
           token,

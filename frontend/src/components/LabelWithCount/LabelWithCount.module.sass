@@ -1,10 +1,12 @@
 @use '@/styles/vars' as *
 
 .labelWithCount
-  display: inline-flex
+  display: flex
+  justify-content: space-between
   align-items: baseline
-  @include font-body
   color: var(--color-text)
+  span
+    @include font-body
 
 .count
   @include font-count

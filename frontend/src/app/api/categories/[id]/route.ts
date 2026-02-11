@@ -58,7 +58,7 @@ export async function PUT(
       );
     }
 
-    // Disallow edits to protected categories (e.g. YouTube)
+    // Disallow edits to protected categories (social-managed categories)
     const categories = await mfFetchUser<MinifluxCategory[]>(
       token,
       '/v1/categories'
@@ -145,7 +145,7 @@ export async function DELETE(
       );
     }
 
-    // Disallow deletes to protected categories (e.g. YouTube)
+    // Disallow deletes to protected categories (social-managed categories)
     const categories = await mfFetchUser<MinifluxCategory[]>(
       token,
       '/v1/categories'

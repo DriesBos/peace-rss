@@ -3,7 +3,6 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { mfFetchUser } from '@/lib/miniflux';
-import { isYouTubeFeedUrl } from '@/lib/youtube';
 import {
   isProtectedCategoryTitle,
   normalizeCategoryTitle,
@@ -84,53 +83,13 @@ export async function PUT(
     const { title, feed_url, category_id, blocklist_rules, rewrite_rules } =
       body as UpdateFeedRequest;
 
-    const nextFeedUrl =
-      typeof feed_url === 'string' && feed_url.trim() ? feed_url.trim() : null;
-
     let forcedKind: ProtectedCategoryKind | null = null;
-    let existingFeed: MinifluxFeed | null = null;
-
-    if (nextFeedUrl) {
-      if (isYouTubeFeedUrl(nextFeedUrl)) {
-        forcedKind = 'youtube';
-      } else {
-        existingFeed = await mfFetchUser<MinifluxFeed>(
-          token,
-          `/v1/feeds/${feedId}`,
-        );
-        const existingCategoryKind = existingFeed.category?.title
-          ? normalizeCategoryTitle(existingFeed.category.title)
-          : null;
-        const existingIsProtected =
-          Boolean(existingCategoryKind && isProtectedCategoryTitle(existingCategoryKind)) ||
-          isYouTubeFeedUrl(existingFeed.feed_url);
-
-        if (existingIsProtected && existingCategoryKind && isProtectedCategoryTitle(existingCategoryKind)) {
-          forcedKind = existingCategoryKind as ProtectedCategoryKind;
-        } else if (existingIsProtected) {
-          forcedKind = 'youtube';
-        }
-
-        if (forcedKind === 'youtube') {
-          return NextResponse.json(
-            {
-              error:
-                'YouTube feeds must use a YouTube RSS URL (/feeds/videos.xml).',
-            },
-            { status: 400 },
-          );
-        }
-      }
-    } else {
-      existingFeed = await mfFetchUser<MinifluxFeed>(token, `/v1/feeds/${feedId}`);
-      const existingCategoryKind = existingFeed.category?.title
-        ? normalizeCategoryTitle(existingFeed.category.title)
-        : null;
-      if (existingCategoryKind && isProtectedCategoryTitle(existingCategoryKind)) {
-        forcedKind = existingCategoryKind as ProtectedCategoryKind;
-      } else if (isYouTubeFeedUrl(existingFeed.feed_url)) {
-        forcedKind = 'youtube';
-      }
+    const existingFeed = await mfFetchUser<MinifluxFeed>(token, `/v1/feeds/${feedId}`);
+    const existingCategoryKind = existingFeed.category?.title
+      ? normalizeCategoryTitle(existingFeed.category.title)
+      : null;
+    if (existingCategoryKind && isProtectedCategoryTitle(existingCategoryKind)) {
+      forcedKind = existingCategoryKind as ProtectedCategoryKind;
     }
 
     // Build update payload

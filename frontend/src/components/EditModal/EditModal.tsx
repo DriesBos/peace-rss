@@ -20,7 +20,6 @@ export type EditModalProps = {
   editFeedUrl: string;
   editCategoryId: number | null;
   editRemoveClickbait: boolean;
-  editFeedLayout: 'default' | 'youtube' | 'instagram' | 'twitter';
   isEditingProtectedCategory: boolean;
   editLoading: boolean;
   editError: string | null;
@@ -44,7 +43,6 @@ export function EditModal({
   editFeedUrl,
   editCategoryId,
   editRemoveClickbait,
-  editFeedLayout,
   isEditingProtectedCategory,
   editLoading,
   editError,
@@ -191,45 +189,34 @@ export function EditModal({
               />
             </div>
 
-            {editFeedLayout === 'default' ? (
-              <>
-                <LabeledSelect
-                  id="edit-feed-category"
-                  label="Category"
-                  value={editCategoryId ? String(editCategoryId) : ''}
-                  onChange={(value) =>
-                    onChangeCategoryId(value ? Number(value) : null)
-                  }
-                  placeholder="Select category"
-                  options={categories
-                    .filter(
-                      (cat) => !isProtectedCategoryTitle(cat.title),
-                    )
-                    .map((cat) => ({
-                      value: String(cat.id),
-                      label: cat.title,
-                    }))}
-                  disabled={editLoading}
-                />
+            <LabeledSelect
+              id="edit-feed-category"
+              label="Category"
+              value={editCategoryId ? String(editCategoryId) : ''}
+              onChange={(value) =>
+                onChangeCategoryId(value ? Number(value) : null)
+              }
+              placeholder="Select category"
+              options={categories
+                .filter((cat) => !isProtectedCategoryTitle(cat.title))
+                .map((cat) => ({
+                  value: String(cat.id),
+                  label: cat.title,
+                }))}
+              disabled={editLoading}
+            />
 
-                <label className={styles.checkboxRow}>
-                  <input
-                    type="checkbox"
-                    checked={editRemoveClickbait}
-                    onChange={(event) =>
-                      onChangeRemoveClickbait(event.currentTarget.checked)
-                    }
-                    disabled={editLoading}
-                  />
-                  <span>Apply Miniflux `remove_clickbait` title rewrite</span>
-                </label>
-              </>
-            ) : (
-              <div className={styles.help}>
-                This feed is assigned automatically and can’t be moved to a
-                different category.
-              </div>
-            )}
+            <label className={styles.checkboxRow}>
+              <input
+                type="checkbox"
+                checked={editRemoveClickbait}
+                onChange={(event) =>
+                  onChangeRemoveClickbait(event.currentTarget.checked)
+                }
+                disabled={editLoading}
+              />
+              <span>Apply Miniflux `remove_clickbait` title rewrite</span>
+            </label>
 
             <div className={styles.formActions}>
               <Button

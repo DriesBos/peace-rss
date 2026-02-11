@@ -49,36 +49,6 @@
   padding-left: var(--two-rem)
   gap: var(--one-rem)
 
-.otherSettings
-  display: flex
-  flex-direction: column
-  gap: var(--one-rem)
-  &_FilterWords
-    display: flex
-    align-items: center
-    gap: var(--half-rem)
-
-  &_Body
-    display: flex
-    flex-direction: column
-    gap: var(--one-rem)
-    padding-left: var(--two-rem)
-
-  &_Help
-    @include font-data
-    color: var(--color-text-secondary)
-
-  &_Error
-    padding: 10px 12px
-    border: 1px solid #e6e6e6
-    background: #f7f7f7
-    color: #333
-    font-size: 13px
-    white-space: pre-wrap
-    overflow-wrap: anywhere
-    user-select: text
-    pointer-events: auto
-
 .categoryHeader
   display: flex
   align-items: center
@@ -132,10 +102,10 @@
     text-overflow: ellipsis
     white-space: nowrap
 
-.youtubeFeedsList
+.feedList_Header
   display: flex
-  flex-direction: column
-  gap: var(--one-rem)
+  align-items: center
+  justify-content: space-between
 
 // VIEWLOOK
 .viewLook_themeSelectRow

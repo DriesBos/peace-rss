@@ -2,66 +2,35 @@
 
 .entryList
   padding: 0 var(--space-sides-general)
-  display: grid
-  align-items: start
-  gap: 1.5rem
-  grid-template-columns: repeat(1, 1fr)
+  display: flex
+  flex-direction: column
+
+.entryList_Items
+  column-count: 1
+  column-gap: 1.5rem
   @media (min-width: 800px)
-    grid-template-columns: repeat(2, 1fr)
+    column-count: 2
   @media (min-width: 1200px)
-    grid-template-columns: repeat(3, 1fr)
+    column-count: 3
   @media (min-width: 1600px)
-    grid-template-columns: repeat(4, 1fr)
+    column-count: 4
   @media (min-width: 2000px)
-    grid-template-columns: repeat(5, 1fr)
+    column-count: 5
 
-  &_Footer
-    padding: 2rem var(--space-sides-general)
-    display: flex
-    justify-content: center
+.entryList_Items .lazyEntryWrapper
+  break-inside: avoid
+  -webkit-column-break-inside: avoid
+  display: inline-block
+  width: 100%
+  margin-bottom: 1.5rem
 
-.entryList[data-layout='youtube']
-  grid-template-columns: repeat(2, 1fr)
-  gap: 16px
-  @media (min-width: 750px)
-    grid-template-columns: repeat(3, 1fr)
-    gap: 24px
-  @media (min-width: 1000px)
-    grid-template-columns: repeat(4, 1fr)
-  @media (min-width: 1250px)
-    grid-template-columns: repeat(5, 1fr)
-  @media (min-width: 1500px)
-    gap: 32px
-    grid-template-columns: repeat(6, 1fr)
+.entryList_Items .lazyEntryWrapper:last-child
+  margin-bottom: 0
 
-.entryList[data-layout='instagram']
-  grid-template-columns: repeat(6, 1fr)
-  @media (max-width: 2000px)
-    grid-template-columns: repeat(5, 1fr)
-  @media (max-width: 1450px)
-    grid-template-columns: repeat(4, 1fr)
-  @media (max-width: 1150px)
-    grid-template-columns: repeat(3, 1fr)
-  @media (max-width: 550px)
-    grid-template-columns: repeat(2, 1fr)
-
-.entryList[data-layout='youtube'] .entryList_Footer
-  grid-column: 1 / -1
-
-.entryList[data-layout='youtube'] .lazyEntryWrapper
-  min-height: 0
-
-.entryList[data-layout='instagram'] .entryList_Footer
-  grid-column: 1 / -1
-
-.entryList[data-layout='instagram'] .lazyEntryWrapper
-  min-height: 0
-
-.entryList[data-layout='twitter'] .entryList_Footer
-  grid-column: 1 / -1
-
-.entryList[data-layout='twitter'] .lazyEntryWrapper
-  min-height: 0
+.entryList_Footer
+  padding: 2rem var(--space-sides-general)
+  display: flex
+  justify-content: center
 
 @keyframes fadeIn
   from

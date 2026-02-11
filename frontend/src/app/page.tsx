@@ -19,17 +19,12 @@ import { useUnreadCounters } from '@/hooks/useUnreadCounters';
 import { fetchStarredEntries } from '@/lib/readerApi';
 import { ENTRIES_PAGE_SIZE, INITIAL_ENTRIES_LIMIT } from '@/lib/entriesQuery';
 import { NOTIFICATION_COPY } from '@/lib/notificationCopy';
-import type { SocialPlatform } from '@/lib/social/types';
-import { isLikelyYouTubeChannelInput, isYouTubeFeedUrl } from '@/lib/youtube';
 import {
   isProtectedCategoryTitle,
   normalizeCategoryTitle,
 } from '@/lib/protectedCategories';
 import {
   hasRemoveClickbaitRule,
-  mergeManagedFilterWordsIntoBlocklistRules,
-  parseFilterWordsInput,
-  parseManagedFilterWordsFromBlocklistRules,
   setRemoveClickbaitRule,
 } from '@/lib/minifluxRules';
 
@@ -41,7 +36,6 @@ const DONE_HOLD_MS = 700;
 const FETCH_INDICATOR_HEIGHT = 32;
 const SWIPE_THRESHOLD_PX = 60;
 const SWIPE_MAX_VERTICAL_PX = 50;
-const GLOBAL_FILTER_WORDS_DEBOUNCE_MS = 450;
 
 const getBrowserWindow = (): any => {
   if (typeof globalThis === 'undefined') return null;
@@ -92,27 +86,6 @@ export default function Home() {
   const [isProvisioned, setIsProvisioned] = useState(false);
   const [provisionError, setProvisionError] = useState<string | null>(null);
   const [newFeedUrl, setNewFeedUrl] = useState('');
-  const [newYoutubeFeedUrl, setNewYoutubeFeedUrl] = useState('');
-  const [addYoutubeFeedLoading, setAddYoutubeFeedLoading] = useState(false);
-  const [addYoutubeFeedError, setAddYoutubeFeedError] = useState<string | null>(
-    null,
-  );
-  const [newInstagramHandle, setNewInstagramHandle] = useState('');
-  const [addInstagramFeedLoading, setAddInstagramFeedLoading] = useState(false);
-  const [addInstagramFeedError, setAddInstagramFeedError] = useState<
-    string | null
-  >(null);
-  const [newTwitterHandle, setNewTwitterHandle] = useState('');
-  const [addTwitterFeedLoading, setAddTwitterFeedLoading] = useState(false);
-  const [addTwitterFeedError, setAddTwitterFeedError] = useState<string | null>(
-    null,
-  );
-  const [newFeedPlatform, setNewFeedPlatform] = useState<'' | SocialPlatform>(
-    '',
-  );
-  const [newFeedHandle, setNewFeedHandle] = useState('');
-  const [newFeedLoginUsername, setNewFeedLoginUsername] = useState('');
-  const [newFeedLoginPassword, setNewFeedLoginPassword] = useState('');
   const [newFeedCategoryId, setNewFeedCategoryId] = useState<number | null>(
     null,
   );
@@ -143,7 +116,6 @@ export default function Home() {
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const isRefreshingRef = useRef(false);
   const doneTimeoutRef = useRef<number | null>(null);
-  const globalFilterWordsDebounceRef = useRef<number | null>(null);
   const hasInitialLoadRef = useRef(false);
   const lastSyncRef = useRef<number | null>(null);
   const autoMarkTimeoutRef = useRef<number | null>(null);
@@ -172,19 +144,10 @@ export default function Home() {
   const [editFeedUrl, setEditFeedUrl] = useState('');
   const [editCategoryId, setEditCategoryId] = useState<number | null>(null);
   const [editRemoveClickbait, setEditRemoveClickbait] = useState(false);
-  const [editOriginalFeedLayout, setEditOriginalFeedLayout] = useState<
-    'default' | 'youtube' | 'instagram' | 'twitter'
-  >('default');
   const [isEditingProtectedCategory, setIsEditingProtectedCategory] =
     useState(false);
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
-  const [globalFilterWords, setGlobalFilterWords] = useState('');
-  const [isApplyingGlobalFilterWords, setIsApplyingGlobalFilterWords] =
-    useState(false);
-  const [globalFilterWordsError, setGlobalFilterWordsError] = useState<
-    string | null
-  >(null);
 
   const view = useMemo(
     () => ({
@@ -298,28 +261,11 @@ export default function Home() {
   } = useUnreadCounters({ isProvisioned, feeds });
 
   const openMenuModal = useCallback(() => {
-    const win = getBrowserWindow();
-    if (win && globalFilterWordsDebounceRef.current !== null) {
-      win.clearTimeout(globalFilterWordsDebounceRef.current);
-      globalFilterWordsDebounceRef.current = null;
-    }
-
-    const words = new Set<string>();
-    for (const feed of feeds) {
-      for (const word of parseManagedFilterWordsFromBlocklistRules(
-        feed.blocklist_rules,
-      )) {
-        words.add(word);
-      }
-    }
-    setGlobalFilterWords(Array.from(words).sort().join(', '));
-    setGlobalFilterWordsError(null);
-
     setIsMenuModalOpen(true);
     setIsAddModalOpen(false);
     setIsEditModalOpen(false);
     setReturnToMenuAfterSubModal(false);
-  }, [feeds]);
+  }, []);
 
   const closeMenuModal = useCallback(() => {
     setIsMenuModalOpen(false);
@@ -328,9 +274,6 @@ export default function Home() {
 
   const openAddModal = useCallback(() => {
     setAddFeedError(null);
-    setAddYoutubeFeedError(null);
-    setAddInstagramFeedError(null);
-    setAddTwitterFeedError(null);
     setIsAddModalOpen(true);
     setIsMenuModalOpen(false);
     setIsEditModalOpen(false);
@@ -367,15 +310,6 @@ export default function Home() {
     };
   }, []);
 
-  useEffect(() => {
-    const win = getBrowserWindow();
-    return () => {
-      if (globalFilterWordsDebounceRef.current !== null && win) {
-        win.clearTimeout(globalFilterWordsDebounceRef.current);
-      }
-    };
-  }, []);
-
   const openEditModal = useCallback(
     (type: 'feed' | 'category', item: Feed | Category) => {
       if (type === 'category') {
@@ -394,27 +328,8 @@ export default function Home() {
       if (type === 'feed') {
         const feed = item as Feed;
         setEditFeedUrl(feed.feed_url || '');
-        const originalKind = feed.category?.title
-          ? normalizeCategoryTitle(feed.category.title)
-          : null;
-        const originalLayout =
-          originalKind && isProtectedCategoryTitle(originalKind)
-            ? (originalKind as 'youtube' | 'instagram' | 'twitter')
-            : feed.feed_url && isYouTubeFeedUrl(feed.feed_url)
-              ? 'youtube'
-              : 'default';
-
-        setEditOriginalFeedLayout(originalLayout);
-        setEditCategoryId(
-          originalLayout === 'default' ? feed.category?.id || null : null,
-        );
-        setEditRemoveClickbait(
-          originalLayout === 'default'
-            ? hasRemoveClickbaitRule(feed.rewrite_rules)
-            : false,
-        );
-      } else {
-        setEditOriginalFeedLayout('default');
+        setEditCategoryId(feed.category?.id || null);
+        setEditRemoveClickbait(hasRemoveClickbaitRule(feed.rewrite_rules));
       }
       setIsEditModalOpen(true);
       setIsMenuModalOpen(false);
@@ -435,7 +350,6 @@ export default function Home() {
     setEditFeedUrl('');
     setEditCategoryId(null);
     setEditRemoveClickbait(false);
-    setEditOriginalFeedLayout('default');
     setIsEditingProtectedCategory(false);
     setEditError(null);
   }, [returnToMenuAfterSubModal]);
@@ -446,39 +360,12 @@ export default function Home() {
     return map;
   }, [feeds]);
 
-  const editFeedLayout = useMemo(() => {
-    if (editType !== 'feed') return 'default';
-    if (editOriginalFeedLayout !== 'default') return editOriginalFeedLayout;
-    return editFeedUrl.trim() && isYouTubeFeedUrl(editFeedUrl.trim())
-      ? 'youtube'
-      : 'default';
-  }, [editFeedUrl, editOriginalFeedLayout, editType]);
-
-  useEffect(() => {
-    if (!isEditModalOpen) return;
-    if (editType !== 'feed') return;
-    if (editFeedLayout === 'default') return;
-    if (editCategoryId !== null) setEditCategoryId(null);
-    if (editRemoveClickbait) setEditRemoveClickbait(false);
-  }, [
-    editCategoryId,
-    editRemoveClickbait,
-    editType,
-    isEditModalOpen,
-    editFeedLayout,
-  ]);
-
-  const selectedCategoryLayout = useMemo(() => {
-    if (searchMode || isStarredView) return 'default';
-    if (selectedCategoryId === null) return 'default';
-    const cat = categories.find((c) => c.id === selectedCategoryId);
-    if (!cat) return 'default';
-    const kind = normalizeCategoryTitle(cat.title);
-    if (kind === 'youtube' || kind === 'instagram' || kind === 'twitter') {
-      return kind;
-    }
-    return 'default';
-  }, [categories, isStarredView, searchMode, selectedCategoryId]);
+  const visibleHeaderCategories = useMemo(() => {
+    return categories.filter((category) => {
+      const kind = normalizeCategoryTitle(category.title);
+      return kind !== 'instagram' && kind !== 'twitter';
+    });
+  }, [categories]);
 
   const selectedEntry = useMemo(() => {
     return entries.find((e) => e.id === selectedEntryId) ?? null;
@@ -917,25 +804,8 @@ export default function Home() {
     e.preventDefault();
 
     const trimmedUrl = newFeedUrl.trim();
-    const trimmedSocialHandle = newFeedHandle.trim();
-    const trimmedLoginUsername = newFeedLoginUsername.trim();
-    const trimmedLoginPassword = newFeedLoginPassword.trim();
-    const hasSocialInput = Boolean(newFeedPlatform && trimmedSocialHandle);
-
-    if (!trimmedUrl && !hasSocialInput) {
-      setAddFeedError(
-        'Enter a feed URL, or choose a social platform and handle.',
-      );
-      return false;
-    }
-
-    if (
-      (trimmedLoginUsername && !trimmedLoginPassword) ||
-      (!trimmedLoginUsername && trimmedLoginPassword)
-    ) {
-      setAddFeedError(
-        'Provide both login username and login password, or leave both empty.',
-      );
+    if (!trimmedUrl) {
+      setAddFeedError('Enter a feed URL.');
       return false;
     }
 
@@ -944,32 +814,10 @@ export default function Home() {
 
     try {
       const requestBody: {
-        feed_url?: string;
+        feed_url: string;
         category_id?: number;
-        social?: {
-          platform: SocialPlatform;
-          handle: string;
-          login_username?: string;
-          login_password?: string;
-        };
-      } = {};
-
-      if (hasSocialInput && newFeedPlatform) {
-        requestBody.social = {
-          platform: newFeedPlatform,
-          handle: trimmedSocialHandle,
-          login_username: trimmedLoginUsername || undefined,
-          login_password: trimmedLoginPassword || undefined,
-        };
-      } else {
-        requestBody.feed_url = trimmedUrl;
-      }
-
-      if (
-        newFeedCategoryId &&
-        !isYouTubeFeedUrl(trimmedUrl) &&
-        !hasSocialInput
-      ) {
+      } = { feed_url: trimmedUrl };
+      if (newFeedCategoryId) {
         requestBody.category_id = newFeedCategoryId;
       }
 
@@ -981,10 +829,6 @@ export default function Home() {
 
       // Success: clear input and refresh feeds
       setNewFeedUrl('');
-      setNewFeedPlatform('');
-      setNewFeedHandle('');
-      setNewFeedLoginUsername('');
-      setNewFeedLoginPassword('');
       setNewFeedCategoryId(null);
       await Promise.all([
         loadFeeds(),
@@ -997,159 +841,6 @@ export default function Home() {
       return false;
     } finally {
       setAddFeedLoading(false);
-    }
-  }
-
-  async function addYoutubeFeed(e: React.FormEvent): Promise<boolean> {
-    e.preventDefault();
-
-    const trimmedUrl = newYoutubeFeedUrl.trim();
-    if (!trimmedUrl) {
-      setAddYoutubeFeedError(
-        'Enter a YouTube feed URL, channel URL, or handle.',
-      );
-      return false;
-    }
-    if (!isLikelyYouTubeChannelInput(trimmedUrl)) {
-      setAddYoutubeFeedError(
-        'Enter a YouTube feed URL, channel URL, or handle (for example @channel).',
-      );
-      return false;
-    }
-
-    setAddYoutubeFeedLoading(true);
-    setAddYoutubeFeedError(null);
-
-    try {
-      await fetchJson<unknown>('/api/feeds/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ feed_url: trimmedUrl }),
-      });
-      setNewYoutubeFeedUrl('');
-      await Promise.all([
-        loadFeeds(),
-        loadCategories(),
-        refreshUnreadCounters(),
-      ]);
-      return true;
-    } catch (e) {
-      setAddYoutubeFeedError(
-        e instanceof Error ? e.message : 'Failed to add feed',
-      );
-      return false;
-    } finally {
-      setAddYoutubeFeedLoading(false);
-    }
-  }
-
-  async function addInstagramFeed(e: React.FormEvent): Promise<boolean> {
-    e.preventDefault();
-
-    const trimmedHandle = newInstagramHandle.trim();
-    const trimmedLoginUsername = newFeedLoginUsername.trim();
-    const trimmedLoginPassword = newFeedLoginPassword.trim();
-
-    if (!trimmedHandle) {
-      setAddInstagramFeedError('Enter an Instagram handle or profile URL.');
-      return false;
-    }
-
-    if (
-      (trimmedLoginUsername && !trimmedLoginPassword) ||
-      (!trimmedLoginUsername && trimmedLoginPassword)
-    ) {
-      setAddInstagramFeedError(
-        'Provide both login username and login password, or leave both empty.',
-      );
-      return false;
-    }
-
-    setAddInstagramFeedLoading(true);
-    setAddInstagramFeedError(null);
-
-    try {
-      await fetchJson<unknown>('/api/feeds/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          social: {
-            platform: 'instagram' as const,
-            handle: trimmedHandle,
-            login_username: trimmedLoginUsername || undefined,
-            login_password: trimmedLoginPassword || undefined,
-          },
-        }),
-      });
-      setNewInstagramHandle('');
-      await Promise.all([
-        loadFeeds(),
-        loadCategories(),
-        refreshUnreadCounters(),
-      ]);
-      return true;
-    } catch (e) {
-      setAddInstagramFeedError(
-        e instanceof Error ? e.message : 'Failed to add feed',
-      );
-      return false;
-    } finally {
-      setAddInstagramFeedLoading(false);
-    }
-  }
-
-  async function addTwitterFeed(e: React.FormEvent): Promise<boolean> {
-    e.preventDefault();
-
-    const trimmedHandle = newTwitterHandle.trim();
-    const trimmedLoginUsername = newFeedLoginUsername.trim();
-    const trimmedLoginPassword = newFeedLoginPassword.trim();
-
-    if (!trimmedHandle) {
-      setAddTwitterFeedError('Enter a Twitter / X handle or profile URL.');
-      return false;
-    }
-
-    if (
-      (trimmedLoginUsername && !trimmedLoginPassword) ||
-      (!trimmedLoginUsername && trimmedLoginPassword)
-    ) {
-      setAddTwitterFeedError(
-        'Provide both login username and login password, or leave both empty.',
-      );
-      return false;
-    }
-
-    setAddTwitterFeedLoading(true);
-    setAddTwitterFeedError(null);
-
-    try {
-      await fetchJson<unknown>('/api/feeds/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          social: {
-            platform: 'twitter' as const,
-            handle: trimmedHandle,
-            login_username: trimmedLoginUsername || undefined,
-            login_password: trimmedLoginPassword || undefined,
-          },
-        }),
-      });
-      setNewTwitterHandle('');
-      await Promise.all([
-        loadFeeds(),
-        loadCategories(),
-        refreshUnreadCounters(),
-      ]);
-      return true;
-    } catch (e) {
-      setAddTwitterFeedError(
-        e instanceof Error ? e.message : 'Failed to add feed',
-      );
-      return false;
-    } finally {
-      setAddTwitterFeedLoading(false);
     }
   }
 
@@ -1289,12 +980,6 @@ export default function Home() {
     const trimmedUrl = editFeedUrl.trim();
 
     if (!trimmedTitle || !trimmedUrl) return false;
-    if (editOriginalFeedLayout === 'youtube' && !isYouTubeFeedUrl(trimmedUrl)) {
-      setEditError(
-        'YouTube feeds must use a YouTube RSS URL (it should contain /feeds/videos.xml).',
-      );
-      return false;
-    }
 
     setEditLoading(true);
     setEditError(null);
@@ -1303,22 +988,15 @@ export default function Home() {
       await fetchJson<{ ok: boolean }>(`/api/feeds/${editItemId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(
-          editFeedLayout !== 'default'
-            ? {
-                title: trimmedTitle,
-                feed_url: trimmedUrl,
-              }
-            : {
-                title: trimmedTitle,
-                feed_url: trimmedUrl,
-                category_id: editCategoryId,
-                rewrite_rules: setRemoveClickbaitRule(
-                  feedsById.get(editItemId)?.rewrite_rules,
-                  editRemoveClickbait,
-                ),
-              },
-        ),
+        body: JSON.stringify({
+          title: trimmedTitle,
+          feed_url: trimmedUrl,
+          category_id: editCategoryId,
+          rewrite_rules: setRemoveClickbaitRule(
+            feedsById.get(editItemId)?.rewrite_rules,
+            editRemoveClickbait,
+          ),
+        }),
       });
 
       // Success: refresh feeds/categories (category may be created/forced server-side)
@@ -1335,92 +1013,6 @@ export default function Home() {
       setEditLoading(false);
     }
   }
-
-  const applyGlobalFilterWords = useCallback(
-    async (input: string): Promise<boolean> => {
-      const { words, invalid } = parseFilterWordsInput(input);
-      const normalizedWords = words.join(', ');
-      if (invalid.length > 0) {
-        setGlobalFilterWordsError(
-          `Invalid filter words: ${invalid.join(', ')}. Use letters, numbers, _ or -.`,
-        );
-        return false;
-      }
-
-      const existingWords = new Set<string>();
-      for (const feed of feeds) {
-        for (const word of parseManagedFilterWordsFromBlocklistRules(
-          feed.blocklist_rules,
-        )) {
-          existingWords.add(word);
-        }
-      }
-      const existingCanonical = Array.from(existingWords).sort().join(',');
-      const nextCanonical = words.join(',');
-      if (existingCanonical === nextCanonical) {
-        setGlobalFilterWords(normalizedWords);
-        setGlobalFilterWordsError(null);
-        return true;
-      }
-
-      setIsApplyingGlobalFilterWords(true);
-      setGlobalFilterWordsError(null);
-
-      try {
-        await Promise.all(
-          feeds.map((feed) => {
-            const blocklistRules = mergeManagedFilterWordsIntoBlocklistRules(
-              feed.blocklist_rules,
-              words,
-            );
-            return fetchJson<{ ok: boolean }>(`/api/feeds/${feed.id}`, {
-              method: 'PUT',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ blocklist_rules: blocklistRules }),
-            });
-          }),
-        );
-
-        await Promise.all([loadFeeds(), refreshUnreadCounters()]);
-        setGlobalFilterWords((currentValue) => {
-          const currentCanonical =
-            parseFilterWordsInput(currentValue).words.join(',');
-          return currentCanonical === nextCanonical
-            ? normalizedWords
-            : currentValue;
-        });
-        return true;
-      } catch (e) {
-        setGlobalFilterWordsError(
-          e instanceof Error ? e.message : 'Failed to apply filter words',
-        );
-        return false;
-      } finally {
-        setIsApplyingGlobalFilterWords(false);
-      }
-    },
-    [feeds, loadFeeds, refreshUnreadCounters],
-  );
-
-  const handleGlobalFilterWordsChange = useCallback(
-    (value: string) => {
-      setGlobalFilterWords(value);
-      setGlobalFilterWordsError(null);
-
-      const win = getBrowserWindow();
-      if (!win) return;
-
-      if (globalFilterWordsDebounceRef.current !== null) {
-        win.clearTimeout(globalFilterWordsDebounceRef.current);
-      }
-
-      globalFilterWordsDebounceRef.current = win.setTimeout(() => {
-        globalFilterWordsDebounceRef.current = null;
-        void applyGlobalFilterWords(value);
-      }, GLOBAL_FILTER_WORDS_DEBOUNCE_MS);
-    },
-    [applyGlobalFilterWords],
-  );
 
   const toggleSearch = useCallback(() => {
     setIsSearchOpen((prev) => {
@@ -1894,7 +1486,12 @@ export default function Home() {
     const win = getBrowserWindow();
     if (!win) return;
     if (!isProvisioned) return;
-    if (isMenuModalOpen || isAddModalOpen || isEditModalOpen) return;
+    if (
+      isMenuModalOpen ||
+      isAddModalOpen ||
+      isEditModalOpen
+    )
+      return;
 
     const entry = selectedEntryRef.current;
     if (!entry) return;
@@ -2035,11 +1632,6 @@ export default function Home() {
               openEditModal={openEditModal}
               openAddModal={openAddModal}
               isLoading={isLoading}
-              globalFilterWords={globalFilterWords}
-              onGlobalFilterWordsChange={handleGlobalFilterWordsChange}
-              onApplyGlobalFilterWords={applyGlobalFilterWords}
-              isApplyingGlobalFilterWords={isApplyingGlobalFilterWords}
-              globalFilterWordsError={globalFilterWordsError}
               starredEntries={starredEntries}
               onToggleEntryStar={toggleEntryStar}
             />
@@ -2053,31 +1645,8 @@ export default function Home() {
               addCategoryLoading={addCategoryLoading}
               addCategoryError={addCategoryError}
               addCategory={addCategory}
-              newYoutubeFeedUrl={newYoutubeFeedUrl}
-              setNewYoutubeFeedUrl={setNewYoutubeFeedUrl}
-              addYoutubeFeedLoading={addYoutubeFeedLoading}
-              addYoutubeFeedError={addYoutubeFeedError}
-              addYoutubeFeed={addYoutubeFeed}
-              newInstagramHandle={newInstagramHandle}
-              setNewInstagramHandle={setNewInstagramHandle}
-              addInstagramFeedLoading={addInstagramFeedLoading}
-              addInstagramFeedError={addInstagramFeedError}
-              addInstagramFeed={addInstagramFeed}
-              newTwitterHandle={newTwitterHandle}
-              setNewTwitterHandle={setNewTwitterHandle}
-              addTwitterFeedLoading={addTwitterFeedLoading}
-              addTwitterFeedError={addTwitterFeedError}
-              addTwitterFeed={addTwitterFeed}
               newFeedUrl={newFeedUrl}
               setNewFeedUrl={setNewFeedUrl}
-              newFeedPlatform={newFeedPlatform}
-              setNewFeedPlatform={setNewFeedPlatform}
-              newFeedHandle={newFeedHandle}
-              setNewFeedHandle={setNewFeedHandle}
-              newFeedLoginUsername={newFeedLoginUsername}
-              setNewFeedLoginUsername={setNewFeedLoginUsername}
-              newFeedLoginPassword={newFeedLoginPassword}
-              setNewFeedLoginPassword={setNewFeedLoginPassword}
               newFeedCategoryId={newFeedCategoryId}
               setNewFeedCategoryId={setNewFeedCategoryId}
               addFeedLoading={addFeedLoading}
@@ -2095,7 +1664,6 @@ export default function Home() {
               editFeedUrl={editFeedUrl}
               editCategoryId={editCategoryId}
               editRemoveClickbait={editRemoveClickbait}
-              editFeedLayout={editFeedLayout}
               isEditingProtectedCategory={isEditingProtectedCategory}
               editLoading={editLoading}
               editError={editError}
@@ -2116,7 +1684,7 @@ export default function Home() {
               isCategoriesOpen={isCategoriesOpen}
               onToggleCategories={toggleCategories}
               isOffline={isOffline}
-              categories={categories}
+              categories={visibleHeaderCategories}
               selectedCategoryId={selectedCategoryId}
               isStarredView={isStarredView}
               categoryUnreadCounts={categoryUnreadCounts}
@@ -2143,7 +1711,6 @@ export default function Home() {
               onLoadMore={handleLoadMore}
               searchMode={searchMode}
               isStarredView={isStarredView}
-              layout={selectedCategoryLayout}
             />
 
             <EntryPanel
