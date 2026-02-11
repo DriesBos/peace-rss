@@ -29,6 +29,7 @@ import {
 } from '@/lib/minifluxRules';
 
 type PullState = 'idle' | 'pulling' | 'fetching' | 'done';
+type ActiveModal = 'none' | 'menu' | 'add' | 'edit';
 
 const PULL_TRIGGER_PX = 70;
 const PULL_MAX_PX = 90;
@@ -102,10 +103,7 @@ export default function Home() {
   const [originalFetchStatusById, setOriginalFetchStatusById] = useState<
     Record<number, 'success' | 'error'>
   >({});
-  const [isMenuModalOpen, setIsMenuModalOpen] = useState(false);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [returnToMenuAfterSubModal, setReturnToMenuAfterSubModal] =
-    useState(false);
+  const [activeModal, setActiveModal] = useState<ActiveModal>('none');
   const [isOffline, setIsOffline] = useState(false);
   const [pullState, setPullState] = useState<PullState>('idle');
   const [pullDistance, setPullDistance] = useState(0);
@@ -136,8 +134,7 @@ export default function Home() {
     }
   }, []);
 
-  // Edit modal state
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  // Edit modal form state
   const [editType, setEditType] = useState<'feed' | 'category' | null>(null);
   const [editItemId, setEditItemId] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState('');
@@ -261,31 +258,21 @@ export default function Home() {
   } = useUnreadCounters({ isProvisioned, feeds });
 
   const openMenuModal = useCallback(() => {
-    setIsMenuModalOpen(true);
-    setIsAddModalOpen(false);
-    setIsEditModalOpen(false);
-    setReturnToMenuAfterSubModal(false);
+    setActiveModal('menu');
   }, []);
 
   const closeMenuModal = useCallback(() => {
-    setIsMenuModalOpen(false);
-    setReturnToMenuAfterSubModal(false);
+    setActiveModal('none');
   }, []);
 
   const openAddModal = useCallback(() => {
     setAddFeedError(null);
-    setIsAddModalOpen(true);
-    setIsMenuModalOpen(false);
-    setIsEditModalOpen(false);
-    setReturnToMenuAfterSubModal(true);
+    setActiveModal('add');
   }, []);
 
   const closeAddModal = useCallback(() => {
-    setIsAddModalOpen(false);
-    if (returnToMenuAfterSubModal) {
-      setIsMenuModalOpen(true);
-    }
-  }, [returnToMenuAfterSubModal]);
+    setActiveModal('menu');
+  }, []);
 
   useEffect(() => {
     const win = getBrowserWindow();
@@ -331,19 +318,14 @@ export default function Home() {
         setEditCategoryId(feed.category?.id || null);
         setEditRemoveClickbait(hasRemoveClickbaitRule(feed.rewrite_rules));
       }
-      setIsEditModalOpen(true);
-      setIsMenuModalOpen(false);
-      setReturnToMenuAfterSubModal(true);
+      setActiveModal('edit');
       setEditError(null);
     },
     [],
   );
 
   const closeEditModal = useCallback(() => {
-    setIsEditModalOpen(false);
-    if (returnToMenuAfterSubModal) {
-      setIsMenuModalOpen(true);
-    }
+    setActiveModal('menu');
     setEditType(null);
     setEditItemId(null);
     setEditTitle('');
@@ -352,7 +334,7 @@ export default function Home() {
     setEditRemoveClickbait(false);
     setIsEditingProtectedCategory(false);
     setEditError(null);
-  }, [returnToMenuAfterSubModal]);
+  }, []);
 
   const feedsById = useMemo(() => {
     const map = new Map<number, Feed>();
@@ -1179,11 +1161,7 @@ export default function Home() {
     startXRef.current = null;
   };
 
-  const canSwipe =
-    selectedEntryId !== null &&
-    !isMenuModalOpen &&
-    !isAddModalOpen &&
-    !isEditModalOpen;
+  const canSwipe = selectedEntryId !== null && activeModal === 'none';
 
   const handleTouchStart = useCallback(
     (event: TouchEvent) => {
@@ -1486,12 +1464,7 @@ export default function Home() {
     const win = getBrowserWindow();
     if (!win) return;
     if (!isProvisioned) return;
-    if (
-      isMenuModalOpen ||
-      isAddModalOpen ||
-      isEditModalOpen
-    )
-      return;
+    if (activeModal !== 'none') return;
 
     const entry = selectedEntryRef.current;
     if (!entry) return;
@@ -1523,9 +1496,7 @@ export default function Home() {
     selectedEntry?.id,
     selectedEntryId,
     isProvisioned,
-    isMenuModalOpen,
-    isAddModalOpen,
-    isEditModalOpen,
+    activeModal,
     setEntryStatusById,
   ]);
 
@@ -1625,7 +1596,7 @@ export default function Home() {
               </div>
             )}
             <MenuModal
-              isOpen={isMenuModalOpen}
+              isOpen={activeModal === 'menu'}
               onClose={closeMenuModal}
               categories={categories}
               feeds={feeds}
@@ -1637,7 +1608,7 @@ export default function Home() {
             />
 
             <AddModal
-              isOpen={isAddModalOpen}
+              isOpen={activeModal === 'add'}
               onClose={closeAddModal}
               categories={categories}
               newCategoryTitle={newCategoryTitle}
@@ -1656,7 +1627,7 @@ export default function Home() {
             />
 
             <EditModal
-              isOpen={isEditModalOpen}
+              isOpen={activeModal === 'edit'}
               editType={editType}
               editItemId={editItemId}
               categories={categories}
@@ -1679,7 +1650,7 @@ export default function Home() {
             />
 
             <TheHeader
-              isMenuOpen={isMenuModalOpen}
+              isMenuOpen={activeModal === 'menu'}
               onOpenMenu={openMenuModal}
               isCategoriesOpen={isCategoriesOpen}
               onToggleCategories={toggleCategories}
