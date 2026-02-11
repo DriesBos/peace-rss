@@ -34,7 +34,6 @@ import {
 } from '@/lib/minifluxRules';
 
 type PullState = 'idle' | 'pulling' | 'fetching' | 'done';
-type StoriesWindowDays = 7 | 30 | 90;
 
 const PULL_TRIGGER_PX = 70;
 const PULL_MAX_PX = 90;
@@ -42,8 +41,6 @@ const DONE_HOLD_MS = 700;
 const FETCH_INDICATOR_HEIGHT = 32;
 const SWIPE_THRESHOLD_PX = 60;
 const SWIPE_MAX_VERTICAL_PX = 50;
-const STORIES_WINDOW_STORAGE_KEY = 'peace-rss-stories-window-days';
-const DEFAULT_STORIES_WINDOW_DAYS: StoriesWindowDays = 30;
 const GLOBAL_FILTER_WORDS_DEBOUNCE_MS = 450;
 
 const getBrowserWindow = (): any => {
@@ -88,9 +85,6 @@ export default function Home() {
   const [isStarredView, setIsStarredView] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchMode, setSearchMode] = useState(false);
-  const [storiesWindowDays, setStoriesWindowDays] = useState<StoriesWindowDays>(
-    DEFAULT_STORIES_WINDOW_DAYS,
-  );
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isCategoriesOpen, setIsCategoriesOpen] = useState(false);
   const [isTogglingStar, setIsTogglingStar] = useState(false);
@@ -192,34 +186,6 @@ export default function Home() {
     string | null
   >(null);
 
-  useEffect(() => {
-    const win = getBrowserWindow();
-    if (!win) return;
-    try {
-      const stored = win.localStorage.getItem(STORIES_WINDOW_STORAGE_KEY);
-      if (!stored) return;
-      const parsed = Number(stored);
-      if (parsed === 7 || parsed === 30 || parsed === 90) {
-        setStoriesWindowDays(parsed);
-      }
-    } catch {
-      // Ignore storage errors.
-    }
-  }, []);
-
-  useEffect(() => {
-    const win = getBrowserWindow();
-    if (!win) return;
-    try {
-      win.localStorage.setItem(
-        STORIES_WINDOW_STORAGE_KEY,
-        String(storiesWindowDays),
-      );
-    } catch {
-      // Ignore storage errors.
-    }
-  }, [storiesWindowDays]);
-
   const view = useMemo(
     () => ({
       searchMode,
@@ -227,16 +193,8 @@ export default function Home() {
       isStarredView,
       selectedFeedId,
       selectedCategoryId,
-      storiesWindowDays,
     }),
-    [
-      searchMode,
-      searchQuery,
-      isStarredView,
-      selectedFeedId,
-      selectedCategoryId,
-      storiesWindowDays,
-    ],
+    [searchMode, searchQuery, isStarredView, selectedFeedId, selectedCategoryId],
   );
 
   const {
@@ -1819,7 +1777,6 @@ export default function Home() {
     selectedCategoryId,
     isStarredView,
     searchMode,
-    storiesWindowDays,
     isProvisioned,
     resetEntries,
     setIsLoading,
@@ -2075,8 +2032,6 @@ export default function Home() {
               onClose={closeMenuModal}
               categories={categories}
               feeds={feeds}
-              storiesWindowDays={storiesWindowDays}
-              onStoriesWindowDaysChange={setStoriesWindowDays}
               openEditModal={openEditModal}
               openAddModal={openAddModal}
               isLoading={isLoading}

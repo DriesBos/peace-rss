@@ -21,23 +21,22 @@ import { IconStar } from '@/components/icons/IconStar';
 import { IconWrapper } from '@/components/icons/IconWrapper/IconWrapper';
 import { LabelWithCount } from '@/components/LabelWithCount/LabelWithCount';
 import { LabeledInput } from '@/components/LabeledInput/LabeledInput';
+import { LabeledSelect } from '@/components/LabeledSelect/LabeledSelect';
 import type { Category, Entry, Feed } from '@/app/_lib/types';
 import { toast } from 'sonner';
 import { NOTIFICATION_COPY } from '@/lib/notificationCopy';
 import { useKeydown } from '@/hooks/useKeydown';
 import { isYouTubeFeedUrl } from '@/lib/youtube';
 import { normalizeCategoryTitle } from '@/lib/protectedCategories';
+import { IconArrowShortRight } from '../icons/IconArrowShortRight';
 
 type MenuView = 'feeds' | 'look' | 'other';
-type StoriesWindowDays = 7 | 30 | 90;
 
 export type MenuModalProps = {
   isOpen: boolean;
   onClose: () => void;
   categories: Category[];
   feeds: Feed[];
-  storiesWindowDays: StoriesWindowDays;
-  onStoriesWindowDaysChange: (days: StoriesWindowDays) => void;
   openEditModal: (type: 'feed' | 'category', item: Feed | Category) => void;
   openAddModal: () => void;
   isLoading: boolean;
@@ -58,7 +57,6 @@ const THEME_LABELS: Record<string, string> = {
   green: 'Green',
   nightmode: 'Nightmode',
 };
-const STORIES_WINDOW_OPTIONS: StoriesWindowDays[] = [7, 30, 90];
 const THEME_TOAST_DEBOUNCE_MS = 350;
 
 function buildInitialCollapsedCategories(categories: Category[]) {
@@ -76,8 +74,6 @@ export function MenuModal({
   onClose,
   categories,
   feeds,
-  storiesWindowDays,
-  onStoriesWindowDaysChange,
   openEditModal,
   openAddModal,
   isLoading,
@@ -91,6 +87,7 @@ export function MenuModal({
 }: MenuModalProps) {
   const [activeView, setActiveView] = useState<MenuView>('feeds');
   const [nowMs, setNowMs] = useState(() => Date.now());
+  const [selectedTheme, setSelectedTheme] = useState('');
   const { theme, setTheme } = useTheme();
   const hasUserAdjustedCollapse = useRef(false);
   const categoriesListRef = useRef<HTMLDivElement | null>(null);
@@ -321,6 +318,27 @@ export function MenuModal({
     [queueThemeToast, setTheme, theme],
   );
 
+  const themeOptions = useMemo(
+    () =>
+      Object.entries(THEME_LABELS).map(([value, label]) => ({
+        value,
+        label: `${label} theme`,
+      })),
+    [],
+  );
+
+  useEffect(() => {
+    if (!isOpen) return;
+    if (typeof theme !== 'string') return;
+    if (!(theme in THEME_LABELS)) return;
+    setSelectedTheme(theme);
+  }, [isOpen, theme]);
+
+  const handleSelectTheme = useCallback(() => {
+    if (!selectedTheme) return;
+    handleThemeChange(selectedTheme);
+  }, [handleThemeChange, selectedTheme]);
+
   const handleApplyGlobalFilterWords = useCallback(async () => {
     const didSucceed = await onApplyGlobalFilterWords(globalFilterWords);
     if (didSucceed) {
@@ -468,11 +486,7 @@ export function MenuModal({
                         icon="plus"
                         onClick={() => toggleCategoryCollapse(cat.id)}
                         disabled={isLoading}
-                        count={
-                          categoryFeeds.length > 0
-                            ? categoryFeeds.length
-                            : undefined
-                        }
+                        count={categoryFeeds.length}
                       >
                         <IconWrapper>
                           <IconPlus />
@@ -762,83 +776,61 @@ export function MenuModal({
 
         {activeView === 'look' && (
           <div className={styles.viewLook}>
-            <button
-              type="button"
-              className={styles.themeWheel}
-              onClick={() =>
-                handleThemeChange(theme === 'dark' ? 'light' : 'dark')
-              }
-              aria-label="Toggle theme"
-            >
-              <div className={styles.themeWheel_Indicator} />
-            </button>
-
-            <div className={styles.themeCard}>
-              <div className={styles.cardSection}>
-                <div className={styles.cardLabel}>Theme</div>
-                {Object.entries(THEME_LABELS).map(([themeName, label]) => (
-                  <button
-                    type="button"
-                    key={themeName}
-                    className={styles.themeOption}
-                    data-active={theme === themeName}
-                    onClick={() => handleThemeChange(themeName)}
-                  >
-                    {label}
-                  </button>
-                ))}
+            <div className={styles.viewLook_themeSelectRow}>
+              <div className={styles.viewLook_themeSelectField}>
+                <LabeledSelect
+                  id="theme-select"
+                  value={selectedTheme}
+                  onChange={setSelectedTheme}
+                  options={themeOptions}
+                  placeholder="Select theme"
+                  disabled={isLoading}
+                />
               </div>
-
-              <div className={styles.cardDivider} />
-
-              <div className={styles.cardSection}>
-                <div className={styles.cardLabel}>Stories</div>
-                {STORIES_WINDOW_OPTIONS.map((days) => (
-                  <button
-                    type="button"
-                    key={days}
-                    className={styles.themeOption}
-                    data-active={storiesWindowDays === days}
-                    onClick={() => onStoriesWindowDaysChange(days)}
-                  >
-                    Last {days} days
-                  </button>
-                ))}
-              </div>
+              <Button
+                type="button"
+                variant="nav"
+                onClick={handleSelectTheme}
+                disabled={
+                  isLoading ||
+                  !selectedTheme ||
+                  (typeof theme === 'string' && selectedTheme === theme)
+                }
+              >
+                <span>Select</span>
+              </Button>
             </div>
-
-            <button
-              type="button"
-              className={styles.lookCard}
-              data-kind="komorebi"
-              onClick={() => handleThemeChange('softlight')}
-            />
-            <button
-              type="button"
-              className={styles.lookCard}
-              data-kind="rain"
-              onClick={() => handleThemeChange('green')}
-            />
           </div>
         )}
 
         {activeView === 'other' && (
           <div className={styles.viewOther}>
-            <div className={styles.profileRow}>
-              <div className={styles.profileButton}>
+            <div className={styles.viewOther_Links}>
+              <div className={styles.viewOther_Profile}>
                 <UserButton />
+                <span>Profile</span>
               </div>
-              <span>Profile</span>
+              <div className={styles.viewOther_Links_Item}>
+                <Link href="/about">About</Link>
+                <IconWrapper>
+                  <IconArrowShortRight />
+                </IconWrapper>
+              </div>
+              <div className={styles.viewOther_Links_Item}>
+                <Link href="/updates">Updates</Link>
+                <IconWrapper>
+                  <IconArrowShortRight />
+                </IconWrapper>
+              </div>
+              <div className={styles.viewOther_Links_Item}>
+                <Link href="/tips">Tips</Link>
+                <IconWrapper>
+                  <IconArrowShortRight />
+                </IconWrapper>
+              </div>
             </div>
 
-            <div className={styles.menuLinks}>
-              <Link href="/about">About</Link>
-              <Link href="/tips">Tips</Link>
-              <Link href="/notifications">Notifications</Link>
-              <Link href="/updates">Updates</Link>
-            </div>
-
-            <div className={styles.footerLinks}>
+            <div className={styles.viewOther_Footer}>
               <a href="mailto:info@driesbos.com">Feedback</a>
               <a
                 href="https://peace.blog/newsletter"

@@ -21,7 +21,7 @@ export const Button: React.FC<ButtonProps> = ({
   collapse,
   ...props
 }) => {
-  const shouldShowCount = typeof count === 'number' && count > 0;
+  const shouldShowCount = typeof count === 'number';
 
   return (
     <button
