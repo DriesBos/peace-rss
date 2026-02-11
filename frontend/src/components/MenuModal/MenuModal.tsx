@@ -807,8 +807,8 @@ export function MenuModal({
           <div className={styles.viewOther}>
             <div className={styles.viewOther_Links}>
               <div className={styles.viewOther_Profile}>
-                <UserButton />
                 <span>Profile</span>
+                <UserButton />
               </div>
               <div className={styles.viewOther_Links_Item}>
                 <Link href="/about">About</Link>
