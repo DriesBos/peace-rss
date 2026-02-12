@@ -169,7 +169,7 @@ export function AddModal({
                 disabled={addFeedLoading || isLoading}
               />
               <div className={styles.help}>
-                Multiple feeds were found. Choose one and submit again.
+                Choose a discovered feed and submit again.
               </div>
             </>
           ) : null}

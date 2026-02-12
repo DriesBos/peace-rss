@@ -41,6 +41,7 @@ type AddFeedSelectionResponse = {
   requires_selection: true;
   subscriptions: DiscoveredFeed[];
   source?: 'input_url' | 'base_url';
+  notice?: string;
 };
 
 function isAddFeedSelectionResponse(
@@ -812,7 +813,12 @@ export default function Home() {
 
         setDiscoveredFeeds(subscriptions);
         setSelectedDiscoveredFeedUrl(subscriptions[0]?.url ?? '');
-        setAddFeedError('Multiple feeds found. Choose one, then submit again.');
+        setAddFeedError(
+          response.notice ??
+            (subscriptions.length > 1
+              ? 'Multiple feeds found. Choose one, then submit again.'
+              : 'No exact URL match was found. Review the suggested feed and submit again to confirm.'),
+        );
         return false;
       }
 
@@ -902,10 +908,6 @@ export default function Home() {
   }
 
   async function deleteFeed(feedId: number) {
-    if (!confirm('Are you sure you want to delete this feed?')) {
-      return;
-    }
-
     setIsLoading(true);
     setError(null);
 

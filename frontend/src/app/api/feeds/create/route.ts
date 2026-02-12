@@ -590,6 +590,8 @@ export async function POST(request: NextRequest) {
                 requires_selection: true,
                 subscriptions: discoveredFromInput,
                 source: 'input_url',
+                notice:
+                  'Multiple feeds were discovered for this URL. Choose one to continue.',
               });
             }
 
@@ -616,19 +618,15 @@ export async function POST(request: NextRequest) {
             );
             baseDiscoveryCount = discoveredFromBase ? discoveredFromBase.length : null;
             if (discoveredFromBase && discoveredFromBase.length > 0) {
-              if (discoveredFromBase.length > 1) {
-                return NextResponse.json({
-                  requires_selection: true,
-                  subscriptions: discoveredFromBase,
-                  source: 'base_url',
-                });
-              }
-              feedUrlToCreate = discoveredFromBase[0].url;
-              strategy = 'base_discovery_fallback';
-              console.log(
-                `Discovered ${discoveredFromBase.length} feed(s) for base URL, using:`,
-                feedUrlToCreate
-              );
+              // Don't silently downgrade a path-specific URL to a site-wide feed.
+              // Require an explicit user choice, even when only one fallback feed exists.
+              return NextResponse.json({
+                requires_selection: true,
+                subscriptions: discoveredFromBase,
+                source: 'base_url',
+                notice:
+                  'No feed matched this exact URL path. Review the suggested site-level feed and submit again to confirm.',
+              });
             } else {
               feedUrlToCreate = baseUrl;
               strategy = 'base_url_direct_fallback';
