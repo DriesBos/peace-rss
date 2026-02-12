@@ -360,7 +360,7 @@ export function MenuModal({
     <ModalContainer isOpen={isOpen} onClose={handleClose} ariaLabel="Menu">
       <div className={styles.modalMenu}>
         <div className={styles.modalMenu_Nav}>
-          <div>
+          <div className={styles.modalMenu_Nav_Buttons}>
             <Button
               variant="nav"
               type="button"
