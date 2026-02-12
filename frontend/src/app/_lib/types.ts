@@ -4,6 +4,12 @@ export type Category = {
   title: string;
 };
 
+export type DiscoveredFeed = {
+  url: string;
+  title: string;
+  type: string;
+};
+
 export type Feed = {
   id: number;
   title: string;

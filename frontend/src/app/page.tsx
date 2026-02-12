@@ -13,7 +13,7 @@ import { TheHeader } from '@/components/TheHeader/TheHeader';
 import { MenuModal } from '@/components/MenuModal/MenuModal';
 import { useKeydown } from '@/hooks/useKeydown';
 import { fetchJson } from '@/app/_lib/fetchJson';
-import type { Category, Entry, Feed } from '@/app/_lib/types';
+import type { Category, DiscoveredFeed, Entry, Feed } from '@/app/_lib/types';
 import { useReaderData } from '@/hooks/useReaderData';
 import { useReaderGestures } from '@/hooks/useReaderGestures';
 import { useUnreadCounters } from '@/hooks/useUnreadCounters';
@@ -37,6 +37,26 @@ const getBrowserNavigator = (): any => {
   return (globalThis as any).navigator ?? null;
 };
 
+type AddFeedSelectionResponse = {
+  requires_selection: true;
+  subscriptions: DiscoveredFeed[];
+  source?: 'input_url' | 'base_url';
+};
+
+function isAddFeedSelectionResponse(
+  value: unknown,
+): value is AddFeedSelectionResponse {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as {
+    requires_selection?: unknown;
+    subscriptions?: unknown;
+  };
+  return (
+    candidate.requires_selection === true &&
+    Array.isArray(candidate.subscriptions)
+  );
+}
+
 export default function Home() {
   const [selectedEntryId, setSelectedEntryId] = useState<number | null>(null);
   const [selectedFeedId, setSelectedFeedId] = useState<number | null>(null);
@@ -58,6 +78,9 @@ export default function Home() {
   );
   const [addFeedLoading, setAddFeedLoading] = useState(false);
   const [addFeedError, setAddFeedError] = useState<string | null>(null);
+  const [discoveredFeeds, setDiscoveredFeeds] = useState<DiscoveredFeed[]>([]);
+  const [selectedDiscoveredFeedUrl, setSelectedDiscoveredFeedUrl] =
+    useState('');
   const [newCategoryTitle, setNewCategoryTitle] = useState('');
   const [addCategoryLoading, setAddCategoryLoading] = useState(false);
   const [addCategoryError, setAddCategoryError] = useState<string | null>(null);
@@ -223,11 +246,22 @@ export default function Home() {
 
   const openAddModal = useCallback(() => {
     setAddFeedError(null);
+    setDiscoveredFeeds([]);
+    setSelectedDiscoveredFeedUrl('');
     setActiveModal('add');
   }, []);
 
   const closeAddModal = useCallback(() => {
+    setDiscoveredFeeds([]);
+    setSelectedDiscoveredFeedUrl('');
     setActiveModal('menu');
+  }, []);
+
+  const handleSetNewFeedUrl = useCallback((value: string) => {
+    setNewFeedUrl(value);
+    setDiscoveredFeeds([]);
+    setSelectedDiscoveredFeedUrl('');
+    setAddFeedError(null);
   }, []);
 
   useEffect(() => {
@@ -708,7 +742,8 @@ export default function Home() {
     e.preventDefault();
 
     const trimmedUrl = newFeedUrl.trim();
-    if (!trimmedUrl) {
+    const trimmedSelectedFeedUrl = selectedDiscoveredFeedUrl.trim();
+    if (!trimmedUrl && !trimmedSelectedFeedUrl) {
       setAddFeedError('Enter a feed URL.');
       return false;
     }
@@ -718,22 +753,48 @@ export default function Home() {
 
     try {
       const requestBody: {
-        feed_url: string;
+        feed_url?: string;
+        selected_feed_url?: string;
         category_id?: number;
-      } = { feed_url: trimmedUrl };
+      } = {};
+      if (trimmedUrl) {
+        requestBody.feed_url = trimmedUrl;
+      }
+      if (trimmedSelectedFeedUrl) {
+        requestBody.selected_feed_url = trimmedSelectedFeedUrl;
+      }
       if (newFeedCategoryId) {
         requestBody.category_id = newFeedCategoryId;
       }
 
-      await fetchJson<unknown>('/api/feeds/create', {
+      const response = await fetchJson<unknown>('/api/feeds/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestBody),
       });
 
+      if (isAddFeedSelectionResponse(response)) {
+        const subscriptions = response.subscriptions;
+        if (subscriptions.length === 0) {
+          setAddFeedError(
+            'No discoverable feeds found for this URL. Please try another URL.',
+          );
+          setDiscoveredFeeds([]);
+          setSelectedDiscoveredFeedUrl('');
+          return false;
+        }
+
+        setDiscoveredFeeds(subscriptions);
+        setSelectedDiscoveredFeedUrl(subscriptions[0]?.url ?? '');
+        setAddFeedError('Multiple feeds found. Choose one, then submit again.');
+        return false;
+      }
+
       // Success: clear input and refresh feeds
       setNewFeedUrl('');
       setNewFeedCategoryId(null);
+      setDiscoveredFeeds([]);
+      setSelectedDiscoveredFeedUrl('');
       await Promise.all([
         loadFeeds(),
         loadCategories(),
@@ -1408,9 +1469,12 @@ export default function Home() {
               addCategoryError={addCategoryError}
               addCategory={addCategory}
               newFeedUrl={newFeedUrl}
-              setNewFeedUrl={setNewFeedUrl}
+              setNewFeedUrl={handleSetNewFeedUrl}
               newFeedCategoryId={newFeedCategoryId}
               setNewFeedCategoryId={setNewFeedCategoryId}
+              discoveredFeeds={discoveredFeeds}
+              selectedDiscoveredFeedUrl={selectedDiscoveredFeedUrl}
+              setSelectedDiscoveredFeedUrl={setSelectedDiscoveredFeedUrl}
               addFeedLoading={addFeedLoading}
               addFeedError={addFeedError}
               addFeed={addFeed}

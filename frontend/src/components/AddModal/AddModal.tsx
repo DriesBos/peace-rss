@@ -5,7 +5,7 @@ import styles from './AddModal.module.sass';
 import { ModalContainer } from '@/components/ModalContainer/ModalContainer';
 import { LabeledInput } from '@/components/LabeledInput/LabeledInput';
 import { LabeledSelect } from '@/components/LabeledSelect/LabeledSelect';
-import type { Category } from '@/app/_lib/types';
+import type { Category, DiscoveredFeed } from '@/app/_lib/types';
 import { toast } from 'sonner';
 import { NOTIFICATION_COPY } from '@/lib/notificationCopy';
 import { useKeydown } from '@/hooks/useKeydown';
@@ -25,6 +25,9 @@ export type AddModalProps = {
   setNewFeedUrl: (value: string) => void;
   newFeedCategoryId: number | null;
   setNewFeedCategoryId: (value: number | null) => void;
+  discoveredFeeds: DiscoveredFeed[];
+  selectedDiscoveredFeedUrl: string;
+  setSelectedDiscoveredFeedUrl: (value: string) => void;
   addFeedLoading: boolean;
   addFeedError: string | null;
   addFeed: (e: React.FormEvent) => Promise<boolean>;
@@ -44,12 +47,18 @@ export function AddModal({
   setNewFeedUrl,
   newFeedCategoryId,
   setNewFeedCategoryId,
+  discoveredFeeds,
+  selectedDiscoveredFeedUrl,
+  setSelectedDiscoveredFeedUrl,
   addFeedLoading,
   addFeedError,
   addFeed,
   isLoading,
 }: AddModalProps) {
-  const canSubmitFeed = Boolean(newFeedUrl.trim());
+  const isChoosingDiscoveredFeed = discoveredFeeds.length > 0;
+  const canSubmitFeed = isChoosingDiscoveredFeed
+    ? Boolean(selectedDiscoveredFeedUrl)
+    : Boolean(newFeedUrl.trim());
 
   const handleAddCategory = async (event: React.FormEvent) => {
     const didSucceed = await addCategory(event);
@@ -88,6 +97,13 @@ export function AddModal({
         label: cat.title,
       }));
   }, [categories]);
+
+  const discoveredFeedOptions = useMemo(() => {
+    return discoveredFeeds.map((feed) => ({
+      value: feed.url,
+      label: `${feed.title || feed.url} (${feed.type.toUpperCase()})`,
+    }));
+  }, [discoveredFeeds]);
 
   return (
     <ModalContainer isOpen={isOpen} onClose={onClose} ariaLabel="Add">
@@ -135,12 +151,32 @@ export function AddModal({
             options={categoryOptions}
             disabled={addFeedLoading || isLoading}
           />
+          {isChoosingDiscoveredFeed ? (
+            <>
+              <LabeledSelect
+                id="add-feed-discovered"
+                label="Choose feed"
+                value={selectedDiscoveredFeedUrl}
+                onChange={setSelectedDiscoveredFeedUrl}
+                placeholder="Choose discovered feed"
+                options={discoveredFeedOptions}
+                disabled={addFeedLoading || isLoading}
+              />
+              <div className={styles.help}>
+                Multiple feeds were found. Choose one and submit again.
+              </div>
+            </>
+          ) : null}
           <button
             type="submit"
             disabled={addFeedLoading || isLoading || !canSubmitFeed}
             className={styles.linkButton}
           >
-            {addFeedLoading ? 'Adding...' : 'Add feed'}
+            {addFeedLoading
+              ? 'Adding...'
+              : isChoosingDiscoveredFeed
+                ? 'Subscribe selected feed'
+                : 'Add feed'}
           </button>
           {addFeedError && <div className={styles.error}>{addFeedError}</div>}
         </form>

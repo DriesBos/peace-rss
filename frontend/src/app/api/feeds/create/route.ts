@@ -44,6 +44,7 @@ const youtubeResolveTimeoutMs = (() => {
 type CreateFeedRequest = {
   feed_url?: string;
   category_id?: number;
+  selected_feed_url?: string;
   social?: SocialFeedRequestInput;
 };
 
@@ -333,66 +334,6 @@ function hasSlugPath(url: URL): boolean {
   return normalizePathname(url.pathname) !== '/';
 }
 
-function buildLowercaseHaystack(url: URL): string {
-  return `${normalizePathname(url.pathname)}${url.search}`.toLowerCase();
-}
-
-function extractPathTerms(pathname: string): string[] {
-  return pathname
-    .split('/')
-    .filter(Boolean)
-    .map((segment) => {
-      try {
-        return decodeURIComponent(segment).trim().toLowerCase();
-      } catch {
-        return segment.trim().toLowerCase();
-      }
-    })
-    .filter(Boolean);
-}
-
-function pickDiscoveredFeedForSlugPath(
-  inputUrl: URL,
-  discovered: DiscoverResponse
-): string | null {
-  if (discovered.length === 0) return null;
-  if (!hasSlugPath(inputUrl)) return discovered[0].url;
-
-  const inputTerms = extractPathTerms(normalizePathname(inputUrl.pathname));
-  if (inputTerms.length === 0) return null;
-
-  const inputHref = inputUrl.toString();
-  const inputOrigin = inputUrl.origin;
-
-  for (const item of discovered) {
-    if (item.url === inputHref) return item.url;
-  }
-
-  for (const item of discovered) {
-    const candidate = parseHttpUrl(item.url);
-    if (!candidate || candidate.origin !== inputOrigin) continue;
-    const candidatePath = normalizePathname(candidate.pathname);
-    if (candidatePath === '/') continue;
-    const haystack = buildLowercaseHaystack(candidate);
-    if (inputTerms.every((term) => haystack.includes(term))) {
-      return item.url;
-    }
-  }
-
-  for (const item of discovered) {
-    const candidate = parseHttpUrl(item.url);
-    if (!candidate || candidate.origin !== inputOrigin) continue;
-    const candidatePath = normalizePathname(candidate.pathname);
-    if (candidatePath === '/') continue;
-    const haystack = buildLowercaseHaystack(candidate);
-    if (inputTerms.some((term) => haystack.includes(term))) {
-      return item.url;
-    }
-  }
-
-  return null;
-}
-
 async function discoverFeedsForUrl(
   token: string,
   url: string
@@ -494,22 +435,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { feed_url, category_id, social } = body as CreateFeedRequest;
+    const { feed_url, category_id, selected_feed_url, social } =
+      body as CreateFeedRequest;
     const trimmedUrl = typeof feed_url === 'string' ? feed_url.trim() : '';
+    const trimmedSelectedFeedUrl =
+      typeof selected_feed_url === 'string' ? selected_feed_url.trim() : '';
     const hasSocialPayload = Boolean(
       social &&
         typeof social === 'object' &&
         (typeof social.platform === 'string' || typeof social.handle === 'string')
     );
 
-    if (!trimmedUrl && !hasSocialPayload) {
+    if (!trimmedUrl && !trimmedSelectedFeedUrl && !hasSocialPayload) {
       return NextResponse.json(
-        { error: 'feed_url or social payload is required' },
+        { error: 'feed_url, selected_feed_url, or social payload is required' },
         { status: 400 }
       );
     }
 
-    let feedUrlToCreate = trimmedUrl;
+    let feedUrlToCreate = trimmedSelectedFeedUrl || trimmedUrl;
     console.log('Creating feed with input:', {
       hasUrl: Boolean(trimmedUrl),
       hasSocialPayload: Boolean(hasSocialPayload),
@@ -583,7 +527,7 @@ export async function POST(request: NextRequest) {
 
       const socialToken = encodeSocialFeedToken(tokenPayload);
       feedUrlToCreate = buildSocialProxyFeedUrl(socialToken);
-    } else {
+    } else if (!trimmedSelectedFeedUrl) {
       const resolvedYouTubeFeedUrl = await resolveYouTubeFeedUrlFromInput(trimmedUrl);
       if (resolvedYouTubeFeedUrl) {
         feedUrlToCreate = resolvedYouTubeFeedUrl;
@@ -641,28 +585,22 @@ export async function POST(request: NextRequest) {
 
           let shouldFallbackToBase = false;
           if (discoveredFromInput && discoveredFromInput.length > 0) {
-            const preferredFeedUrl =
-              parsedInputUrl && inputHasSlugPath
-                ? pickDiscoveredFeedForSlugPath(parsedInputUrl, discoveredFromInput)
-                : discoveredFromInput[0].url;
-
-            if (preferredFeedUrl) {
-              feedUrlToCreate = preferredFeedUrl;
-              strategy = inputHasSlugPath
-                ? 'input_slug_or_path_match'
-                : 'input_discovery_first_result';
-              console.log(
-                `Discovered ${discoveredFromInput.length} feed(s) for input URL, using:`,
-                feedUrlToCreate
-              );
-            } else {
-              shouldFallbackToBase = Boolean(baseUrl && inputHasSlugPath);
-              if (shouldFallbackToBase) {
-                console.log(
-                  'Input discovery returned feeds but none matched slug path; trying base URL fallback...'
-                );
-              }
+            if (discoveredFromInput.length > 1) {
+              return NextResponse.json({
+                requires_selection: true,
+                subscriptions: discoveredFromInput,
+                source: 'input_url',
+              });
             }
+
+            feedUrlToCreate = discoveredFromInput[0].url;
+            strategy = inputHasSlugPath
+              ? 'input_slug_or_path_match'
+              : 'input_discovery_first_result';
+            console.log(
+              `Discovered ${discoveredFromInput.length} feed(s) for input URL, using:`,
+              feedUrlToCreate
+            );
           } else {
             shouldFallbackToBase = Boolean(baseUrl && inputHasSlugPath);
             if (!shouldFallbackToBase) {
@@ -678,6 +616,13 @@ export async function POST(request: NextRequest) {
             );
             baseDiscoveryCount = discoveredFromBase ? discoveredFromBase.length : null;
             if (discoveredFromBase && discoveredFromBase.length > 0) {
+              if (discoveredFromBase.length > 1) {
+                return NextResponse.json({
+                  requires_selection: true,
+                  subscriptions: discoveredFromBase,
+                  source: 'base_url',
+                });
+              }
               feedUrlToCreate = discoveredFromBase[0].url;
               strategy = 'base_discovery_fallback';
               console.log(
