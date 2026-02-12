@@ -4,7 +4,6 @@ import Image from 'next/image';
 import { useMemo, useState } from 'react';
 import styles from './EntryItem.module.sass';
 import { FormattedDate } from '../FormattedDate';
-import { formatReadingTime } from '@/lib/readingTime';
 import {
   extractThumbnailFromHtml,
   resolveAbsoluteUrl,
@@ -15,7 +14,6 @@ type EntryItemProps = {
   feedTitle?: string;
   author?: string;
   publishedAt?: string;
-  readingTimeMinutes?: number;
   content?: string;
   url?: string;
   active?: boolean;
@@ -79,7 +77,6 @@ export function EntryItem({
   feedTitle,
   author,
   publishedAt,
-  readingTimeMinutes,
   content,
   url,
   active,
@@ -99,11 +96,7 @@ export function EntryItem({
   }, [thumbnailUrl, url]);
 
   const [isThumbnailErrored, setIsThumbnailErrored] = useState(false);
-  const readingTimeLabel = useMemo(
-    () => formatReadingTime(readingTimeMinutes),
-    [readingTimeMinutes],
-  );
-  const hasMetaPrefix = Boolean(publishedAt || readingTimeLabel);
+  const hasMetaPrefix = Boolean(publishedAt);
   const hasSourceMeta = Boolean(author || feedTitle);
 
   return (
@@ -124,8 +117,6 @@ export function EntryItem({
                 <FormattedDate date={publishedAt} />
               </span>
             ) : null}
-            {publishedAt && readingTimeLabel ? <span>{' · '}</span> : null}
-            {readingTimeLabel ? <span>{readingTimeLabel}</span> : null}
             {hasMetaPrefix && hasSourceMeta ? <span>{' — '}</span> : null}
             {hasSourceMeta ? (
               <span>
