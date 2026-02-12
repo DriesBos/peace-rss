@@ -334,6 +334,66 @@ function hasSlugPath(url: URL): boolean {
   return normalizePathname(url.pathname) !== '/';
 }
 
+function buildLowercaseHaystack(url: URL): string {
+  return `${normalizePathname(url.pathname)}${url.search}`.toLowerCase();
+}
+
+function extractPathTerms(pathname: string): string[] {
+  return pathname
+    .split('/')
+    .filter(Boolean)
+    .map((segment) => {
+      try {
+        return decodeURIComponent(segment).trim().toLowerCase();
+      } catch {
+        return segment.trim().toLowerCase();
+      }
+    })
+    .filter(Boolean);
+}
+
+function isLikelyInputPathMatch(inputUrl: URL, candidateFeedUrl: string): boolean {
+  if (!hasSlugPath(inputUrl)) return true;
+
+  const candidate = parseHttpUrl(candidateFeedUrl);
+  if (!candidate) return false;
+
+  if (candidate.toString() === inputUrl.toString()) return true;
+  if (candidate.origin !== inputUrl.origin) return false;
+
+  const candidatePath = normalizePathname(candidate.pathname);
+  if (
+    candidatePath === '/' ||
+    candidatePath.startsWith('/feed') ||
+    candidatePath.startsWith('/rss')
+  ) {
+    return false;
+  }
+
+  const stopTerms = new Set([
+    'author',
+    'authors',
+    'contributor',
+    'contributors',
+    'tag',
+    'tags',
+    'category',
+    'categories',
+    'section',
+    'sections',
+  ]);
+
+  const inputTerms = extractPathTerms(normalizePathname(inputUrl.pathname));
+  const meaningfulTerms = inputTerms.filter(
+    (term) => term.length >= 3 && !stopTerms.has(term),
+  );
+  const termsToMatch = meaningfulTerms.length > 0 ? meaningfulTerms : inputTerms;
+  if (termsToMatch.length === 0) return false;
+
+  const haystack = buildLowercaseHaystack(candidate);
+  return termsToMatch.every((term) => haystack.includes(term));
+}
+
 async function discoverFeedsForUrl(
   token: string,
   url: string
@@ -595,7 +655,23 @@ export async function POST(request: NextRequest) {
               });
             }
 
-            feedUrlToCreate = discoveredFromInput[0].url;
+            const singleDiscovered = discoveredFromInput[0];
+            if (
+              parsedInputUrl &&
+              inputHasSlugPath &&
+              singleDiscovered &&
+              !isLikelyInputPathMatch(parsedInputUrl, singleDiscovered.url)
+            ) {
+              return NextResponse.json({
+                requires_selection: true,
+                subscriptions: discoveredFromInput,
+                source: 'input_url',
+                notice:
+                  'No feed matched this exact URL path. Review the suggested feed and submit again to confirm.',
+              });
+            }
+
+            feedUrlToCreate = singleDiscovered?.url ?? discoveredFromInput[0].url;
             strategy = inputHasSlugPath
               ? 'input_slug_or_path_match'
               : 'input_discovery_first_result';
