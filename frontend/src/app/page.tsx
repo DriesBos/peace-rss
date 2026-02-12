@@ -252,19 +252,25 @@ export default function Home() {
     return firstRegularCategory?.id ?? null;
   }, [categories]);
 
-  const openAddModal = useCallback(() => {
+  const resetAddModalForm = useCallback(() => {
+    setNewCategoryTitle('');
+    setAddCategoryError(null);
+    setNewFeedUrl('');
+    setNewFeedCategoryId(defaultAddFeedCategoryId);
     setAddFeedError(null);
     setDiscoveredFeeds([]);
     setSelectedDiscoveredFeedUrl('');
-    setNewFeedCategoryId(defaultAddFeedCategoryId);
-    setActiveModal('add');
   }, [defaultAddFeedCategoryId]);
 
+  const openAddModal = useCallback(() => {
+    resetAddModalForm();
+    setActiveModal('add');
+  }, [resetAddModalForm]);
+
   const closeAddModal = useCallback(() => {
-    setDiscoveredFeeds([]);
-    setSelectedDiscoveredFeedUrl('');
+    resetAddModalForm();
     setActiveModal('menu');
-  }, []);
+  }, [resetAddModalForm]);
 
   const handleSetNewFeedUrl = useCallback((value: string) => {
     setNewFeedUrl(value);
@@ -304,6 +310,16 @@ export default function Home() {
     };
   }, []);
 
+  const resetEditModalForm = useCallback(() => {
+    setEditType(null);
+    setEditItemId(null);
+    setEditTitle('');
+    setEditFeedUrl('');
+    setEditCategoryId(null);
+    setIsEditingProtectedCategory(false);
+    setEditError(null);
+  }, []);
+
   const openEditModal = useCallback(
     (type: 'feed' | 'category', item: Feed | Category) => {
       if (type === 'category') {
@@ -313,6 +329,7 @@ export default function Home() {
           return;
         }
       }
+      resetEditModalForm();
       setEditType(type);
       setEditItemId(item.id);
       setEditTitle(item.title);
@@ -327,19 +344,13 @@ export default function Home() {
       setActiveModal('edit');
       setEditError(null);
     },
-    [],
+    [resetEditModalForm],
   );
 
   const closeEditModal = useCallback(() => {
+    resetEditModalForm();
     setActiveModal('menu');
-    setEditType(null);
-    setEditItemId(null);
-    setEditTitle('');
-    setEditFeedUrl('');
-    setEditCategoryId(null);
-    setIsEditingProtectedCategory(false);
-    setEditError(null);
-  }, []);
+  }, [resetEditModalForm]);
 
   const feedsById = useMemo(() => {
     const map = new Map<number, Feed>();
