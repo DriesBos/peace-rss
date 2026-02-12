@@ -244,12 +244,20 @@ export default function Home() {
     setActiveModal('none');
   }, []);
 
+  const defaultAddFeedCategoryId = useMemo(() => {
+    const firstRegularCategory = categories.find(
+      (category) => !isProtectedCategoryTitle(category.title),
+    );
+    return firstRegularCategory?.id ?? null;
+  }, [categories]);
+
   const openAddModal = useCallback(() => {
     setAddFeedError(null);
     setDiscoveredFeeds([]);
     setSelectedDiscoveredFeedUrl('');
+    setNewFeedCategoryId(defaultAddFeedCategoryId);
     setActiveModal('add');
-  }, []);
+  }, [defaultAddFeedCategoryId]);
 
   const closeAddModal = useCallback(() => {
     setDiscoveredFeeds([]);
@@ -263,6 +271,23 @@ export default function Home() {
     setSelectedDiscoveredFeedUrl('');
     setAddFeedError(null);
   }, []);
+
+  useEffect(() => {
+    if (activeModal !== 'add') return;
+
+    const allowedCategoryIds = new Set(
+      categories
+        .filter((category) => !isProtectedCategoryTitle(category.title))
+        .map((category) => category.id),
+    );
+
+    setNewFeedCategoryId((previous) => {
+      if (previous !== null && allowedCategoryIds.has(previous)) {
+        return previous;
+      }
+      return defaultAddFeedCategoryId;
+    });
+  }, [activeModal, categories, defaultAddFeedCategoryId]);
 
   useEffect(() => {
     const win = getBrowserWindow();
@@ -747,6 +772,10 @@ export default function Home() {
       setAddFeedError('Enter a feed URL.');
       return false;
     }
+    if (newFeedCategoryId === null) {
+      setAddFeedError('Choose a category.');
+      return false;
+    }
 
     setAddFeedLoading(true);
     setAddFeedError(null);
@@ -755,16 +784,13 @@ export default function Home() {
       const requestBody: {
         feed_url?: string;
         selected_feed_url?: string;
-        category_id?: number;
-      } = {};
+        category_id: number;
+      } = { category_id: newFeedCategoryId };
       if (trimmedUrl) {
         requestBody.feed_url = trimmedUrl;
       }
       if (trimmedSelectedFeedUrl) {
         requestBody.selected_feed_url = trimmedSelectedFeedUrl;
-      }
-      if (newFeedCategoryId) {
-        requestBody.category_id = newFeedCategoryId;
       }
 
       const response = await fetchJson<unknown>('/api/feeds/create', {
@@ -792,7 +818,7 @@ export default function Home() {
 
       // Success: clear input and refresh feeds
       setNewFeedUrl('');
-      setNewFeedCategoryId(null);
+      setNewFeedCategoryId(defaultAddFeedCategoryId);
       setDiscoveredFeeds([]);
       setSelectedDiscoveredFeedUrl('');
       await Promise.all([

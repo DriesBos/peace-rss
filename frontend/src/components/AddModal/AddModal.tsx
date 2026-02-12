@@ -56,9 +56,10 @@ export function AddModal({
   isLoading,
 }: AddModalProps) {
   const isChoosingDiscoveredFeed = discoveredFeeds.length > 0;
+  const hasCategoryChoice = newFeedCategoryId !== null;
   const canSubmitFeed = isChoosingDiscoveredFeed
-    ? Boolean(selectedDiscoveredFeedUrl)
-    : Boolean(newFeedUrl.trim());
+    ? Boolean(selectedDiscoveredFeedUrl) && hasCategoryChoice
+    : Boolean(newFeedUrl.trim()) && hasCategoryChoice;
 
   const handleAddCategory = async (event: React.FormEvent) => {
     const didSucceed = await addCategory(event);
@@ -142,15 +143,20 @@ export function AddModal({
           />
           <LabeledSelect
             id="add-feed-category"
+            label="Category"
             value={newFeedCategoryId ? String(newFeedCategoryId) : ''}
             onChange={(value) =>
               setNewFeedCategoryId(value ? Number(value) : null)
             }
             placeholder="Select category"
-            optionalHint="(optional)"
             options={categoryOptions}
             disabled={addFeedLoading || isLoading}
           />
+          {!hasCategoryChoice ? (
+            <div className={styles.help}>
+              Create a category first before adding feeds.
+            </div>
+          ) : null}
           {isChoosingDiscoveredFeed ? (
             <>
               <LabeledSelect
