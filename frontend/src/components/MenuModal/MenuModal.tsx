@@ -614,7 +614,7 @@ export function MenuModal({
               </Button>
             </div>
 
-            <div className={styles.viewLook_opml}>
+            {/* <div className={styles.viewLook_opml}>
               <LabelWithCount count="OPML">
                 <span>Import / Export</span>
               </LabelWithCount>
@@ -656,7 +656,7 @@ export function MenuModal({
                   </span>
                 </Button>
               </div>
-            </div>
+            </div> */}
           </div>
         )}
 
@@ -688,13 +688,8 @@ export function MenuModal({
             </div>
 
             <div className={styles.viewOther_Footer}>
-              <a href="mailto:info@driesbos.com">Feedback</a>
-              <a
-                href="https://peace.blog/newsletter"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Newsletter
+              <a href="mailto:hello@driesbos.com?subject=Komorebi Reader">
+                Feedback
               </a>
               <a
                 href="https://www.instagram.com/dries_bos"
