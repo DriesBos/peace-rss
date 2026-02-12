@@ -889,14 +889,22 @@ export default function Home() {
     setEditError(null);
 
     try {
+      const requestBody: {
+        title: string;
+        feed_url: string;
+        category_id?: number;
+      } = {
+        title: trimmedTitle,
+        feed_url: trimmedUrl,
+      };
+      if (editCategoryId !== null) {
+        requestBody.category_id = editCategoryId;
+      }
+
       await fetchJson<{ ok: boolean }>(`/api/feeds/${editItemId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          title: trimmedTitle,
-          feed_url: trimmedUrl,
-          category_id: editCategoryId,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       // Success: refresh feeds/categories (category may be created/forced server-side)

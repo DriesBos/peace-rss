@@ -852,7 +852,7 @@ export async function POST(request: NextRequest) {
           method: 'PUT',
           body: JSON.stringify({
             hide_globally: true,
-            category: { id: forcedCategoryId },
+            category_id: forcedCategoryId,
           }),
         });
         createdFeed.hide_globally = true;

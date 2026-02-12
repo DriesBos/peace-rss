@@ -32,7 +32,7 @@ type MinifluxFeed = {
 type UpdateFeedRequest = {
   title?: string;
   feed_url?: string;
-  category_id?: number;
+  category_id?: number | null;
   blocklist_rules?: string;
   rewrite_rules?: string;
 };
@@ -121,8 +121,14 @@ export async function PUT(
           ).id;
 
       updatePayload.hide_globally = true;
-      updatePayload.category = { id: protectedCategoryId };
-    } else if (category_id !== undefined) {
+      updatePayload.category_id = protectedCategoryId;
+    } else if (category_id !== undefined && category_id !== null) {
+      if (!Number.isInteger(category_id) || category_id <= 0) {
+        return NextResponse.json(
+          { error: 'Invalid category ID' },
+          { status: 400 },
+        );
+      }
       // Disallow moving feeds into protected categories.
       const categories = await mfFetchUser<MinifluxCategory[]>(
         token,
@@ -135,7 +141,7 @@ export async function PUT(
           { status: 400 },
         );
       }
-      updatePayload.category = { id: category_id };
+      updatePayload.category_id = category_id;
     }
 
     // 5. Update feed using Miniflux API
