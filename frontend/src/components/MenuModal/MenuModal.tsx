@@ -360,11 +360,10 @@ export function MenuModal({
     <ModalContainer isOpen={isOpen} onClose={handleClose} ariaLabel="Menu">
       <div className={styles.modalMenu}>
         <div className={styles.modalMenu_Nav}>
-          <div className={styles.tabs}>
+          <div>
             <Button
               variant="nav"
               type="button"
-              className={styles.tab}
               active={activeView === 'feeds'}
               onClick={() => setActiveView('feeds')}
             >
@@ -373,7 +372,6 @@ export function MenuModal({
             <Button
               variant="nav"
               type="button"
-              className={styles.tab}
               active={activeView === 'settings'}
               onClick={() => setActiveView('settings')}
             >
@@ -382,7 +380,6 @@ export function MenuModal({
             <Button
               variant="nav"
               type="button"
-              className={styles.tab}
               active={activeView === 'other'}
               onClick={() => setActiveView('other')}
             >
@@ -587,7 +584,6 @@ export function MenuModal({
                 </div>
               )}
             </div>
-
           </div>
         )}
 
@@ -629,7 +625,9 @@ export function MenuModal({
                   onClick={handleExportOpml}
                   disabled={isLoading || opmlExportLoading || opmlImportLoading}
                 >
-                  <span>{opmlExportLoading ? 'Exporting...' : 'Export OPML'}</span>
+                  <span>
+                    {opmlExportLoading ? 'Exporting...' : 'Export OPML'}
+                  </span>
                 </Button>
               </div>
 
@@ -653,7 +651,9 @@ export function MenuModal({
                     !selectedOpmlFile
                   }
                 >
-                  <span>{opmlImportLoading ? 'Importing...' : 'Import OPML'}</span>
+                  <span>
+                    {opmlImportLoading ? 'Importing...' : 'Import OPML'}
+                  </span>
                 </Button>
               </div>
             </div>
