@@ -1015,16 +1015,23 @@ export default function Home() {
       setError(null);
 
       try {
-        const result = await fetchJson<{ ok: boolean; content: string }>(
-          `/api/entries/${targetEntry.id}/fetch-content`,
-          { method: 'POST' },
-        );
+        const result = await fetchJson<{
+          ok: boolean;
+          content: string;
+          reading_time?: number;
+        }>(`/api/entries/${targetEntry.id}/fetch-content`, { method: 'POST' });
 
         if (result.ok && result.content) {
           // Update the entry in the entries array with the new content
           setEntries((prev) =>
             prev.map((e) =>
-              e.id === targetEntry.id ? { ...e, content: result.content } : e,
+              e.id === targetEntry.id
+                ? {
+                    ...e,
+                    content: result.content,
+                    reading_time: result.reading_time ?? e.reading_time,
+                  }
+                : e,
             ),
           );
           setOriginalFetchStatusById((prev) => ({
@@ -1092,7 +1099,9 @@ export default function Home() {
       hasPrev,
       onNavigateNext: navigateToNext,
       onNavigatePrev: navigateToPrev,
-      onRefresh: refreshAllDataWithToast,
+      onRefresh: async () => {
+        await refreshAllDataWithToast();
+      },
     });
 
   // Bootstrap on mount

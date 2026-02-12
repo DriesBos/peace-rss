@@ -51,11 +51,16 @@ export async function POST(_request: NextRequest, context: Ctx) {
       title: string;
       content: string;
       url: string;
+      reading_time?: number;
     }>(token, `/v1/entries/${entryId}/fetch-content`, {
       method: 'GET',
     });
 
-    return NextResponse.json({ ok: true, content: entry.content });
+    return NextResponse.json({
+      ok: true,
+      content: entry.content,
+      reading_time: entry.reading_time,
+    });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Failed to fetch content' },
@@ -63,4 +68,3 @@ export async function POST(_request: NextRequest, context: Ctx) {
     );
   }
 }
-

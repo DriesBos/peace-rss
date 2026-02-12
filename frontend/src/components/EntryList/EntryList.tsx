@@ -50,6 +50,7 @@ function LazyEntryItem({
           author={entry.author}
           feedTitle={feedTitle}
           publishedAt={published}
+          readingTimeMinutes={entry.reading_time}
           active={isActive}
           marked={entry.status === 'read'}
           content={entry.content}

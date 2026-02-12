@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  type ChangeEvent,
   type CSSProperties,
   useCallback,
   useEffect,
@@ -28,7 +29,7 @@ import { useKeydown } from '@/hooks/useKeydown';
 import { isProtectedCategoryTitle } from '@/lib/protectedCategories';
 import { IconArrowShortRight } from '../icons/IconArrowShortRight';
 
-type MenuView = 'feeds' | 'look' | 'other';
+type MenuView = 'feeds' | 'settings' | 'other';
 
 export type MenuModalProps = {
   isOpen: boolean;
@@ -85,6 +86,10 @@ export function MenuModal({
   const categoriesListRef = useRef<HTMLDivElement | null>(null);
   const [feedsMaxHeight, setFeedsMaxHeight] = useState(0);
   const themeToastTimeoutRef = useRef<number | null>(null);
+  const opmlFileInputRef = useRef<HTMLInputElement | null>(null);
+  const [selectedOpmlFile, setSelectedOpmlFile] = useState<File | null>(null);
+  const [opmlImportLoading, setOpmlImportLoading] = useState(false);
+  const [opmlExportLoading, setOpmlExportLoading] = useState(false);
 
   const [collapsedCategories, setCollapsedCategories] = useState<
     Set<number | string>
@@ -112,6 +117,10 @@ export function MenuModal({
     hasUserAdjustedCollapse.current = false;
     setActiveView('feeds');
     setLocalThemeChoice(null);
+    setSelectedOpmlFile(null);
+    if (opmlFileInputRef.current) {
+      opmlFileInputRef.current.value = '';
+    }
     resetCollapsedCategories();
     onClose();
   }, [onClose, resetCollapsedCategories]);
@@ -287,6 +296,70 @@ export function MenuModal({
     setLocalThemeChoice(null);
   }, [handleThemeChange, displayTheme]);
 
+  const handleOpmlFileChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0] ?? null;
+      setSelectedOpmlFile(file);
+    },
+    [],
+  );
+
+  const handleExportOpml = useCallback(async () => {
+    if (opmlExportLoading) return;
+    setOpmlExportLoading(true);
+    try {
+      const response = await fetch('/api/opml/export', {
+        method: 'GET',
+        cache: 'no-store',
+      });
+
+      if (!response.ok) {
+        const message = await response.text().catch(() => '');
+        throw new Error(message || 'Failed to export OPML');
+      }
+
+      const blob = await response.blob();
+      const objectUrl = window.URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = objectUrl;
+      anchor.download = 'feeds.opml';
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      window.URL.revokeObjectURL(objectUrl);
+      toast('OPML export downloaded.');
+    } catch (error) {
+      toast.error('Could not export OPML.');
+    } finally {
+      setOpmlExportLoading(false);
+    }
+  }, [opmlExportLoading]);
+
+  const handleImportOpml = useCallback(async () => {
+    if (!selectedOpmlFile || opmlImportLoading) return;
+    setOpmlImportLoading(true);
+    try {
+      const formData = new FormData();
+      formData.set('file', selectedOpmlFile);
+      const response = await fetch('/api/opml/import', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const message = await response.text().catch(() => '');
+        throw new Error(message || 'Failed to import OPML');
+      }
+
+      toast('OPML imported. Refreshing feeds now.');
+      window.location.reload();
+    } catch (error) {
+      toast.error('Could not import OPML.');
+    } finally {
+      setOpmlImportLoading(false);
+    }
+  }, [opmlImportLoading, selectedOpmlFile]);
+
   return (
     <ModalContainer isOpen={isOpen} onClose={handleClose} ariaLabel="Menu">
       <div className={styles.modalMenu}>
@@ -305,10 +378,10 @@ export function MenuModal({
               variant="nav"
               type="button"
               className={styles.tab}
-              active={activeView === 'look'}
-              onClick={() => setActiveView('look')}
+              active={activeView === 'settings'}
+              onClick={() => setActiveView('settings')}
             >
-              <span>Looks</span>
+              <span>Settings</span>
             </Button>
             <Button
               variant="nav"
@@ -522,7 +595,7 @@ export function MenuModal({
           </div>
         )}
 
-        {activeView === 'look' && (
+        {activeView === 'settings' && (
           <div className={styles.viewLook}>
             <div className={styles.viewLook_themeSelectRow}>
               <div className={styles.viewLook_themeSelectField}>
@@ -547,6 +620,46 @@ export function MenuModal({
               >
                 <span>Select</span>
               </Button>
+            </div>
+
+            <div className={styles.viewLook_opml}>
+              <LabelWithCount count="OPML">
+                <span>Import / Export</span>
+              </LabelWithCount>
+              <div className={styles.viewLook_opmlActions}>
+                <Button
+                  type="button"
+                  variant="nav"
+                  onClick={handleExportOpml}
+                  disabled={isLoading || opmlExportLoading || opmlImportLoading}
+                >
+                  <span>{opmlExportLoading ? 'Exporting...' : 'Export OPML'}</span>
+                </Button>
+              </div>
+
+              <div className={styles.viewLook_opmlImport}>
+                <input
+                  ref={opmlFileInputRef}
+                  className={styles.viewLook_opmlFileInput}
+                  type="file"
+                  accept=".opml,.xml,text/xml,application/xml"
+                  onChange={handleOpmlFileChange}
+                  disabled={isLoading || opmlExportLoading || opmlImportLoading}
+                />
+                <Button
+                  type="button"
+                  variant="nav"
+                  onClick={handleImportOpml}
+                  disabled={
+                    isLoading ||
+                    opmlImportLoading ||
+                    opmlExportLoading ||
+                    !selectedOpmlFile
+                  }
+                >
+                  <span>{opmlImportLoading ? 'Importing...' : 'Import OPML'}</span>
+                </Button>
+              </div>
             </div>
           </div>
         )}

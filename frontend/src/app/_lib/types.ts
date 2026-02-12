@@ -21,6 +21,7 @@ export type Entry = {
   title: string;
   url: string;
   content?: string;
+  reading_time?: number;
   author?: string;
   feed_id: number;
   feed?: { id: number; title: string };

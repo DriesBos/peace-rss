@@ -4,6 +4,7 @@ import Image from 'next/image';
 import { useMemo, useState } from 'react';
 import styles from './EntryItem.module.sass';
 import { FormattedDate } from '../FormattedDate';
+import { formatReadingTime } from '@/lib/readingTime';
 import {
   extractThumbnailFromHtml,
   resolveAbsoluteUrl,
@@ -14,6 +15,7 @@ type EntryItemProps = {
   feedTitle?: string;
   author?: string;
   publishedAt?: string;
+  readingTimeMinutes?: number;
   content?: string;
   url?: string;
   active?: boolean;
@@ -77,6 +79,7 @@ export function EntryItem({
   feedTitle,
   author,
   publishedAt,
+  readingTimeMinutes,
   content,
   url,
   active,
@@ -96,6 +99,12 @@ export function EntryItem({
   }, [thumbnailUrl, url]);
 
   const [isThumbnailErrored, setIsThumbnailErrored] = useState(false);
+  const readingTimeLabel = useMemo(
+    () => formatReadingTime(readingTimeMinutes),
+    [readingTimeMinutes],
+  );
+  const hasMetaPrefix = Boolean(publishedAt || readingTimeLabel);
+  const hasSourceMeta = Boolean(author || feedTitle);
 
   return (
     <div
@@ -110,13 +119,19 @@ export function EntryItem({
         <div className={styles.entryItem_Header}>
           <h1>{title}</h1>
           <div className={styles.entryItem_Meta}>
-            <span>
-              <FormattedDate date={publishedAt} />
-              {' — '}
-            </span>
-            <span>
-              By: <i>{author ? `${author}, ${feedTitle}` : feedTitle}</i>
-            </span>
+            {publishedAt ? (
+              <span>
+                <FormattedDate date={publishedAt} />
+              </span>
+            ) : null}
+            {publishedAt && readingTimeLabel ? <span>{' · '}</span> : null}
+            {readingTimeLabel ? <span>{readingTimeLabel}</span> : null}
+            {hasMetaPrefix && hasSourceMeta ? <span>{' — '}</span> : null}
+            {hasSourceMeta ? (
+              <span>
+                By: <i>{author ? `${author}, ${feedTitle}` : feedTitle}</i>
+              </span>
+            ) : null}
           </div>
         </div>
         {preview && <p className={styles.entryItem_Preview}>{preview}</p>}

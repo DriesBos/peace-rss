@@ -16,10 +16,6 @@
   flex-direction: column
   gap: var(--half-rem)
 
-.label
-  @include font-body
-  color: var(--color-text)
-
 .formActions
   display: flex
   align-items: center
@@ -36,20 +32,6 @@
   @include font-body
   color: var(--color-text)
 
-.linkButton
-  appearance: none
-  background: transparent
-  border: 0
-  color: var(--color-text)
-  @include font-body
-  text-decoration: underline
-  text-underline-offset: 2px
-  padding: 0
-  cursor: pointer
-  &:disabled
-    opacity: var(--disabled-opacity)
-    cursor: not-allowed
-
 .error
   padding: 10px 12px
   border: 1px solid #e6e6e6
@@ -58,27 +40,3 @@
   font-size: 13px
   white-space: pre-wrap
   overflow-wrap: anywhere
-
-.input
-  appearance: none
-  width: 100%
-  height: 22px
-  padding: 0 var(--one-rem)
-  border: 1px solid var(--color-text-secondary)
-  border-radius: 4px
-  background: transparent
-  color: var(--color-text)
-  font: inherit
-  font-size: 16px
-
-.input::placeholder
-  color: var(--color-text-secondary)
-  font-size: 16px
-
-.input:focus
-  outline: none
-  border-color: var(--color-text)
-
-.input:disabled
-  opacity: var(--disabled-opacity)
-  cursor: not-allowed

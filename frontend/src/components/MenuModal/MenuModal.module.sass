@@ -17,6 +17,9 @@
   gap: var(--one-rem)
   flex: 1
 
+.tab
+  flex: 1 1 0
+
 .timeColon
   width: 0.45em
   text-align: center
@@ -117,6 +120,26 @@
 .viewLook_themeSelectField
   display: flex
   flex: 1 1 auto
+
+.viewLook_opml
+  display: flex
+  flex-direction: column
+  gap: var(--one-rem)
+
+.viewLook_opmlActions
+  display: flex
+  align-items: center
+  gap: var(--one-rem)
+
+.viewLook_opmlImport
+  display: flex
+  align-items: center
+  gap: var(--one-rem)
+  flex-wrap: wrap
+
+.viewLook_opmlFileInput
+  color: var(--color-text)
+  @include font-body
 
 // VIEWOTHER
 .viewOther_Links

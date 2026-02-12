@@ -13,6 +13,7 @@ import { IconArrowShortLeft } from '@/components/icons/IconArrowShortLeft';
 import { IconArrowShortRight } from '@/components/icons/IconArrowShortRight';
 import { ScrollToTop } from '@/components/ScrollToTop/ScrollToTop';
 import type { Entry, Feed } from '@/app/_lib/types';
+import { formatReadingTime } from '@/lib/readingTime';
 import { extractYouTubeVideoId, getYouTubeEmbedUrl } from '@/lib/youtube';
 import { IconWrapper } from '../icons/IconWrapper/IconWrapper';
 import { IconStar } from '../icons/IconStar';
@@ -527,6 +528,12 @@ export function EntryPanel({
     useState(false);
   const content = entry?.content?.trim() ?? '';
   const hasContent = Boolean(content);
+  const readingTimeLabel = formatReadingTime(entry?.reading_time);
+  const sourceFeedTitle =
+    entry?.feed_title ??
+    entry?.feed?.title ??
+    (entry ? feedsById.get(entry.feed_id)?.title : undefined);
+  const hasSourceMeta = Boolean(sourceFeedTitle || entry?.author);
   const originalFetchFailed = originalFetchStatus === 'error';
   const showContent =
     hasContent && (originalFetchStatus === 'success' || originalFetchFailed);
@@ -659,27 +666,23 @@ export function EntryPanel({
           <div className={styles.entry_Header}>
             <h1>{entry.title || '(untitled)'}</h1>
             <div className={styles.entry_Meta}>
-              {(entry.feed_title ??
-                entry.feed?.title ??
-                feedsById.get(entry.feed_id)?.title) ||
-              entry.published_at ||
-              entry.author ? (
+              {hasSourceMeta || entry.published_at || readingTimeLabel ? (
                 <>
                   {entry.published_at && (
                     <p>
                       <FormattedDate date={entry.published_at} />
                     </p>
                   )}
-                  <p>
-                    From:{' '}
-                    <i>
-                      {entry.author && `By: ${entry.author}, `}
-                      {entry.feed_title ??
-                        entry.feed?.title ??
-                        feedsById.get(entry.feed_id)?.title ??
-                        ''}
-                    </i>
-                  </p>
+                  {readingTimeLabel ? <p>{readingTimeLabel}</p> : null}
+                  {hasSourceMeta ? (
+                    <p>
+                      From:{' '}
+                      <i>
+                        {entry.author && `By: ${entry.author}, `}
+                        {sourceFeedTitle ?? ''}
+                      </i>
+                    </p>
+                  ) : null}
                 </>
               ) : null}
             </div>
