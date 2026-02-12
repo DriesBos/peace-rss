@@ -24,10 +24,6 @@ import {
   isProtectedCategoryTitle,
   normalizeCategoryTitle,
 } from '@/lib/protectedCategories';
-import {
-  hasRemoveClickbaitRule,
-  setRemoveClickbaitRule,
-} from '@/lib/minifluxRules';
 
 type ActiveModal = 'none' | 'menu' | 'add' | 'edit';
 
@@ -101,7 +97,6 @@ export default function Home() {
   const [editTitle, setEditTitle] = useState('');
   const [editFeedUrl, setEditFeedUrl] = useState('');
   const [editCategoryId, setEditCategoryId] = useState<number | null>(null);
-  const [editRemoveClickbait, setEditRemoveClickbait] = useState(false);
   const [isEditingProtectedCategory, setIsEditingProtectedCategory] =
     useState(false);
   const [editLoading, setEditLoading] = useState(false);
@@ -268,7 +263,6 @@ export default function Home() {
         const feed = item as Feed;
         setEditFeedUrl(feed.feed_url || '');
         setEditCategoryId(feed.category?.id || null);
-        setEditRemoveClickbait(hasRemoveClickbaitRule(feed.rewrite_rules));
       }
       setActiveModal('edit');
       setEditError(null);
@@ -283,7 +277,6 @@ export default function Home() {
     setEditTitle('');
     setEditFeedUrl('');
     setEditCategoryId(null);
-    setEditRemoveClickbait(false);
     setIsEditingProtectedCategory(false);
     setEditError(null);
   }, []);
@@ -903,10 +896,6 @@ export default function Home() {
           title: trimmedTitle,
           feed_url: trimmedUrl,
           category_id: editCategoryId,
-          rewrite_rules: setRemoveClickbaitRule(
-            feedsById.get(editItemId)?.rewrite_rules,
-            editRemoveClickbait,
-          ),
         }),
       });
 
@@ -1428,7 +1417,6 @@ export default function Home() {
               editTitle={editTitle}
               editFeedUrl={editFeedUrl}
               editCategoryId={editCategoryId}
-              editRemoveClickbait={editRemoveClickbait}
               isEditingProtectedCategory={isEditingProtectedCategory}
               editLoading={editLoading}
               editError={editError}
@@ -1440,7 +1428,6 @@ export default function Home() {
               onChangeTitle={setEditTitle}
               onChangeFeedUrl={setEditFeedUrl}
               onChangeCategoryId={setEditCategoryId}
-              onChangeRemoveClickbait={setEditRemoveClickbait}
             />
 
             <TheHeader

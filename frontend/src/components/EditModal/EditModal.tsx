@@ -19,7 +19,6 @@ export type EditModalProps = {
   editTitle: string;
   editFeedUrl: string;
   editCategoryId: number | null;
-  editRemoveClickbait: boolean;
   isEditingProtectedCategory: boolean;
   editLoading: boolean;
   editError: string | null;
@@ -31,7 +30,6 @@ export type EditModalProps = {
   onChangeTitle: (value: string) => void;
   onChangeFeedUrl: (value: string) => void;
   onChangeCategoryId: (value: number | null) => void;
-  onChangeRemoveClickbait: (value: boolean) => void;
 };
 
 export function EditModal({
@@ -42,7 +40,6 @@ export function EditModal({
   editTitle,
   editFeedUrl,
   editCategoryId,
-  editRemoveClickbait,
   isEditingProtectedCategory,
   editLoading,
   editError,
@@ -54,7 +51,6 @@ export function EditModal({
   onChangeTitle,
   onChangeFeedUrl,
   onChangeCategoryId,
-  onChangeRemoveClickbait,
 }: EditModalProps) {
   const handleSubmitCategory = async (event: React.FormEvent) => {
     const didSucceed = await onUpdateCategory(event);
@@ -82,7 +78,7 @@ export function EditModal({
     {
       enabled: isOpen,
       target: typeof document !== 'undefined' ? document : null,
-    }
+    },
   );
 
   return (
@@ -98,8 +94,8 @@ export function EditModal({
               <>
                 <div className={styles.formField}>
                   <div className={styles.help}>
-                    This category is managed automatically and can’t be edited or
-                    deleted.
+                    This category is managed automatically and can’t be edited
+                    or deleted.
                   </div>
                 </div>
                 <div className={styles.formActions}>
@@ -140,7 +136,9 @@ export function EditModal({
                     onClick={() => {
                       if (
                         editItemId &&
-                        confirm('Are you sure you want to delete this category?')
+                        confirm(
+                          'Are you sure you want to delete this category?',
+                        )
                       ) {
                         onDeleteCategory(editItemId);
                         toast(NOTIFICATION_COPY.app.categoryDeleted);
@@ -205,18 +203,6 @@ export function EditModal({
                 }))}
               disabled={editLoading}
             />
-
-            <label className={styles.checkboxRow}>
-              <input
-                type="checkbox"
-                checked={editRemoveClickbait}
-                onChange={(event) =>
-                  onChangeRemoveClickbait(event.currentTarget.checked)
-                }
-                disabled={editLoading}
-              />
-              <span>Apply Miniflux `remove_clickbait` title rewrite</span>
-            </label>
 
             <div className={styles.formActions}>
               <Button

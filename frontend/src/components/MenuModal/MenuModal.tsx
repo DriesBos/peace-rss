@@ -57,7 +57,7 @@ function buildInitialCollapsedCategories(categories: Category[]) {
   const initialSet = new Set<number | string>();
   initialSet.add('starred');
   initialSet.add('uncategorized');
-  categories.slice(1).forEach((cat) => {
+  categories.forEach((cat) => {
     initialSet.add(cat.id);
   });
   return initialSet;
@@ -207,11 +207,8 @@ export function MenuModal({
   }, [nowMs]);
 
   const uncategorizedFeeds = useMemo(
-    () =>
-      feeds.filter(
-        (feed) => !feed.category || feed.category.id === categories[0]?.id,
-      ),
-    [feeds, categories],
+    () => feeds.filter((feed) => !feed.category?.id),
+    [feeds],
   );
 
   const protectedCategoryIds = useMemo(() => {
@@ -239,9 +236,8 @@ export function MenuModal({
   }, [uncategorizedFeeds, protectedCategoryIds]);
 
   const regularCategories = useMemo(() => {
-    const rest = categories.slice(1);
-    if (protectedCategoryIds.size === 0) return rest;
-    return rest.filter((cat) => !protectedCategoryIds.has(cat.id));
+    if (protectedCategoryIds.size === 0) return categories;
+    return categories.filter((cat) => !protectedCategoryIds.has(cat.id));
   }, [categories, protectedCategoryIds]);
 
   const handleOpenAddModal = useCallback(() => {
