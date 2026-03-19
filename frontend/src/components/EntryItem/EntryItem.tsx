@@ -137,6 +137,7 @@ export function EntryItem({
             quality={60}
             unoptimized
             loading="lazy"
+            referrerPolicy="no-referrer"
             style={{ objectFit: 'cover' }}
             onError={() => setIsThumbnailErrored(true)}
           />

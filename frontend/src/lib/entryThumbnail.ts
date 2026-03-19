@@ -1,5 +1,64 @@
 import { extractYouTubeVideoId, getYouTubePosterUrl } from '@/lib/youtube';
 
+const IMAGE_URL_ATTRIBUTES = [
+  'src',
+  'data-src',
+  'data-lazy-src',
+  'data-original',
+] as const;
+
+const IMAGE_SRCSET_ATTRIBUTES = ['srcset', 'data-srcset'] as const;
+
+function getTrimmedAttribute(
+  element: Element,
+  attributeName: string,
+): string | null {
+  const value = element.getAttribute(attributeName)?.trim();
+  return value ? value : null;
+}
+
+export function extractFirstSrcSetUrl(
+  srcSet: string | null | undefined,
+): string | null {
+  if (!srcSet) return null;
+
+  const firstCandidate = srcSet
+    .split(',')
+    .map((candidate) => candidate.trim())
+    .find(Boolean);
+
+  if (!firstCandidate) return null;
+
+  const [url] = firstCandidate.split(/\s+/);
+  return url?.trim() || null;
+}
+
+export function extractImageSrcSetFromElement(
+  element: Element | null,
+): string | null {
+  if (!element) return null;
+
+  for (const attributeName of IMAGE_SRCSET_ATTRIBUTES) {
+    const value = getTrimmedAttribute(element, attributeName);
+    if (value) return value;
+  }
+
+  return null;
+}
+
+export function extractImageUrlFromElement(
+  element: Element | null,
+): string | null {
+  if (!element) return null;
+
+  for (const attributeName of IMAGE_URL_ATTRIBUTES) {
+    const value = getTrimmedAttribute(element, attributeName);
+    if (value) return value;
+  }
+
+  return extractFirstSrcSetUrl(extractImageSrcSetFromElement(element));
+}
+
 function extractThumbnailRegex(htmlContent: string): string | null {
   const youtubeMatch = htmlContent.match(
     /(https?:\/\/(?:www\.)?youtube\.com\/watch\?[^"'\s>]*v=([a-zA-Z0-9_-]{11})|https?:\/\/youtu\.be\/([a-zA-Z0-9_-]{11})|https?:\/\/(?:www\.)?youtube(?:-nocookie)?\.com\/embed\/([a-zA-Z0-9_-]{11}))/i,
@@ -25,6 +84,17 @@ function extractThumbnailRegex(htmlContent: string): string | null {
     /<picture[^>]*>[\s\S]*?<img[^>]*src=["']([^"']+)["']/i,
   );
   if (pictureImgMatch && pictureImgMatch[1]) return pictureImgMatch[1];
+
+  const srcSetMatch = htmlContent.match(/srcset=["']([^"']+)["']/i);
+  if (srcSetMatch?.[1]) {
+    const firstSrcSetUrl = extractFirstSrcSetUrl(srcSetMatch[1]);
+    if (firstSrcSetUrl) return firstSrcSetUrl;
+  }
+
+  const dataSrcMatch = htmlContent.match(
+    /<img[^>]*data-(?:src|lazy-src|original)=["']([^"']+)["']/i,
+  );
+  if (dataSrcMatch && dataSrcMatch[1]) return dataSrcMatch[1];
 
   const imgMatch = htmlContent.match(/<img[^>]*src=["']([^"']+)["']/i);
   if (imgMatch && imgMatch[1]) return imgMatch[1];
@@ -80,21 +150,19 @@ export function extractThumbnailFromHtml(
   const picture = doc.querySelector('picture');
   if (picture) {
     const img = picture.querySelector('img');
-    const pictureImgSrc = img?.getAttribute('src');
+    const pictureImgSrc = extractImageUrlFromElement(img);
     if (pictureImgSrc) return pictureImgSrc;
 
-    const source = picture.querySelector('source[srcset]');
-    if (source) {
-      const srcset = source.getAttribute('srcset');
-      if (srcset) {
-        const firstUrl = srcset.split(',')[0].trim().split(/\s+/)[0];
-        if (firstUrl) return firstUrl;
-      }
+    const source = picture.querySelector('source');
+    const sourceSrcSet = extractImageSrcSetFromElement(source);
+    if (sourceSrcSet) {
+      const firstUrl = extractFirstSrcSetUrl(sourceSrcSet);
+      if (firstUrl) return firstUrl;
     }
   }
 
   const img = doc.querySelector('img');
-  const imgSrc = img?.getAttribute('src');
+  const imgSrc = extractImageUrlFromElement(img);
   if (img && imgSrc) {
     const width = img.getAttribute('width');
     const height = img.getAttribute('height');

@@ -3,7 +3,6 @@
 import Image from 'next/image';
 import { createElement, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
-import IntersectionImage from 'react-intersection-image';
 import styles from './EntryPanel.module.sass';
 import { SlidePanel } from '@/components/SlidePanel/SlidePanel';
 import { FormattedDate } from '@/components/FormattedDate';
@@ -19,6 +18,8 @@ import { IconWrapper } from '../icons/IconWrapper/IconWrapper';
 import { IconStar } from '../icons/IconStar';
 import { IconExit } from '../icons/IconExit';
 import {
+  extractImageSrcSetFromElement,
+  extractImageUrlFromElement,
   extractThumbnailFromHtml,
   resolveAbsoluteUrl,
 } from '@/lib/entryThumbnail';
@@ -165,21 +166,15 @@ function extractLeadImage(
     }
 
     if (img) {
-      const src =
-        img.getAttribute('src') ||
-        img.getAttribute('data-src') ||
-        img.getAttribute('data-lazy-src') ||
-        img.getAttribute('data-original') ||
-        '';
-      const trimmed = src.trim();
-      if (!trimmed) continue;
+      const src = extractImageUrlFromElement(img);
+      if (!src) continue;
 
       const widthAttr = img.getAttribute('width');
       const heightAttr = img.getAttribute('height');
       const parsedWidth = widthAttr ? Number.parseInt(widthAttr, 10) : NaN;
       const parsedHeight = heightAttr ? Number.parseInt(heightAttr, 10) : NaN;
 
-      const resolvedUrl = resolveUrl(trimmed, baseUrl);
+      const resolvedUrl = resolveUrl(src, baseUrl);
 
       return {
         url: resolvedUrl,
@@ -332,6 +327,15 @@ function buildElementProps(
       return;
     }
 
+    if (
+      lowerName === 'data-srcset' &&
+      element.tagName.toLowerCase() === 'source' &&
+      !props.srcSet
+    ) {
+      props.srcSet = attr.value;
+      return;
+    }
+
     const mappedName = mapAttributeName(attr.name);
 
     if (mappedName === 'href') {
@@ -363,14 +367,22 @@ function createLazyImageElement(
   key: string,
   baseUrl?: string,
 ): ReactNode | null {
-  const src = element.getAttribute('src');
+  const src = extractImageUrlFromElement(element);
 
   if (!src) {
     return null;
   }
 
   const baseProps = buildElementProps(element, {
-    omit: ['src', 'srcset', 'sizes'],
+    omit: [
+      'src',
+      'srcset',
+      'sizes',
+      'data-src',
+      'data-srcset',
+      'data-lazy-src',
+      'data-original',
+    ],
   });
 
   const {
@@ -393,19 +405,32 @@ function createLazyImageElement(
   }
 
   const resolvedSrc = resolveUrl(src, baseUrl);
-  const srcSet = element.getAttribute('srcset');
+  const srcSet = extractImageSrcSetFromElement(element);
   const resolvedSrcSet = srcSet ? resolveSrcSet(srcSet, baseUrl) : null;
   const sizes = element.getAttribute('sizes');
   const alt = element.getAttribute('alt') ?? '';
+  const loadingAttr = element.getAttribute('loading');
+  const loading: 'lazy' | 'eager' =
+    loadingAttr === 'eager' ? 'eager' : 'lazy';
+  const decodingAttr = element.getAttribute('decoding');
+  const decoding: 'async' | 'auto' | 'sync' =
+    decodingAttr === 'auto' || decodingAttr === 'sync'
+      ? decodingAttr
+      : 'async';
 
   return (
-    <IntersectionImage
+    // Native img is more reliable here than next/image for arbitrary article HTML.
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
       key={key}
       {...restProps}
       src={resolvedSrc}
       alt={alt}
       srcSet={resolvedSrcSet ?? undefined}
       sizes={sizes ?? undefined}
+      loading={loading as 'lazy' | 'eager'}
+      decoding={decoding as 'async' | 'auto' | 'sync'}
+      referrerPolicy="no-referrer"
       className={combinedClassName || undefined}
       style={Object.keys(mergedStyle).length ? mergedStyle : {}}
     />
@@ -707,7 +732,9 @@ export function EntryPanel({
                 sizes="(max-width: 745px) 100vw, 800px"
                 quality={75}
                 unoptimized
-                loading="lazy"
+                loading="eager"
+                fetchPriority="high"
+                referrerPolicy="no-referrer"
                 style={{ objectFit: 'contain' }}
                 onError={() => setIsPinnedLeadImageErrored(true)}
               />
