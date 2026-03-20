@@ -27,6 +27,14 @@ import { toast } from 'sonner';
 import { NOTIFICATION_COPY } from '@/lib/notificationCopy';
 import { useKeydown } from '@/hooks/useKeydown';
 import { isProtectedCategoryTitle } from '@/lib/protectedCategories';
+import {
+  DEFAULT_TYPE_SIZE,
+  getAppliedTypeSize,
+  isTypeSize,
+  setTypeSize,
+  TYPE_SIZE_LABELS,
+  type TypeSize,
+} from '@/lib/typeSize';
 import { IconArrowShortRight } from '../icons/IconArrowShortRight';
 
 type MenuView = 'feeds' | 'settings' | 'other';
@@ -77,6 +85,7 @@ export function MenuModal({
   const [activeView, setActiveView] = useState<MenuView>('feeds');
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [localThemeChoice, setLocalThemeChoice] = useState<string | null>(null);
+  const [typeSize, setTypeSizeChoice] = useState<TypeSize>(DEFAULT_TYPE_SIZE);
   const { theme, setTheme } = useTheme();
 
   const displayTheme =
@@ -128,7 +137,10 @@ export function MenuModal({
   useEffect(() => {
     if (!isOpen) {
       hasUserAdjustedCollapse.current = false;
+      return;
     }
+
+    setTypeSizeChoice(getAppliedTypeSize());
   }, [isOpen]);
 
   useLayoutEffect(() => {
@@ -291,6 +303,22 @@ export function MenuModal({
     handleThemeChange(displayTheme);
     setLocalThemeChoice(null);
   }, [handleThemeChange, displayTheme]);
+
+  const typeSizeOptions = useMemo(
+    () =>
+      Object.entries(TYPE_SIZE_LABELS).map(([value, label]) => ({
+        value,
+        label,
+      })),
+    [],
+  );
+
+  const handleTypeSizeChange = useCallback((nextTypeSize: string) => {
+    if (!isTypeSize(nextTypeSize)) return;
+
+    setTypeSizeChoice(nextTypeSize);
+    setTypeSize(nextTypeSize);
+  }, []);
 
   const handleOpmlFileChange = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => {
@@ -612,6 +640,20 @@ export function MenuModal({
               >
                 <span>Select</span>
               </Button>
+            </div>
+
+            <div className={styles.viewLook_typeSizeRow}>
+              <div className={styles.viewLook_typeSizeField}>
+                <LabeledSelect
+                  id="type-size-select"
+                  value={typeSize}
+                  onChange={handleTypeSizeChange}
+                  options={typeSizeOptions}
+                  placeholder="Select type size"
+                  label="Type size"
+                  disabled={isLoading}
+                />
+              </div>
             </div>
 
             {/* <div className={styles.viewLook_opml}>

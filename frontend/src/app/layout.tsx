@@ -12,6 +12,8 @@ import { ThemeProvider } from '@/components/ThemeProvider';
 import Notifications from '@/components/Notifications/Notifications';
 import { GlobalKeybindings } from '@/components/GlobalKeybindings/GlobalKeybindings';
 import { LandingPage } from '@/components/LandingPage/LandingPage';
+import { TypeSizeController } from '@/components/TypeSizeController/TypeSizeController';
+import { DEFAULT_TYPE_SIZE } from '@/lib/typeSize';
 
 const untitledSans = localFont({
   src: [
@@ -119,7 +121,10 @@ export default function RootLayout({
   return (
     <ClerkProvider signInFallbackRedirectUrl="/">
       <html lang="en" suppressHydrationWarning>
-        <body className={`${untitledSans.variable} ${soulSister.variable}`}>
+        <body
+          className={`${untitledSans.variable} ${soulSister.variable}`}
+          data-type-size={DEFAULT_TYPE_SIZE}
+        >
           <ThemeProvider
             attribute="data-theme"
             defaultTheme="light"
@@ -127,6 +132,7 @@ export default function RootLayout({
             enableSystem={true}
             storageKey="peace-rss-theme"
           >
+            <TypeSizeController />
             <Notifications />
             <main>
               <SignedOut>
