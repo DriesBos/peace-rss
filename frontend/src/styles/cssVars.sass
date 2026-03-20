@@ -157,7 +157,8 @@ body
 
   // Spacing
   &[data-spacing-wide="true"]
-    --space-sides-general-wide: 0
-    --space-sides-stories-wide: 8px
+    @media (orientation: portrait)
+      --space-sides-general-wide: 0
+      --space-sides-stories-wide: 8px
 
   
