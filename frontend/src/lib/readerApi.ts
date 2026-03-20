@@ -5,6 +5,7 @@ import type {
   Feed,
   ReaderPreferences,
 } from '@/app/_lib/types';
+import { DEFAULT_ENTRIES_PAGE_SIZE } from '@/lib/entriesQuery';
 
 export async function fetchFeeds(): Promise<Feed[]> {
   return fetchJson<Feed[]>('/api/feeds');
@@ -18,8 +19,12 @@ export async function fetchEntries(url: string): Promise<EntriesResponse> {
   return fetchJson<EntriesResponse>(url);
 }
 
-export async function fetchStarredEntries(): Promise<EntriesResponse> {
-  return fetchJson<EntriesResponse>(`/api/entries?starred=true&offset=0`);
+export async function fetchStarredEntries(
+  limit = DEFAULT_ENTRIES_PAGE_SIZE,
+): Promise<EntriesResponse> {
+  return fetchJson<EntriesResponse>(
+    `/api/entries?starred=true&offset=0&limit=${limit}`,
+  );
 }
 
 export async function fetchStarredCount(): Promise<EntriesResponse> {

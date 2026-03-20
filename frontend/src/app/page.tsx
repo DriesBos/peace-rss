@@ -382,12 +382,12 @@ export default function Home() {
   const loadStarredEntries = useCallback(async () => {
     if (!isProvisioned) return;
     try {
-      const data = await fetchStarredEntries();
+      const data = await fetchStarredEntries(readerPreferences.entries_per_page);
       setStarredEntries(data.entries);
     } catch (err) {
       console.error('Failed to load starred entries', err);
     }
-  }, [isProvisioned]);
+  }, [isProvisioned, readerPreferences.entries_per_page]);
 
   const syncSelection = useCallback((nextEntries: Entry[]) => {
     setSelectedEntryId((prev) =>

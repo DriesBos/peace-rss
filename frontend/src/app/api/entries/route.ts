@@ -3,6 +3,7 @@ import 'server-only';
 import { NextResponse } from 'next/server';
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { mfFetchUser } from '@/lib/miniflux';
+import { DEFAULT_ENTRIES_PAGE_SIZE } from '@/lib/entriesQuery';
 
 export const runtime = 'nodejs';
 
@@ -59,7 +60,7 @@ export async function GET(request: Request) {
     // 3. Parse query parameters
     const url = new URL(request.url);
 
-    const limit = getNumberParam(url, 'limit', 50);
+    const limit = getNumberParam(url, 'limit', DEFAULT_ENTRIES_PAGE_SIZE);
     const offset = getNumberParam(url, 'offset', 0);
     const direction = getStringParam(url, 'direction', 'desc');
     const order = getStringParam(url, 'order', 'published_at');
