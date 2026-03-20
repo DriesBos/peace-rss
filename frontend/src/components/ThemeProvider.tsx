@@ -2,9 +2,56 @@
 
 import {
   ThemeProvider as NextThemesProvider,
+  useTheme,
   type ThemeProviderProps,
 } from 'next-themes';
+import { useEffect } from 'react';
+import { getEffectiveTheme, normalizeLegacyTheme } from '@/lib/theme';
 
 export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
-  return <NextThemesProvider {...props}>{children}</NextThemesProvider>;
+  return (
+    <NextThemesProvider {...props}>
+      <ThemeStateBridge />
+      {children}
+    </NextThemesProvider>
+  );
+}
+
+function ThemeStateBridge() {
+  const { resolvedTheme, setTheme, theme } = useTheme();
+
+  useEffect(() => {
+    const normalizedTheme = normalizeLegacyTheme(theme);
+    if (!normalizedTheme || normalizedTheme === theme) return;
+    setTheme(normalizedTheme);
+  }, [setTheme, theme]);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+
+    const applyEffectiveTheme = () => {
+      document.documentElement.dataset.theme = getEffectiveTheme(
+        theme,
+        resolvedTheme,
+      );
+    };
+
+    applyEffectiveTheme();
+
+    const intervalId = window.setInterval(applyEffectiveTheme, 60_000);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        applyEffectiveTheme();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [resolvedTheme, theme]);
+
+  return null;
 }

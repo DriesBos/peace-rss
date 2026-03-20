@@ -83,53 +83,22 @@
   --index-modal: 600
   --index-menu: 700
 
-  // Background Gradient
-  --background-gradient-active: 0
-  --background-gradient-opacity: 0.1
-
   // Theme Light
   &[data-theme="light"]
-    --color-app: var(--color-white)
-    --color-app-secondary: hsla(0, 0%, 85%, 1)
+    --color-app: hsla(0, 0%, 100%, 1)
+    --color-app-secondary: hsla(0, 0%, 97%, 1)
     --color-text: hsla(0, 0%, 15%, 1)
-    --color-text-secondary: hsla(0, 0%, 15%, 0.6)
-    --color-footer-bg: hsla(0, 0%, 85%, 0.1)
+    --color-text-secondary: hsla(0, 0%, 15%, 0.5)
   &[data-theme="dark"]
-    --color-app: var(--color-black)
-    --color-app-secondary: hsla(0, 0%, 12%, 1)
+    --color-app: hsla(0, 0%, 0%, 1)
+    --color-app-secondary: hsla(0, 0%, 3%, 1)
     --color-text: hsla(0, 0%, 85%, 1)
-    --color-text-secondary: hsla(0, 0%, 85%, 0.6)
-    --color-footer-bg: hsla(0, 0%, 85%, 0.1)
-  &[data-theme="softlight"]
-    --color-app: hsla(65, 14%, 82%, 1)
-    --color-app-secondary: hsla(65, 14%, 72%, 1)
-    --color-text: hsla(66, 8%, 24%, 1)
-    --color-text-secondary: hsla(66, 8%, 24%, 0.6)
-    --color-footer-bg: hsla(65, 14%, 82%, 0.1)
-    --background-gradient-active: 1
-    --background-gradient-opacity: 0.5
-  &[data-theme="softdark"]
-    --color-app: hsla(0, 0%, 29%, 1)
-    --color-app-secondary: hsla(0, 0%, 24%, 1)
-    --color-text: hsla(0, 0%, 10%, 1)
-    --color-text-secondary: hsla(0, 0%, 10%, 0.6)
-    --color-footer-bg: hsla(0, 0%, 29%, 0.1)
-    --background-gradient-active: 1
-    --background-gradient-opacity: 0.5
-  &[data-theme="green"]
-    --color-app: hsla(71, 14%, 24%, 1)
-    --color-app-secondary: hsla(71, 14%, 38%, 1)
-    --color-text: hsla(0, 0%, 98%, 1)
-    --color-text-secondary: hsla(0, 0%, 98%, 0.6)
-    --color-footer-bg: hsla(71, 14%, 24%, 0.1)
-    --background-gradient-active: 1
-    --background-gradient-opacity: 0.5
+    --color-text-secondary: hsla(0, 0%, 85%, 0.5)
   &[data-theme="nightmode"]
     --color-app: hsla(0, 0%, 0%, 1)
-    --color-app-secondary: hsla(0, 0%, 6%, 1)
+    --color-app-secondary: hsla(0, 0%, 3%, 1)
     --color-text: hsla(0, 100%, 46%, 1)
-    --color-text-secondary: hsla(0, 100%, 46%, 0.6)
-    --color-footer-bg: hsla(0, 100%, 46%, 0.1)
+    --color-text-secondary: hsla(0, 100%, 46%, 0.5)
 
 body
   // Font family
@@ -141,18 +110,7 @@ body
     --type-family-display: var(--font-lyon-display), Georgia, 'Times New Roman', Times, serif
 
   // Font size
-  &[data-type-size="s"]
-    --type-body: 14px
-    --type-title: 18px
-    --type-nav: 14px
-    --type-data: 12px
-    --type-button: 14px
-    --type-caption: 12px
-    --type-meta: 12px
-    --type-summary: 12px
-    --type-count: 9px
-    --type-input: 14px
-  &[data-type-size="l"]
+  &[data-type-size="larger"]
     --type-body: 18px
     --type-title: 22px
     --type-nav: 18px

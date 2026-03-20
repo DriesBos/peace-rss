@@ -44,6 +44,7 @@ import {
   type TypeSize,
 } from '@/lib/typeSize';
 import {
+  DEFAULT_THEME,
   isThemeOption,
   THEME_LABELS,
   THEME_OPTIONS,
@@ -97,7 +98,7 @@ export function MenuModal({
   const { theme, setTheme } = useTheme();
 
   const displayTheme =
-    typeof theme === 'string' && isThemeOption(theme) ? theme : '';
+    typeof theme === 'string' && isThemeOption(theme) ? theme : DEFAULT_THEME;
   const hasUserAdjustedCollapse = useRef(false);
   const categoriesListRef = useRef<HTMLDivElement | null>(null);
   const [feedsMaxHeight, setFeedsMaxHeight] = useState(0);
@@ -300,7 +301,7 @@ export function MenuModal({
     () =>
       THEME_OPTIONS.map((value) => ({
         value,
-        label: `${THEME_LABELS[value]} theme`,
+        label: `${THEME_LABELS[value]}`,
       })),
     [],
   );
@@ -646,7 +647,6 @@ export function MenuModal({
                   value={displayTheme}
                   onChange={handleThemeChoiceChange}
                   options={themeOptions}
-                  placeholder="Select theme"
                   label="Theme"
                   disabled={isLoading}
                 />

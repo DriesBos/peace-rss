@@ -20,6 +20,7 @@
     -webkit-user-select: auto
     -moz-user-select: auto
     -ms-user-select: auto
+    background: var(--color-app)
   &_Header
     display: flex
     flex-direction: column
@@ -129,7 +130,7 @@
   padding-right: calc(env(safe-area-inset-right) + var(--space-sides-stories))
   padding-bottom: calc(env(safe-area-inset-bottom) + var(--space-content-bottom))
   padding-left: calc(env(safe-area-inset-left) + var(--space-sides-stories))
-  @include background-gradient-surface(var(--color-footer-bg))
+  background: var(--color-app-secondary)
 
 .actionsList
   display: flex

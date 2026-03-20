@@ -48,25 +48,3 @@ $res-tabled: 745px
   width: 100%
   height: $height
   background: $color
-
-@mixin background-gradient-surface($background)
-  isolation: isolate
-  background: $background
-
-  &::before
-    content: ''
-    position: absolute
-    inset: 0
-    pointer-events: none
-    z-index: 0
-    background-image: url('/textures/bg-gradient.png')
-    border-image-repeat: repeat
-    background-position: center
-    background-size: 200px
-    background-repeat: repeat
-    filter: grayscale(1) contrast(220%) brightness(68%)
-    opacity: calc(var(--background-gradient-active, 0) * var(--surface-gradient-opacity, 1))
-    transition: opacity var(--transition-theme)
-
-  > *
-    z-index: 1

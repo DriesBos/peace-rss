@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import { useTheme } from 'next-themes';
+import { getEffectiveTheme } from '@/lib/theme';
 
 function applySpacingWide(isWide: boolean) {
   if (typeof document === 'undefined') return;
@@ -13,7 +14,9 @@ export function SpacingWideController() {
   const { theme, resolvedTheme } = useTheme();
 
   useEffect(() => {
-    const isDarkTheme = theme === 'dark' || resolvedTheme === 'dark';
+    const effectiveTheme = getEffectiveTheme(theme, resolvedTheme);
+    const isDarkTheme =
+      effectiveTheme === 'dark' || effectiveTheme === 'nightmode';
     applySpacingWide(isDarkTheme);
   }, [resolvedTheme, theme]);
 

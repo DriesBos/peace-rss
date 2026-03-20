@@ -12,7 +12,7 @@ type LabeledSelectProps = {
   value: string;
   onChange: (value: string) => void;
   options: SelectOption[];
-  placeholder: string;
+  placeholder?: string;
   optionalHint?: string;
   label?: string;
   disabled?: boolean;

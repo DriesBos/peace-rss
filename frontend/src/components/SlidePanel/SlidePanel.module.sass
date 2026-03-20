@@ -22,13 +22,13 @@
     max-width: 100%
     min-height: 100lvh
     opacity: 0
-    @include background-gradient-surface(var(--color-app))
     transition: opacity 0.33s ease
     z-index: var(--index-slidepanel)
     overflow-y: auto
     scrollbar-width: none
     -ms-overflow-style: none
     pointer-events: none
+    background: var(--color-app)
     &::-webkit-scrollbar
       display: none
     &[data-open="true"]
@@ -47,10 +47,8 @@
     position: sticky
     top: 0
     z-index: +1
-    background: var(--color-app)
     display: flex
     align-items: center
     padding: 0 var(--space-sides-general-wide)
-    
     flex-shrink: 0
     height: 50px

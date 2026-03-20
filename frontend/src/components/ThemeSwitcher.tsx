@@ -3,11 +3,13 @@
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 import styles from './ThemeSwitcher.module.sass';
-import { THEME_LABELS, THEME_OPTIONS } from '@/lib/theme';
+import { DEFAULT_THEME, isThemeOption, THEME_LABELS, THEME_OPTIONS } from '@/lib/theme';
 
 export function ThemeSwitcher() {
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme();
+  const displayTheme =
+    typeof theme === 'string' && isThemeOption(theme) ? theme : DEFAULT_THEME;
 
   // useEffect only runs on the client, so now we can safely show the UI
   useEffect(() => {
@@ -31,7 +33,7 @@ export function ThemeSwitcher() {
       </label>
       <select
         id="theme-select"
-        value={theme}
+        value={displayTheme}
         onChange={(e) => setTheme(e.target.value)}
         className={styles.select}
       >

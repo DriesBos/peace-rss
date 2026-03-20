@@ -14,8 +14,8 @@ const CACHE_NAME = 'peace-rss-v1';
 const urlsToCache = [
   '/',
   '/manifest.json',
-  '/favicon.ico',
-  '/images/favicon-32x32.png',
+  '/komorebi-favicon-black.svg',
+  '/komorebi-favicon-white.svg',
   '/images/apple-touch-icon.png',
   '/images/web-app-manifest-192x192.png',
   '/images/web-app-manifest-512x512.png',

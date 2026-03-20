@@ -9,7 +9,6 @@ import '@/styles/vars.sass';
 import '@/styles/reset.css';
 import '@/styles/globals.sass';
 import { ThemeProvider } from '@/components/ThemeProvider';
-import { BackgroundGradient } from '@/components/BackgroundGradient/BackgroundGradient';
 import { FontFamilyController } from '@/components/FontFamilyController/FontFamilyController';
 import Notifications from '@/components/Notifications/Notifications';
 import { GlobalKeybindings } from '@/components/GlobalKeybindings/GlobalKeybindings';
@@ -193,11 +192,20 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: '/favicon.ico', sizes: 'any' },
-      { url: '/images/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
-      { url: '/images/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/komorebi-favicon-black.svg', type: 'image/svg+xml', sizes: 'any' },
+      {
+        url: '/komorebi-favicon-black.svg',
+        type: 'image/svg+xml',
+        sizes: 'any',
+        media: '(prefers-color-scheme: light)',
+      },
+      {
+        url: '/komorebi-favicon-white.svg',
+        type: 'image/svg+xml',
+        sizes: 'any',
+        media: '(prefers-color-scheme: dark)',
+      },
     ],
-    shortcut: [{ url: '/favicon.ico' }],
     apple: [
       { url: '/images/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
     ],
@@ -243,7 +251,6 @@ export default function RootLayout({
             <TypeSizeController />
             <Notifications />
             <main>
-              <BackgroundGradient opacity={0.18} />
               <SignedOut>
                 <LandingPage />
               </SignedOut>

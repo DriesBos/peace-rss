@@ -25,12 +25,12 @@
     scrollbar-width: none
     -ms-overflow-style: none
     padding: var(--space-top-modal) 0 var(--space-bottom-modal)
-    @include background-gradient-surface(var(--color-app))
     border-top: var(--border-containers)
     display: flex
     flex-direction: column
     transform: translateY(100%)
     transition: transform 0.3s ease-in-out
+    background: var(--color-app)
     &::-webkit-scrollbar
       display: none
     &[data-active="true"]

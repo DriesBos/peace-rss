@@ -1,15 +1,14 @@
 export const TYPE_SIZE_STORAGE_KEY = 'peace-rss-type-size';
 
-export const TYPE_SIZE_VALUES = ['s', 'm', 'l'] as const;
+export const TYPE_SIZE_VALUES = ['default', 'larger'] as const;
 
 export type TypeSize = (typeof TYPE_SIZE_VALUES)[number];
 
-export const DEFAULT_TYPE_SIZE: TypeSize = 'm';
+export const DEFAULT_TYPE_SIZE: TypeSize = 'default';
 
 export const TYPE_SIZE_LABELS: Record<TypeSize, string> = {
-  s: 'S',
-  m: 'M',
-  l: 'L',
+  default: 'Default',
+  larger: 'Larger',
 };
 
 export function isTypeSize(value: string | null | undefined): value is TypeSize {
@@ -19,11 +18,28 @@ export function isTypeSize(value: string | null | undefined): value is TypeSize 
   );
 }
 
+function normalizeLegacyTypeSize(
+  value: string | null | undefined,
+): TypeSize | null {
+  if (value === 'm' || value === 's') return 'default';
+  if (value === 'l') return 'larger';
+  return null;
+}
+
 export function getStoredTypeSize(): TypeSize {
   if (typeof window === 'undefined') return DEFAULT_TYPE_SIZE;
 
   const storedValue = window.localStorage.getItem(TYPE_SIZE_STORAGE_KEY);
-  return isTypeSize(storedValue) ? storedValue : DEFAULT_TYPE_SIZE;
+
+  if (isTypeSize(storedValue)) return storedValue;
+
+  const normalizedValue = normalizeLegacyTypeSize(storedValue);
+  if (normalizedValue) {
+    window.localStorage.setItem(TYPE_SIZE_STORAGE_KEY, normalizedValue);
+    return normalizedValue;
+  }
+
+  return DEFAULT_TYPE_SIZE;
 }
 
 export function applyTypeSize(typeSize: TypeSize) {
@@ -47,5 +63,7 @@ export function getAppliedTypeSize(): TypeSize {
   if (typeof document === 'undefined') return DEFAULT_TYPE_SIZE;
 
   const appliedValue = document.body.dataset.typeSize;
-  return isTypeSize(appliedValue) ? appliedValue : DEFAULT_TYPE_SIZE;
+  if (isTypeSize(appliedValue)) return appliedValue;
+
+  return normalizeLegacyTypeSize(appliedValue) ?? DEFAULT_TYPE_SIZE;
 }
