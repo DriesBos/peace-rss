@@ -121,11 +121,12 @@
     text-decoration: underline
 
 .entry_Footer
+  position: relative
   display: flex
   flex-direction: column
   gap: 4rem
   padding: 2rem var(--space-sides-stories) var(--space-content-bottom)
-  background: var(--color-footer-bg)
+  @include background-gradient-surface(var(--color-footer-bg))
 
 .actionsList
   display: flex

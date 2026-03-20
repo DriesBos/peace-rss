@@ -8,16 +8,17 @@
   flex-direction: row
   justify-content: flex-start
   align-items: center
-  background: var(--color-app)
+  @include background-gradient-surface(var(--color-app))
   z-index: calc(var(--index-newsfeed) + 1)
   overflow: visible
   height: 50px
   &_Left
+    position: relative
     display: flex
     flex-direction: row
     align-items: center
     flex: 0 0 auto
-    background: var(--color-app)
+    @include background-gradient-surface(var(--color-app))
     height: 2rem
     border-right: 1px solid transparent
     transition: border-color var(--transition-header-toggle)

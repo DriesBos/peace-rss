@@ -1,3 +1,5 @@
+@use '@/styles/vars' as *
+
 .modalOverlay
   position: fixed
   inset: 0
@@ -23,7 +25,7 @@
     scrollbar-width: none
     -ms-overflow-style: none
     padding: var(--space-top-modal) 0 var(--space-bottom-modal)
-    background: var(--color-app)
+    @include background-gradient-surface(var(--color-app))
     border-top: var(--border-containers)
     display: flex
     flex-direction: column
