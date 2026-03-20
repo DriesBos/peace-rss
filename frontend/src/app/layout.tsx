@@ -9,10 +9,12 @@ import '@/styles/vars.sass';
 import '@/styles/reset.css';
 import '@/styles/globals.sass';
 import { ThemeProvider } from '@/components/ThemeProvider';
+import { FontFamilyController } from '@/components/FontFamilyController/FontFamilyController';
 import Notifications from '@/components/Notifications/Notifications';
 import { GlobalKeybindings } from '@/components/GlobalKeybindings/GlobalKeybindings';
 import { LandingPage } from '@/components/LandingPage/LandingPage';
 import { TypeSizeController } from '@/components/TypeSizeController/TypeSizeController';
+import { DEFAULT_FONT_FAMILY } from '@/lib/fontFamily';
 import { DEFAULT_TYPE_SIZE } from '@/lib/typeSize';
 
 const untitledSans = localFont({
@@ -123,6 +125,7 @@ export default function RootLayout({
       <html lang="en" suppressHydrationWarning>
         <body
           className={`${untitledSans.variable} ${soulSister.variable}`}
+          data-font-family={DEFAULT_FONT_FAMILY}
           data-type-size={DEFAULT_TYPE_SIZE}
         >
           <ThemeProvider
@@ -132,6 +135,7 @@ export default function RootLayout({
             enableSystem={true}
             storageKey="peace-rss-theme"
           >
+            <FontFamilyController />
             <TypeSizeController />
             <Notifications />
             <main>

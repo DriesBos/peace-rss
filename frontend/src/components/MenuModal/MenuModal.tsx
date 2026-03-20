@@ -24,6 +24,14 @@ import { LabelWithCount } from '@/components/LabelWithCount/LabelWithCount';
 import { LabeledSelect } from '@/components/LabeledSelect/LabeledSelect';
 import type { Category, Entry, Feed } from '@/app/_lib/types';
 import { toast } from 'sonner';
+import {
+  DEFAULT_FONT_FAMILY,
+  FONT_FAMILY_LABELS,
+  getAppliedFontFamily,
+  isFontFamilyPreference,
+  setFontFamily,
+  type FontFamilyPreference,
+} from '@/lib/fontFamily';
 import { NOTIFICATION_COPY } from '@/lib/notificationCopy';
 import { useKeydown } from '@/hooks/useKeydown';
 import { isProtectedCategoryTitle } from '@/lib/protectedCategories';
@@ -85,6 +93,9 @@ export function MenuModal({
   const [activeView, setActiveView] = useState<MenuView>('feeds');
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [localThemeChoice, setLocalThemeChoice] = useState<string | null>(null);
+  const [fontFamily, setFontFamilyChoice] = useState<FontFamilyPreference>(
+    DEFAULT_FONT_FAMILY,
+  );
   const [typeSize, setTypeSizeChoice] = useState<TypeSize>(DEFAULT_TYPE_SIZE);
   const { theme, setTheme } = useTheme();
 
@@ -140,6 +151,7 @@ export function MenuModal({
       return;
     }
 
+    setFontFamilyChoice(getAppliedFontFamily());
     setTypeSizeChoice(getAppliedTypeSize());
   }, [isOpen]);
 
@@ -318,6 +330,22 @@ export function MenuModal({
 
     setTypeSizeChoice(nextTypeSize);
     setTypeSize(nextTypeSize);
+  }, []);
+
+  const fontFamilyOptions = useMemo(
+    () =>
+      Object.entries(FONT_FAMILY_LABELS).map(([value, label]) => ({
+        value,
+        label,
+      })),
+    [],
+  );
+
+  const handleFontFamilyChange = useCallback((nextFontFamily: string) => {
+    if (!isFontFamilyPreference(nextFontFamily)) return;
+
+    setFontFamilyChoice(nextFontFamily);
+    setFontFamily(nextFontFamily);
   }, []);
 
   const handleOpmlFileChange = useCallback(
@@ -651,6 +679,20 @@ export function MenuModal({
                   options={typeSizeOptions}
                   placeholder="Select type size"
                   label="Type size"
+                  disabled={isLoading}
+                />
+              </div>
+            </div>
+
+            <div className={styles.viewLook_fontFamilyRow}>
+              <div className={styles.viewLook_fontFamilyField}>
+                <LabeledSelect
+                  id="font-family-select"
+                  value={fontFamily}
+                  onChange={handleFontFamilyChange}
+                  options={fontFamilyOptions}
+                  placeholder="Select type style"
+                  label="Type style"
                   disabled={isLoading}
                 />
               </div>
