@@ -6,11 +6,6 @@
   gap: 16px
   align-items: flex-start
   cursor: pointer
-  &[data-marked='true']
-    opacity: 0.33
-  &[data-starred='true']
-    opacity: 1
-    background-color: var(--color-app-secondary)
   &_Body
     flex: 1
     display: flex
@@ -23,7 +18,6 @@
     gap: var(--space-titlemeta-gap)
   &_Meta
     padding-left: var(--space-sides-general-wide)
-    
     color: var(--color-text-secondary)
     @include font-meta
     p, i, span
@@ -53,3 +47,10 @@
       height: 100%
       object-fit: cover
       display: block
+
+  &[data-marked='true'][data-starred='false']
+    .entryItem_Meta, h1, .entryItem_Preview
+      color: var(--color-text-inactive)
+    .entryItem
+      &_Thumbnail
+        opacity: 0.25

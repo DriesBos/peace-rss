@@ -81,106 +81,41 @@ const soulSister = localFont({
   variable: '--font-soul-sister',
 });
 
-const lyonDisplay = localFont({
+const cheltenham = localFont({
   src: [
     {
-      path: '../fonts/lyon/display/LyonDisplay-Light-Trial.woff2',
+      path: '../fonts/celtenham/cheltenham-normal-300.woff2',
       weight: '300',
       style: 'normal',
     },
     {
-      path: '../fonts/lyon/display/LyonDisplay-LightItalic-Trial.woff2',
-      weight: '300',
-      style: 'italic',
-    },
-    {
-      path: '../fonts/lyon/display/LyonDisplay-Regular-Trial.woff2',
+      path: '../fonts/celtenham/cheltenham-normal-400.woff2',
       weight: '400',
       style: 'normal',
     },
     {
-      path: '../fonts/lyon/display/LyonDisplay-RegularItalic-Trial.woff2',
+      path: '../fonts/celtenham/cheltenham-small-italic-400.woff2',
       weight: '400',
       style: 'italic',
     },
     {
-      path: '../fonts/lyon/display/LyonDisplay-Medium-Trial.woff2',
-      weight: '500',
-      style: 'normal',
-    },
-    {
-      path: '../fonts/lyon/display/LyonDisplay-MediumItalic-Trial.woff2',
-      weight: '500',
-      style: 'italic',
-    },
-    {
-      path: '../fonts/lyon/display/LyonDisplay-Bold-Trial.woff2',
+      path: '../fonts/celtenham/cheltenham-normal-700.woff2',
       weight: '700',
       style: 'normal',
-    },
-    {
-      path: '../fonts/lyon/display/LyonDisplay-BoldItalic-Trial.woff2',
-      weight: '700',
-      style: 'italic',
-    },
-    {
-      path: '../fonts/lyon/display/LyonDisplay-Black-Trial.woff2',
-      weight: '900',
-      style: 'normal',
-    },
-    {
-      path: '../fonts/lyon/display/LyonDisplay-BlackItalic-Trial.woff2',
-      weight: '900',
-      style: 'italic',
     },
   ],
-  variable: '--font-lyon-display',
+  variable: '--font-cheltenham',
 });
 
-const lyonText = localFont({
+const imperial = localFont({
   src: [
     {
-      path: '../fonts/lyon/text/Lyon Text Regular Trial.woff2',
+      path: '../fonts/imperial-normal-400.woff2',
       weight: '400',
       style: 'normal',
-    },
-    {
-      path: '../fonts/lyon/text/Lyon Text Regular Italic Trial.woff2',
-      weight: '400',
-      style: 'italic',
-    },
-    {
-      path: '../fonts/lyon/text/Lyon Semibold Trial.woff2',
-      weight: '600',
-      style: 'normal',
-    },
-    {
-      path: '../fonts/lyon/text/Lyon Semibold Italic Trial.woff2',
-      weight: '600',
-      style: 'italic',
-    },
-    {
-      path: '../fonts/lyon/text/Lyon Text Bold Trial.woff2',
-      weight: '700',
-      style: 'normal',
-    },
-    {
-      path: '../fonts/lyon/text/Lyon Text Bold Italic Trial.woff2',
-      weight: '700',
-      style: 'italic',
-    },
-    {
-      path: '../fonts/lyon/text/Lyon Text Black Trial.woff2',
-      weight: '900',
-      style: 'normal',
-    },
-    {
-      path: '../fonts/lyon/text/Lyon Text Black Italic Trial.woff2',
-      weight: '900',
-      style: 'italic',
     },
   ],
-  variable: '--font-lyon-text',
+  variable: '--font-imperial',
 });
 
 export const metadata: Metadata = {
@@ -234,7 +169,7 @@ export default function RootLayout({
     <ClerkProvider signInFallbackRedirectUrl="/">
       <html lang="en" suppressHydrationWarning>
         <body
-          className={`${untitledSans.variable} ${soulSister.variable} ${lyonDisplay.variable} ${lyonText.variable}`}
+          className={`${untitledSans.variable} ${soulSister.variable} ${cheltenham.variable} ${imperial.variable}`}
           data-font-family={DEFAULT_FONT_FAMILY}
           data-spacing-wide="false"
           data-type-size={DEFAULT_TYPE_SIZE}

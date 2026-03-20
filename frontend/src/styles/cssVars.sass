@@ -5,7 +5,9 @@
   --color-white: #ffffff
   --color-black: #000000
   --color-modal-bg: rgba(0, 0, 0, 0.4)
-
+  --color-text: white
+  --color-text-secondary: rgba(255, 255, 255, 0.5)
+  --color-text-inactive: rgba(255, 255, 255, 0.25)
   // Spacing
   --quarter-rem: 4px
   --half-rem: 8px
@@ -90,27 +92,47 @@
     --color-app-secondary: hsla(0, 0%, 97%, 1)
     --color-text: hsla(0, 0%, 15%, 1)
     --color-text-secondary: hsla(0, 0%, 15%, 0.5)
+    --color-text-inactive: hsla(0, 0%, 15%, 0.25)
   &[data-theme="dark"]
     --color-app: hsla(0, 0%, 0%, 1)
     --color-app-secondary: hsla(0, 0%, 3%, 1)
     --color-text: hsla(0, 0%, 85%, 1)
     --color-text-secondary: hsla(0, 0%, 85%, 0.5)
+    --color-text-inactive: hsla(0, 0%, 85%, 0.25)
   &[data-theme="nightmode"]
     --color-app: hsla(0, 0%, 0%, 1)
     --color-app-secondary: hsla(0, 0%, 3%, 1)
     --color-text: hsla(0, 100%, 46%, 1)
     --color-text-secondary: hsla(0, 100%, 46%, 0.5)
+    --color-text-inactive: hsla(0, 100%, 46%, 0.25)
 
 body
   // Font family
-  &[data-font-family='clean']
+  &[data-font-family='sans-serif']
+    --type-family-functional: var(--font-untitled-sans), Helvetica, sans-serif
     --type-family: var(--font-untitled-sans), Helvetica, sans-serif
+    --type-family-weight: 400
     --type-family-display: var(--font-untitled-sans), Helvetica, sans-serif
-  &[data-font-family="newspaper"]
-    --type-family: var(--font-lyon-text), Georgia, 'Times New Roman', Times, serif
-    --type-family-display: var(--font-lyon-display), Georgia, 'Times New Roman', Times, serif
+    --type-family-display-weight: 400
+  &[data-font-family="serif"]
+    --type-family-functional: var(--font-untitled-sans), Helvetica, sans-serif
+    --type-family: var(--font-imperial), Georgia, 'Times New Roman', Times, serif
+    --type-family-weight: 400
+    --type-family-display: var(--font-cheltenham), Georgia, 'Times New Roman', Times, serif
+    --type-family-display-weight: 600
 
   // Font size
+  &[data-type-size='default']
+    --type-body: 16px
+    --type-title: 20px
+    --type-nav: 16px
+    --type-data: 14px
+    --type-button: 16px
+    --type-caption: 14px
+    --type-meta: 14px
+    --type-summary: 14px
+    --type-count: 10px
+    --type-input: 16px
   &[data-type-size="larger"]
     --type-body: 18px
     --type-title: 22px
