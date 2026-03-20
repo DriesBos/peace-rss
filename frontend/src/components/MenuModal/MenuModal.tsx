@@ -685,8 +685,7 @@ export function MenuModal({
                   value={fontFamily}
                   onChange={handleFontFamilyChange}
                   options={fontFamilyOptions}
-                  placeholder="Select type style"
-                  label="Type style"
+                  label="Typography"
                   disabled={isLoading}
                 />
               </div>
