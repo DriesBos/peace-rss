@@ -187,20 +187,17 @@ const lyonText = localFont({
 export const metadata: Metadata = {
   title: 'Komorebi Reader',
   description: 'Enjoy your reading',
+  manifest: '/manifest.json',
   formatDetection: {
     telephone: false,
   },
   icons: {
     icon: [
-      {
-        url: '/images/favicon-light.png',
-        media: '(prefers-color-scheme: light)',
-      },
-      {
-        url: '/images/favicon-dark.png',
-        media: '(prefers-color-scheme: dark)',
-      },
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/images/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/images/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
     ],
+    shortcut: [{ url: '/favicon.ico' }],
     apple: [
       { url: '/images/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
     ],
