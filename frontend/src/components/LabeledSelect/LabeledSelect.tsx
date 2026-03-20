@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import styles from './LabeledSelect.module.sass';
 
 type SelectOption = {
@@ -29,6 +30,7 @@ export function LabeledSelect({
   disabled = false,
 }: LabeledSelectProps) {
   const isEmpty = value.length === 0;
+  const [isActive, setIsActive] = useState(false);
 
   return (
     <div className={styles.field}>
@@ -43,10 +45,16 @@ export function LabeledSelect({
           id={id}
           value={value}
           onChange={(event) => onChange(event.target.value)}
+          onFocus={() => setIsActive(true)}
+          onBlur={() => setIsActive(false)}
           disabled={disabled}
           className={styles.select}
         >
-          <option value="">{placeholder}</option>
+          {placeholder ? (
+            <option value="" disabled hidden={isActive}>
+              {placeholder}
+            </option>
+          ) : null}
           {options.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
