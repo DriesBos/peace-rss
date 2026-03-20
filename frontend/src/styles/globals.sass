@@ -15,10 +15,17 @@ body
   -webkit-font-smoothing: antialiased
   -moz-osx-font-smoothing: grayscale
   transition: color var(--transition-theme), background var(--transition-theme)
+  // Default to a non-selectable app surface and opt specific content back in.
   user-select: none
   -webkit-user-select: none
   -moz-user-select: none
   -ms-user-select: none
+
+input, textarea, [contenteditable='true'], button
+  user-select: text
+  -webkit-user-select: text
+  -moz-user-select: text
+  -ms-user-select: text
 
 main
   position: relative

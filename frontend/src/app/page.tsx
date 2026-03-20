@@ -23,6 +23,7 @@ import type {
 import { useReaderData } from '@/hooks/useReaderData';
 import { useReaderGestures } from '@/hooks/useReaderGestures';
 import {
+  fetchAllCount,
   fetchReaderPreferences,
   fetchStarredEntries,
   fetchStarredCount,
@@ -106,6 +107,7 @@ export default function Home() {
     Set<number>
   >(new Set());
   const [starredEntries, setStarredEntries] = useState<Entry[]>([]);
+  const [totalAllCount, setTotalAllCount] = useState(0);
   const [totalStarredCount, setTotalStarredCount] = useState(0);
   const [originalFetchStatusById, setOriginalFetchStatusById] = useState<
     Record<number, 'success' | 'error'>
@@ -378,6 +380,18 @@ export default function Home() {
     }
   }, [isProvisioned]);
 
+  const refreshAllCount = useCallback(async () => {
+    if (!isProvisioned) return null;
+    try {
+      const data = await fetchAllCount();
+      setTotalAllCount(data.total ?? 0);
+      return data.total ?? 0;
+    } catch (err) {
+      console.error('Failed to load all count', err);
+      return null;
+    }
+  }, [isProvisioned]);
+
   // Load starred entries for the menu
   const loadStarredEntries = useCallback(async () => {
     if (!isProvisioned) return;
@@ -396,13 +410,14 @@ export default function Home() {
   }, []);
 
   const refreshAllData = useCallback(async (): Promise<boolean> => {
-    const data = await refreshAll(() => [refreshStarredCount()]);
+    const data = await refreshAll(() => [refreshStarredCount(), refreshAllCount()]);
     if (data?.entries) {
       syncSelection(data.entries);
     }
     return data !== null;
   }, [
     refreshAll,
+    refreshAllCount,
     refreshStarredCount,
     syncSelection,
   ]);
@@ -803,7 +818,7 @@ export default function Home() {
       setNewFeedCategoryId(defaultAddFeedCategoryId);
       setDiscoveredFeeds([]);
       setSelectedDiscoveredFeedUrl('');
-      await Promise.all([loadFeeds(), loadCategories()]);
+      await Promise.all([loadFeeds(), loadCategories(), refreshAllCount()]);
       return true;
     } catch (e) {
       setAddFeedError(e instanceof Error ? e.message : 'Failed to add feed');
@@ -831,7 +846,7 @@ export default function Home() {
 
       // Success: clear input and refresh categories
       setNewCategoryTitle('');
-      await loadCategories();
+      await Promise.all([loadCategories(), refreshAllCount()]);
       return true;
     } catch (e) {
       setAddCategoryError(
@@ -862,7 +877,7 @@ export default function Home() {
       });
 
       // Success: refresh categories and feeds
-      await Promise.all([loadCategories(), loadFeeds()]);
+      await Promise.all([loadCategories(), loadFeeds(), refreshAllCount()]);
       if (selectedCategoryId === categoryId) {
         setSelectedCategoryId(null);
         await reloadCurrentEntries();
@@ -884,7 +899,7 @@ export default function Home() {
       });
 
       // Success: refresh feeds/categories so global visibility and unread totals stay in sync.
-      await Promise.all([loadFeeds(), loadCategories()]);
+      await Promise.all([loadFeeds(), loadCategories(), refreshAllCount()]);
       await reloadCurrentEntries();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to delete feed');
@@ -916,7 +931,7 @@ export default function Home() {
       });
 
       // Success: refresh categories
-      await loadCategories();
+      await Promise.all([loadCategories(), refreshAllCount()]);
       return true;
     } catch (e) {
       setEditError(
@@ -961,7 +976,7 @@ export default function Home() {
       });
 
       // Success: refresh feeds/categories (category may be created/forced server-side)
-      await Promise.all([loadFeeds(), loadCategories()]);
+      await Promise.all([loadFeeds(), loadCategories(), refreshAllCount()]);
       return true;
     } catch (e) {
       setEditError(e instanceof Error ? e.message : 'Failed to update feed');
@@ -1137,6 +1152,14 @@ export default function Home() {
       setEntries,
     ],
   );
+
+  useEffect(() => {
+    if (!isProvisioned || selectedEntryId === null) return;
+
+    void fetchOriginalArticle(selectedEntryId);
+    // Only auto-fetch when the selected entry changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isProvisioned, selectedEntryId]);
 
   const handleEntrySelect = useCallback(
     (entryId: number) => {
@@ -1468,6 +1491,7 @@ export default function Home() {
               isStarredView={isStarredView}
               categoryUnreadCounts={categoryUnreadCounts}
               totalUnreadCount={totalUnreadCount}
+              totalAllCount={totalAllCount}
               totalStarredCount={totalStarredCount}
               isLoading={isLoading}
               isSearchOpen={isSearchOpen}

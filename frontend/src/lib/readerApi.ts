@@ -31,6 +31,12 @@ export async function fetchStarredCount(): Promise<EntriesResponse> {
   return fetchJson<EntriesResponse>('/api/entries?starred=true&offset=0&limit=1');
 }
 
+export async function fetchAllCount(): Promise<EntriesResponse> {
+  return fetchJson<EntriesResponse>(
+    '/api/entries?status=all&globally_visible=true&offset=0&limit=1',
+  );
+}
+
 export async function fetchReaderPreferences(): Promise<ReaderPreferences> {
   return fetchJson<ReaderPreferences>('/api/me');
 }

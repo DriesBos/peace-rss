@@ -23,6 +23,7 @@ export type TheHeaderProps = {
   isStarredView: boolean;
   categoryUnreadCounts: Map<number, number>;
   totalUnreadCount: number;
+  totalAllCount: number;
   totalStarredCount: number;
   isLoading: boolean;
   isSearchOpen: boolean;
@@ -48,6 +49,7 @@ export function TheHeader({
   isStarredView,
   categoryUnreadCounts,
   totalUnreadCount,
+  totalAllCount,
   totalStarredCount,
   isLoading,
   isSearchOpen,
@@ -164,6 +166,7 @@ export function TheHeader({
                 }`}
                 onClick={onSelectAll}
                 disabled={isLoading}
+                count={totalAllCount ?? 0}
               >
                 <span>All</span>
               </Button>
