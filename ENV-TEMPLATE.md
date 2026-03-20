@@ -28,6 +28,11 @@ MINIFLUX_ADMIN_PASSWORD=your_secure_admin_password_here
 # Public URL (used by Miniflux for links and BASE_URL config)
 MINIFLUX_PUBLIC_URL=https://komorebi-reader.com/miniflux
 
+# Miniflux cleanup behavior
+CLEANUP_ARCHIVE_READ_DAYS=30
+CLEANUP_ARCHIVE_UNREAD_DAYS=90
+CLEANUP_FREQUENCY_HOURS=24
+
 # ============================================
 # RSS-Bridge Social Feeds
 # ============================================
@@ -95,6 +100,9 @@ docker compose exec frontend env | grep -E 'CLERK|MINIFLUX'
 # MINIFLUX_BASE_URL=http://miniflux:8080/miniflux
 # MINIFLUX_ADMIN_USERNAME=admin
 # MINIFLUX_ADMIN_PASSWORD=...
+# CLEANUP_ARCHIVE_READ_DAYS=30
+# CLEANUP_ARCHIVE_UNREAD_DAYS=90
+# CLEANUP_FREQUENCY_HOURS=24
 # RSS_BRIDGE_BASE_URL=http://rss-bridge
 # SOCIAL_FEEDS_BASE_URL=http://frontend:3000
 # SOCIAL_FEED_TOKEN_SECRET=...

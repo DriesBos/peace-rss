@@ -97,8 +97,6 @@ export default function Home() {
   const [activeModal, setActiveModal] = useState<ActiveModal>('none');
   const [isOffline, setIsOffline] = useState(false);
   const hasInitialLoadRef = useRef(false);
-  const autoMarkTimeoutRef = useRef<number | null>(null);
-  const autoMarkInitializedEntryIdRef = useRef<number | null>(null);
 
   // Edit modal form state
   const [editType, setEditType] = useState<'feed' | 'category' | null>(null);
@@ -453,6 +451,69 @@ export default function Home() {
     [],
   );
 
+  const markEntryStatusKeepalive = useCallback(
+    (entryIds: number[], status: 'read' | 'unread') => {
+      return fetch('/api/entries/status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'cache-control': 'no-store',
+        },
+        body: JSON.stringify({ entry_ids: entryIds, status }),
+        cache: 'no-store',
+        credentials: 'same-origin',
+        keepalive: true,
+      });
+    },
+    [],
+  );
+
+  const updateEntryStatusLocally = useCallback(
+    (entryId: number, status: 'read' | 'unread') => {
+      setEntries((prev) =>
+        prev.map((entry) =>
+          entry.id === entryId ? { ...entry, status } : entry,
+        ),
+      );
+    },
+    [setEntries],
+  );
+
+  const markEntryReadOnOpen = useCallback(
+    (entryId: number) => {
+      const current = entriesRef.current.find((entry) => entry.id === entryId);
+      if (!current || (current.status ?? 'unread') !== 'unread') return;
+
+      updateEntryStatusLocally(entryId, 'read');
+      void refreshUnreadCounters();
+
+      void markEntryStatus([entryId], 'read').catch((e) => {
+        updateEntryStatusLocally(entryId, 'unread');
+        void refreshUnreadCounters();
+        console.error('Failed to mark entry as read on open', e);
+      });
+    },
+    [markEntryStatus, refreshUnreadCounters, updateEntryStatusLocally],
+  );
+
+  const markSelectedEntryReadForExternalLink = useCallback(() => {
+    const current = selectedEntryRef.current;
+    if (!current || (current.status ?? 'unread') !== 'unread') return;
+
+    updateEntryStatusLocally(current.id, 'read');
+    void refreshUnreadCounters();
+
+    void markEntryStatusKeepalive([current.id], 'read').catch((e) => {
+      updateEntryStatusLocally(current.id, 'unread');
+      void refreshUnreadCounters();
+      console.error('Failed to mark entry as read for external link', e);
+    });
+  }, [
+    markEntryStatusKeepalive,
+    refreshUnreadCounters,
+    updateEntryStatusLocally,
+  ]);
+
   const setEntryStatusById = useCallback(
     async (entryId: number, status: 'read' | 'unread'): Promise<boolean> => {
       if (isUpdatingStatusRef.current) return false;
@@ -477,6 +538,42 @@ export default function Home() {
     },
     [loadFeeds, markEntryStatus, refreshUnreadCounters, reloadCurrentEntries],
   );
+
+  const markCurrentPageAsRead = useCallback(async (): Promise<boolean> => {
+    if (isUpdatingStatusRef.current) return false;
+
+    const unreadEntryIds = entries
+      .filter((entry) => (entry.status ?? 'unread') === 'unread')
+      .map((entry) => entry.id);
+
+    if (unreadEntryIds.length === 0) return true;
+
+    isUpdatingStatusRef.current = true;
+    setIsUpdatingStatus(true);
+    setError(null);
+
+    try {
+      await markEntryStatus(unreadEntryIds, 'read');
+      await Promise.all([
+        reloadCurrentEntries(),
+        loadFeeds(),
+        refreshUnreadCounters(),
+      ]);
+      return true;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to mark page as read');
+      return false;
+    } finally {
+      isUpdatingStatusRef.current = false;
+      setIsUpdatingStatus(false);
+    }
+  }, [
+    entries,
+    loadFeeds,
+    markEntryStatus,
+    refreshUnreadCounters,
+    reloadCurrentEntries,
+  ]);
 
   async function toggleSelectedStar() {
     const current = selectedEntryRef.current;
@@ -989,9 +1086,10 @@ export default function Home() {
     (entryId: number) => {
       setSelectedEntryId(entryId);
       if (!isProvisioned) return;
+      markEntryReadOnOpen(entryId);
       void fetchOriginalArticle(entryId);
     },
-    [fetchOriginalArticle, isProvisioned],
+    [fetchOriginalArticle, isProvisioned, markEntryReadOnOpen],
   );
 
   const navigateToPrev = useCallback(() => {
@@ -1130,6 +1228,16 @@ export default function Home() {
         return;
       }
 
+      if (e.key === 'a' || e.key === 'A') {
+        e.preventDefault();
+        void (async () => {
+          const ok = await markCurrentPageAsRead();
+          if (!ok) return;
+          toast(NOTIFICATION_COPY.app.articleMarked);
+        })();
+        return;
+      }
+
       // ArrowDown = next entry
       if (e.key === 'ArrowDown') {
         e.preventDefault();
@@ -1155,52 +1263,6 @@ export default function Home() {
     },
     { target: getBrowserWindow() },
   );
-
-  // Auto-mark entry as read after 5s on the entry page
-  useEffect(() => {
-    if (selectedEntryId !== null) return;
-    autoMarkInitializedEntryIdRef.current = null;
-  }, [selectedEntryId]);
-
-  useEffect(() => {
-    const win = getBrowserWindow();
-    if (!win) return;
-    if (!isProvisioned) return;
-    if (activeModal !== 'none') return;
-
-    const entry = selectedEntryRef.current;
-    if (!entry) return;
-    if (autoMarkInitializedEntryIdRef.current === entry.id) return;
-    autoMarkInitializedEntryIdRef.current = entry.id;
-    if ((entry.status ?? 'unread') !== 'unread') return;
-
-    const entryId = entry.id;
-
-    if (autoMarkTimeoutRef.current) {
-      win.clearTimeout(autoMarkTimeoutRef.current);
-      autoMarkTimeoutRef.current = null;
-    }
-
-    autoMarkTimeoutRef.current = win.setTimeout(() => {
-      const current = selectedEntryRef.current;
-      if (!current || current.id !== entryId) return;
-      if ((current.status ?? 'unread') !== 'unread') return;
-      void setEntryStatusById(entryId, 'read');
-    }, 5000);
-
-    return () => {
-      if (autoMarkTimeoutRef.current) {
-        win.clearTimeout(autoMarkTimeoutRef.current);
-        autoMarkTimeoutRef.current = null;
-      }
-    };
-  }, [
-    selectedEntry?.id,
-    selectedEntryId,
-    isProvisioned,
-    activeModal,
-    setEntryStatusById,
-  ]);
 
   // Auto-fetch original article when entry is selected (safety net)
   // Primary fetch happens in handleEntrySelect for immediate response
@@ -1405,6 +1467,7 @@ export default function Home() {
               feedsById={feedsById}
               onClose={() => setSelectedEntryId(null)}
               onToggleStar={() => void toggleSelectedStar()}
+              onOpenExternalLink={markSelectedEntryReadForExternalLink}
               onFetchOriginal={() =>
                 void fetchOriginalArticle(undefined, { force: true })
               }

@@ -39,12 +39,18 @@ type YouTubeInlineProps = {
   videoId: string;
   href?: string;
   title?: string;
+  onOpenLink?: () => void;
 };
 
 const SWIPE_THRESHOLD_PX = 60;
 const SWIPE_MAX_VERTICAL_PX = 50;
 
-function YouTubeInline({ videoId, href, title }: YouTubeInlineProps) {
+function YouTubeInline({
+  videoId,
+  href,
+  title,
+  onOpenLink,
+}: YouTubeInlineProps) {
   const embedUrl = getYouTubeEmbedUrl(videoId);
 
   return (
@@ -66,6 +72,8 @@ function YouTubeInline({ videoId, href, title }: YouTubeInlineProps) {
           href={href}
           target="_blank"
           rel="noreferrer"
+          onClick={onOpenLink}
+          onAuxClick={onOpenLink}
         >
           Open on YouTube
         </a>
@@ -512,6 +520,7 @@ export type EntryPanelProps = {
   feedsById: Map<number, Feed>;
   onClose: () => void;
   onToggleStar: () => void;
+  onOpenExternalLink: () => void;
   onFetchOriginal: () => void;
   fetchingOriginal: boolean;
   originalFetchStatus?: 'success' | 'error';
@@ -529,6 +538,7 @@ export function EntryPanel({
   feedsById,
   onClose,
   onToggleStar,
+  onOpenExternalLink,
   onFetchOriginal,
   fetchingOriginal,
   originalFetchStatus,
@@ -563,6 +573,15 @@ export function EntryPanel({
   const showContent =
     hasContent && (originalFetchStatus === 'success' || originalFetchFailed);
   const showLoading = Boolean(entry) && !showContent && !originalFetchFailed;
+
+  const handleExternalLinkIntent = (event: {
+    target: EventTarget | null;
+  }) => {
+    if (!(event.target instanceof Element)) return;
+    const anchor = event.target.closest('a[href]');
+    if (!anchor) return;
+    onOpenExternalLink();
+  };
 
   const leadImage = lazy?.leadImage ?? null;
   const fallbackThumbnailUrl = useMemo(() => {
@@ -745,10 +764,18 @@ export function EntryPanel({
             <div className={styles.entry_Loading}>Loading original content...</div>
           ) : showContent ? (
             lazy ? (
-              <div className={styles.entry_Content}>{lazy.nodes}</div>
+              <div
+                className={styles.entry_Content}
+                onClickCapture={handleExternalLinkIntent}
+                onAuxClickCapture={handleExternalLinkIntent}
+              >
+                {lazy.nodes}
+              </div>
             ) : (
               <div
                 className={styles.entry_Content}
+                onClickCapture={handleExternalLinkIntent}
+                onAuxClickCapture={handleExternalLinkIntent}
                 dangerouslySetInnerHTML={{
                   __html: content,
                 }}
@@ -767,6 +794,8 @@ export function EntryPanel({
                   href={entry.url}
                   target="_blank"
                   rel="noreferrer"
+                  onClick={onOpenExternalLink}
+                  onAuxClick={onOpenExternalLink}
                 >
                   Open source
                 </a>
@@ -795,6 +824,8 @@ export function EntryPanel({
                 target="_blank"
                 rel="noreferrer"
                 title="Source link"
+                onClick={onOpenExternalLink}
+                onAuxClick={onOpenExternalLink}
                 className={`${buttonStyles.button} ${buttonStyles.primary} ${styles.actionsList_Item}`}
               >
                 <span>Source link</span>

@@ -3,7 +3,8 @@
 ## Marked (Read) Entries
 
 - Articles are marked (set to `read`) when the user marks them.
-- Articles are also marked (set to `read`) when the user stays on an entry for more than 5 seconds.
+- Articles are marked (set to `read`) when the user opens them in the reader.
+- Opening an external link from the selected entry marks that entry as `read`.
 
 ## YouTube Feeds
 

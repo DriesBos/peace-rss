@@ -5,7 +5,9 @@ This markdown contains the application plan.
 ## Structure
 
 ### Entries
-- Read entries are removed after 1 day
+- Read entries are removed according to Miniflux cleanup settings
+- Opening an entry changes its status to 'read'
+- Opening an external link from an entry changes its status to 'read'
 - Starred entries are not removed and kept indefinitely
 
 ### EntryList
@@ -18,6 +20,11 @@ This markdown contains the application plan.
 - Starred: shows all starred entries
 - Categories created by user
 - Youtube: shows all youtube feeds
+
+## Settings
+- CLEANUP_ARCHIVE_READ_DAYS: 30
+- CLEANUP_ARCHIVE_UNREAD_DAYS: 90
+- CLEANUP_FREQUENCY_HOURS: 24
 
 ## Agents
 
