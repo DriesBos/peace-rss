@@ -3,7 +3,7 @@ import type {
   Category,
   EntriesResponse,
   Feed,
-  FeedCountersResponse,
+  ReaderPreferences,
 } from '@/app/_lib/types';
 
 export async function fetchFeeds(): Promise<Feed[]> {
@@ -11,15 +11,11 @@ export async function fetchFeeds(): Promise<Feed[]> {
 }
 
 export async function fetchCategories(): Promise<Category[]> {
-  return fetchJson<Category[]>('/api/categories');
+  return fetchJson<Category[]>('/api/categories?counts=true');
 }
 
 export async function fetchEntries(url: string): Promise<EntriesResponse> {
   return fetchJson<EntriesResponse>(url);
-}
-
-export async function fetchFeedCounters(): Promise<FeedCountersResponse> {
-  return fetchJson<FeedCountersResponse>('/api/feeds/counters');
 }
 
 export async function fetchStarredEntries(): Promise<EntriesResponse> {
@@ -27,5 +23,9 @@ export async function fetchStarredEntries(): Promise<EntriesResponse> {
 }
 
 export async function fetchStarredCount(): Promise<EntriesResponse> {
-  return fetchJson<EntriesResponse>('/api/entries?starred=true&offset=0');
+  return fetchJson<EntriesResponse>('/api/entries?starred=true&offset=0&limit=1');
+}
+
+export async function fetchReaderPreferences(): Promise<ReaderPreferences> {
+  return fetchJson<ReaderPreferences>('/api/me');
 }

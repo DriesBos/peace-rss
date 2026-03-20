@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import localFont from 'next/font/local';
 import {
   ClerkProvider,
@@ -9,7 +9,6 @@ import '@/styles/vars.sass';
 import '@/styles/reset.css';
 import '@/styles/globals.sass';
 import { ThemeProvider } from '@/components/ThemeProvider';
-import { SerwistProvider } from './serwist';
 import Notifications from '@/components/Notifications/Notifications';
 import { GlobalKeybindings } from '@/components/GlobalKeybindings/GlobalKeybindings';
 import { LandingPage } from '@/components/LandingPage/LandingPage';
@@ -79,26 +78,8 @@ const soulSister = localFont({
 export const metadata: Metadata = {
   title: 'Komorebi Reader',
   description: 'Enjoy your reading',
-  manifest: '/manifest.json',
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: 'default',
-    title: 'Komorebi Reader',
-  },
   formatDetection: {
     telephone: false,
-  },
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#e3e3d1' },
-    { media: '(prefers-color-scheme: dark)', color: '#3d3f31' },
-  ],
-  viewport: {
-    width: 'device-width',
-    initialScale: 1,
-    minimumScale: 1,
-    maximumScale: 1,
-    userScalable: false,
-    viewportFit: 'cover',
   },
   icons: {
     icon: [
@@ -117,6 +98,19 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  minimumScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#e3e3d1' },
+    { media: '(prefers-color-scheme: dark)', color: '#3d3f31' },
+  ],
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -126,27 +120,25 @@ export default function RootLayout({
     <ClerkProvider signInFallbackRedirectUrl="/">
       <html lang="en" suppressHydrationWarning>
         <body className={`${untitledSans.variable} ${soulSister.variable}`}>
-          <SerwistProvider>
-            <ThemeProvider
-              attribute="data-theme"
-              defaultTheme="light"
-              themes={['light', 'dark', 'softlight', 'softdark', 'green', 'nightmode']}
-              enableSystem={true}
-              storageKey="peace-rss-theme"
-            >
-              <Notifications />
-              <main>
-                <SignedOut>
-                  <LandingPage />
-                </SignedOut>
-                <SignedIn>
-                  <GlobalKeybindings />
-                  {children}
-                </SignedIn>
-              </main>
-              <div id="modal-root" />
-            </ThemeProvider>
-          </SerwistProvider>
+          <ThemeProvider
+            attribute="data-theme"
+            defaultTheme="light"
+            themes={['light', 'dark', 'softlight', 'softdark', 'green', 'nightmode']}
+            enableSystem={true}
+            storageKey="peace-rss-theme"
+          >
+            <Notifications />
+            <main>
+              <SignedOut>
+                <LandingPage />
+              </SignedOut>
+              <SignedIn>
+                <GlobalKeybindings />
+                {children}
+              </SignedIn>
+            </main>
+            <div id="modal-root" />
+          </ThemeProvider>
         </body>
       </html>
     </ClerkProvider>

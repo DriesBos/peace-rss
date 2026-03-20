@@ -531,6 +531,7 @@ export type EntryPanelProps = {
   hasNext: boolean;
   isTogglingStar: boolean;
   isUpdatingStatus: boolean;
+  showReadingTime: boolean;
 };
 
 export function EntryPanel({
@@ -549,6 +550,7 @@ export function EntryPanel({
   hasNext,
   isTogglingStar,
   isUpdatingStatus,
+  showReadingTime,
 }: EntryPanelProps) {
   const lazy = useLazyEntryContent(entry?.content, entry?.url);
   const selectedIsStarred = Boolean(entry?.starred);
@@ -563,16 +565,17 @@ export function EntryPanel({
     useState(false);
   const content = entry?.content?.trim() ?? '';
   const hasContent = Boolean(content);
-  const readingTimeLabel = formatReadingTime(entry?.reading_time);
+  const readingTimeLabel = showReadingTime
+    ? formatReadingTime(entry?.reading_time)
+    : '';
   const sourceFeedTitle =
     entry?.feed_title ??
     entry?.feed?.title ??
     (entry ? feedsById.get(entry.feed_id)?.title : undefined);
   const hasSourceMeta = Boolean(sourceFeedTitle || entry?.author);
   const originalFetchFailed = originalFetchStatus === 'error';
-  const showContent =
-    hasContent && (originalFetchStatus === 'success' || originalFetchFailed);
-  const showLoading = Boolean(entry) && !showContent && !originalFetchFailed;
+  const showContent = hasContent;
+  const showLoading = Boolean(entry) && fetchingOriginal && !showContent;
 
   const handleExternalLinkIntent = (event: {
     target: EventTarget | null;

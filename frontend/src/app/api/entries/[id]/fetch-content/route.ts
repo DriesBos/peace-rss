@@ -52,7 +52,7 @@ export async function POST(_request: NextRequest, context: Ctx) {
       content: string;
       url: string;
       reading_time?: number;
-    }>(token, `/v1/entries/${entryId}/fetch-content`, {
+    }>(token, `/v1/entries/${entryId}/fetch-content?update_content=true`, {
       method: 'GET',
     });
 

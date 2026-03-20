@@ -5,16 +5,17 @@
 - Articles are marked (set to `read`) when the user marks them.
 - Articles are marked (set to `read`) when the user opens them in the reader.
 - Opening an external link from the selected entry marks that entry as `read`.
+- Marking a full page as read uses Miniflux server-side mark-all endpoints for home and category views.
 
-## YouTube Feeds
+## Entry Loading
 
-- When adding a YouTube RSS feed (`/feeds/videos.xml`), the backend auto-assigns it to the `YouTube` category (creating it if needed).
-- YouTube feeds are marked `hide_globally=true` in Miniflux so they do not appear in the global “All” view; they only appear inside the `YouTube` category.
+- Home queries use Miniflux's `globally_visible=true` filter so hidden feeds/categories do not leak into global `Unread` and `All`.
+- Original article fetching is manual. The reader shows Miniflux entry content by default, and `Fetch source` updates the entry through Miniflux when requested.
 
-## Instagram / Twitter Feeds
+## Hidden Global Feeds
 
-- Instagram and Twitter/X feeds are created via the app’s social feed flow and are auto-assigned to `Instagram` / `Twitter` categories (created if needed).
-- Instagram/Twitter feeds are marked `hide_globally=true` so they do not appear in the global “All” view.
+- Feeds and categories marked `hide_globally=true` in Miniflux are excluded from the global `Unread` and `All` views.
+- Instagram and Twitter/X feeds created through the social feed flow are marked `hide_globally=true`.
 - RSS-Bridge is only used for these social feeds (Instagram and Twitter/X).
 
 ## Feed Discovery (Non-Social URLs)
@@ -27,8 +28,8 @@
 
 ## Protected Categories
 
-- `YouTube`, `Instagram`, and `Twitter` categories are protected: they cannot be edited or deleted, and feeds cannot be manually moved into them.
-- The Add/Edit UI mirrors these rules: dedicated add forms exist, and protected feeds can only edit name + URL (no category assignment).
+- `Instagram` and `Twitter` categories are protected: they cannot be edited or deleted, and feeds cannot be manually moved into them.
+- The Add/Edit UI mirrors these rules for protected social categories.
 
 ## Layout Variants
 

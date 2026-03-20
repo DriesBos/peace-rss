@@ -2,6 +2,9 @@ export type Category = {
   id: number;
   user_id: number;
   title: string;
+  hide_globally?: boolean;
+  feed_count?: number;
+  total_unread?: number;
 };
 
 export type DiscoveredFeed = {
@@ -42,7 +45,10 @@ export type EntriesResponse = {
   entries: Entry[];
 };
 
-export type FeedCountersResponse = {
-  reads?: Record<string, number>;
-  unreads?: Record<string, number>;
+export type ReaderPreferences = {
+  id: number;
+  entries_per_page: number;
+  keyboard_shortcuts: boolean;
+  show_reading_time: boolean;
+  entry_swipe: boolean;
 };

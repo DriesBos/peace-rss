@@ -13,19 +13,35 @@ import { TheHeader } from '@/components/TheHeader/TheHeader';
 import { MenuModal } from '@/components/MenuModal/MenuModal';
 import { useKeydown } from '@/hooks/useKeydown';
 import { fetchJson } from '@/app/_lib/fetchJson';
-import type { Category, DiscoveredFeed, Entry, Feed } from '@/app/_lib/types';
+import type {
+  Category,
+  DiscoveredFeed,
+  Entry,
+  Feed,
+  ReaderPreferences,
+} from '@/app/_lib/types';
 import { useReaderData } from '@/hooks/useReaderData';
 import { useReaderGestures } from '@/hooks/useReaderGestures';
-import { useUnreadCounters } from '@/hooks/useUnreadCounters';
-import { fetchStarredEntries } from '@/lib/readerApi';
-import { ENTRIES_PAGE_SIZE, INITIAL_ENTRIES_LIMIT } from '@/lib/entriesQuery';
+import {
+  fetchReaderPreferences,
+  fetchStarredEntries,
+  fetchStarredCount,
+} from '@/lib/readerApi';
+import { DEFAULT_ENTRIES_PAGE_SIZE } from '@/lib/entriesQuery';
 import { NOTIFICATION_COPY } from '@/lib/notificationCopy';
 import {
   isProtectedCategoryTitle,
-  normalizeCategoryTitle,
 } from '@/lib/protectedCategories';
 
 type ActiveModal = 'none' | 'menu' | 'add' | 'edit';
+
+const DEFAULT_READER_PREFERENCES: ReaderPreferences = {
+  id: 0,
+  entries_per_page: DEFAULT_ENTRIES_PAGE_SIZE,
+  keyboard_shortcuts: true,
+  show_reading_time: true,
+  entry_swipe: true,
+};
 
 const getBrowserWindow = (): any => {
   if (typeof globalThis === 'undefined') return null;
@@ -60,11 +76,10 @@ function isAddFeedSelectionResponse(
 
 export default function Home() {
   const [selectedEntryId, setSelectedEntryId] = useState<number | null>(null);
-  const [selectedFeedId, setSelectedFeedId] = useState<number | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
     null,
   );
-  const [isAllEntriesView, setIsAllEntriesView] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<'unread' | 'all'>('unread');
   const [isStarredView, setIsStarredView] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchMode, setSearchMode] = useState(false);
@@ -91,9 +106,13 @@ export default function Home() {
     Set<number>
   >(new Set());
   const [starredEntries, setStarredEntries] = useState<Entry[]>([]);
+  const [totalStarredCount, setTotalStarredCount] = useState(0);
   const [originalFetchStatusById, setOriginalFetchStatusById] = useState<
     Record<number, 'success' | 'error'>
   >({});
+  const [readerPreferences, setReaderPreferences] = useState<ReaderPreferences>(
+    DEFAULT_READER_PREFERENCES,
+  );
   const [activeModal, setActiveModal] = useState<ActiveModal>('none');
   const [isOffline, setIsOffline] = useState(false);
   const hasInitialLoadRef = useRef(false);
@@ -113,18 +132,16 @@ export default function Home() {
     () => ({
       searchMode,
       searchQuery,
-      isAllEntriesView,
       isStarredView,
-      selectedFeedId,
       selectedCategoryId,
+      statusFilter,
     }),
     [
-      isAllEntriesView,
       searchMode,
       searchQuery,
       isStarredView,
-      selectedFeedId,
       selectedCategoryId,
+      statusFilter,
     ],
   );
 
@@ -137,6 +154,8 @@ export default function Home() {
     isRefreshingFeeds,
     error,
     setEntries,
+    setFeeds,
+    setCategories,
     setIsLoading,
     setError,
     loadFeeds,
@@ -144,49 +163,16 @@ export default function Home() {
     loadEntries,
     resetEntries,
     refreshAll,
-  } = useReaderData({ isProvisioned, view });
+  } = useReaderData({
+    isProvisioned,
+    view,
+    pageSize: readerPreferences.entries_per_page,
+  });
 
   const entriesRef = useRef<Entry[]>([]);
   useEffect(() => {
     entriesRef.current = entries;
   }, [entries]);
-
-  const fetchedOriginalSuccessIds = useMemo(() => {
-    const ids = new Set<number>();
-    for (const [id, status] of Object.entries(originalFetchStatusById)) {
-      if (status === 'success') ids.add(Number(id));
-    }
-    return ids;
-  }, [originalFetchStatusById]);
-
-  const preserveOriginalContent = useCallback(
-    (
-      nextEntries: Entry[],
-      previousEntries: Entry[],
-      originalIds: Set<number>,
-    ) => {
-      if (originalIds.size === 0) return nextEntries;
-
-      const previousById = new Map<number, Entry>();
-      for (const entry of previousEntries) previousById.set(entry.id, entry);
-
-      return nextEntries.map((entry) => {
-        if (!originalIds.has(entry.id)) return entry;
-        const previous = previousById.get(entry.id);
-        if (!previous?.content) return entry;
-        return { ...entry, content: previous.content };
-      });
-    },
-    [],
-  );
-
-  const {
-    totalUnreadCount,
-    totalStarredCount,
-    categoryUnreadCounts,
-    refreshUnreadCounters,
-    refreshStarredCount,
-  } = useUnreadCounters({ isProvisioned, feeds });
 
   const openMenuModal = useCallback(() => {
     setActiveModal('menu');
@@ -309,12 +295,29 @@ export default function Home() {
     return map;
   }, [feeds]);
 
-  const visibleHeaderCategories = useMemo(() => {
-    return categories.filter((category) => {
-      const kind = normalizeCategoryTitle(category.title);
-      return kind !== 'instagram' && kind !== 'twitter';
-    });
+  const visibleHeaderCategories = categories;
+
+  const categoryUnreadCounts = useMemo(() => {
+    const counts = new Map<number, number>();
+    for (const category of categories) {
+      counts.set(category.id, category.total_unread ?? 0);
+    }
+    return counts;
   }, [categories]);
+
+  const totalUnreadCount = useMemo(() => {
+    const visibleCategoryUnreadCount = categories.reduce((sum, category) => {
+      if (category.hide_globally) return sum;
+      return sum + (category.total_unread ?? 0);
+    }, 0);
+
+    const uncategorizedUnreadCount = feeds.reduce((sum, feed) => {
+      if (feed.hide_globally || feed.category?.id) return sum;
+      return sum + (feed.unread_count ?? 0);
+    }, 0);
+
+    return visibleCategoryUnreadCount + uncategorizedUnreadCount;
+  }, [categories, feeds]);
 
   const selectedEntry = useMemo(() => {
     return entries.find((e) => e.id === selectedEntryId) ?? null;
@@ -344,6 +347,37 @@ export default function Home() {
     };
   }, [entries, selectedEntryId]);
 
+  const loadReaderPreferences = useCallback(async () => {
+    if (!isProvisioned) return DEFAULT_READER_PREFERENCES;
+    try {
+      const data = await fetchReaderPreferences();
+      setReaderPreferences({
+        ...DEFAULT_READER_PREFERENCES,
+        ...data,
+        entries_per_page:
+          data.entries_per_page > 0
+            ? data.entries_per_page
+            : DEFAULT_ENTRIES_PAGE_SIZE,
+      });
+      return data;
+    } catch (err) {
+      console.error('Failed to load reader preferences', err);
+      return DEFAULT_READER_PREFERENCES;
+    }
+  }, [isProvisioned]);
+
+  const refreshStarredCount = useCallback(async () => {
+    if (!isProvisioned) return null;
+    try {
+      const data = await fetchStarredCount();
+      setTotalStarredCount(data.total ?? 0);
+      return data.total ?? 0;
+    } catch (err) {
+      console.error('Failed to load starred count', err);
+      return null;
+    }
+  }, [isProvisioned]);
+
   // Load starred entries for the menu
   const loadStarredEntries = useCallback(async () => {
     if (!isProvisioned) return;
@@ -362,31 +396,15 @@ export default function Home() {
   }, []);
 
   const refreshAllData = useCallback(async (): Promise<boolean> => {
-    const previousEntriesSnapshot = entriesRef.current;
-    const data = await refreshAll(() => [
-      refreshUnreadCounters(),
-      refreshStarredCount(),
-      loadStarredEntries(),
-    ]);
+    const data = await refreshAll(() => [refreshStarredCount()]);
     if (data?.entries) {
-      const withContent = preserveOriginalContent(
-        data.entries,
-        previousEntriesSnapshot,
-        fetchedOriginalSuccessIds,
-      );
-      setEntries(withContent);
-      syncSelection(withContent);
+      syncSelection(data.entries);
     }
     return data !== null;
   }, [
-    loadStarredEntries,
-    preserveOriginalContent,
     refreshAll,
     refreshStarredCount,
-    refreshUnreadCounters,
-    setEntries,
     syncSelection,
-    fetchedOriginalSuccessIds,
   ]);
 
   const refreshAllDataWithToast = useCallback(async () => {
@@ -401,21 +419,13 @@ export default function Home() {
 
   const reloadCurrentEntries = useCallback(async () => {
     const current = entriesRef.current;
-    const limit = Math.max(current.length, INITIAL_ENTRIES_LIMIT);
+    const limit = Math.max(current.length, readerPreferences.entries_per_page);
     const data = await loadEntries({ append: false, offset: 0, limit });
-    const withContent = preserveOriginalContent(
-      data.entries,
-      current,
-      fetchedOriginalSuccessIds,
-    );
-    setEntries(withContent);
-    syncSelection(withContent);
-    return { ...data, entries: withContent };
+    syncSelection(data.entries);
+    return data;
   }, [
-    fetchedOriginalSuccessIds,
     loadEntries,
-    preserveOriginalContent,
-    setEntries,
+    readerPreferences.entries_per_page,
     syncSelection,
   ]);
 
@@ -426,7 +436,7 @@ export default function Home() {
       await loadEntries({
         append: true,
         offset: entries.length,
-        limit: ENTRIES_PAGE_SIZE,
+        limit: readerPreferences.entries_per_page,
       });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load more');
@@ -436,6 +446,7 @@ export default function Home() {
   }, [
     entries,
     loadEntries,
+    readerPreferences.entries_per_page,
     setError,
     setIsLoading,
   ]);
@@ -470,13 +481,57 @@ export default function Home() {
 
   const updateEntryStatusLocally = useCallback(
     (entryId: number, status: 'read' | 'unread') => {
+      const current = entriesRef.current.find((entry) => entry.id === entryId);
+      if (!current) return;
+
+      const previousStatus = current.status ?? 'unread';
+      if (previousStatus === status) return;
+
+      const delta =
+        previousStatus === 'unread' && status === 'read'
+          ? -1
+          : previousStatus === 'read' && status === 'unread'
+            ? 1
+            : 0;
+
       setEntries((prev) =>
         prev.map((entry) =>
           entry.id === entryId ? { ...entry, status } : entry,
         ),
       );
+
+      if (delta === 0) return;
+
+      setFeeds((prev) =>
+        prev.map((feed) =>
+          feed.id === current.feed_id
+            ? {
+                ...feed,
+                unread_count: Math.max(0, (feed.unread_count ?? 0) + delta),
+              }
+            : feed,
+        ),
+      );
+
+      const categoryId = feedsById.get(current.feed_id)?.category?.id;
+
+      if (categoryId) {
+        setCategories((prev) =>
+          prev.map((category) =>
+            category.id === categoryId
+              ? {
+                  ...category,
+                  total_unread: Math.max(
+                    0,
+                    (category.total_unread ?? 0) + delta,
+                  ),
+                }
+              : category,
+          ),
+        );
+      }
     },
-    [setEntries],
+    [feedsById, setCategories, setEntries, setFeeds],
   );
 
   const markEntryReadOnOpen = useCallback(
@@ -485,15 +540,13 @@ export default function Home() {
       if (!current || (current.status ?? 'unread') !== 'unread') return;
 
       updateEntryStatusLocally(entryId, 'read');
-      void refreshUnreadCounters();
 
       void markEntryStatus([entryId], 'read').catch((e) => {
         updateEntryStatusLocally(entryId, 'unread');
-        void refreshUnreadCounters();
         console.error('Failed to mark entry as read on open', e);
       });
     },
-    [markEntryStatus, refreshUnreadCounters, updateEntryStatusLocally],
+    [markEntryStatus, updateEntryStatusLocally],
   );
 
   const markSelectedEntryReadForExternalLink = useCallback(() => {
@@ -501,18 +554,42 @@ export default function Home() {
     if (!current || (current.status ?? 'unread') !== 'unread') return;
 
     updateEntryStatusLocally(current.id, 'read');
-    void refreshUnreadCounters();
 
     void markEntryStatusKeepalive([current.id], 'read').catch((e) => {
       updateEntryStatusLocally(current.id, 'unread');
-      void refreshUnreadCounters();
       console.error('Failed to mark entry as read for external link', e);
     });
-  }, [
-    markEntryStatusKeepalive,
-    refreshUnreadCounters,
-    updateEntryStatusLocally,
-  ]);
+  }, [markEntryStatusKeepalive, updateEntryStatusLocally]);
+
+  const markCurrentScopeAsRead = useCallback(async () => {
+    if (searchMode || isStarredView) {
+      const unreadEntryIds = entriesRef.current
+        .filter((entry) => (entry.status ?? 'unread') === 'unread')
+        .map((entry) => entry.id);
+
+      if (unreadEntryIds.length === 0) return;
+      await markEntryStatus(unreadEntryIds, 'read');
+      return;
+    }
+
+    if (selectedCategoryId !== null) {
+      await fetchJson<{ ok: true }>('/api/entries/mark-all-read', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scope: 'category',
+          category_id: selectedCategoryId,
+        }),
+      });
+      return;
+    }
+
+    await fetchJson<{ ok: true }>('/api/entries/mark-all-read', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scope: 'user' }),
+    });
+  }, [isStarredView, markEntryStatus, searchMode, selectedCategoryId]);
 
   const setEntryStatusById = useCallback(
     async (entryId: number, status: 'read' | 'unread'): Promise<boolean> => {
@@ -525,7 +602,7 @@ export default function Home() {
         await Promise.all([
           reloadCurrentEntries(),
           loadFeeds(),
-          refreshUnreadCounters(),
+          loadCategories(),
         ]);
         return true;
       } catch (e) {
@@ -536,42 +613,35 @@ export default function Home() {
         setIsUpdatingStatus(false);
       }
     },
-    [loadFeeds, markEntryStatus, refreshUnreadCounters, reloadCurrentEntries],
+    [loadCategories, loadFeeds, markEntryStatus, reloadCurrentEntries],
   );
 
   const markCurrentPageAsRead = useCallback(async (): Promise<boolean> => {
     if (isUpdatingStatusRef.current) return false;
-
-    const unreadEntryIds = entries
-      .filter((entry) => (entry.status ?? 'unread') === 'unread')
-      .map((entry) => entry.id);
-
-    if (unreadEntryIds.length === 0) return true;
 
     isUpdatingStatusRef.current = true;
     setIsUpdatingStatus(true);
     setError(null);
 
     try {
-      await markEntryStatus(unreadEntryIds, 'read');
+      await markCurrentScopeAsRead();
       await Promise.all([
         reloadCurrentEntries(),
         loadFeeds(),
-        refreshUnreadCounters(),
+        loadCategories(),
       ]);
       return true;
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to mark page as read');
       return false;
     } finally {
-      isUpdatingStatusRef.current = false;
-      setIsUpdatingStatus(false);
-    }
+        isUpdatingStatusRef.current = false;
+        setIsUpdatingStatus(false);
+      }
   }, [
-    entries,
+    loadCategories,
     loadFeeds,
-    markEntryStatus,
-    refreshUnreadCounters,
+    markCurrentScopeAsRead,
     reloadCurrentEntries,
   ]);
 
@@ -601,11 +671,10 @@ export default function Home() {
       });
       didToggleOnServer = true;
       // Refresh list + star metadata
-      await Promise.all([
-        reloadCurrentEntries(),
-        refreshStarredCount(),
-        loadStarredEntries(),
-      ]);
+      await Promise.all([reloadCurrentEntries(), refreshStarredCount()]);
+      if (activeModal === 'menu' || isStarredView) {
+        await loadStarredEntries();
+      }
     } catch (e) {
       if (!didToggleOnServer) {
         // Revert only when the toggle request itself failed.
@@ -629,9 +698,10 @@ export default function Home() {
         await fetchJson<{ ok: true }>(`/api/entries/${entryId}/star`, {
           method: 'POST',
         });
-        // Reload starred entries after toggling
-        await loadStarredEntries();
         await refreshStarredCount();
+        if (activeModal === 'menu' || isStarredView) {
+          await loadStarredEntries();
+        }
         if (isStarredView) {
           await reloadCurrentEntries();
         }
@@ -640,6 +710,7 @@ export default function Home() {
       }
     },
     [
+      activeModal,
       loadStarredEntries,
       refreshStarredCount,
       isStarredView,
@@ -732,11 +803,7 @@ export default function Home() {
       setNewFeedCategoryId(defaultAddFeedCategoryId);
       setDiscoveredFeeds([]);
       setSelectedDiscoveredFeedUrl('');
-      await Promise.all([
-        loadFeeds(),
-        loadCategories(),
-        refreshUnreadCounters(),
-      ]);
+      await Promise.all([loadFeeds(), loadCategories()]);
       return true;
     } catch (e) {
       setAddFeedError(e instanceof Error ? e.message : 'Failed to add feed');
@@ -795,14 +862,9 @@ export default function Home() {
       });
 
       // Success: refresh categories and feeds
-      await Promise.all([
-        loadCategories(),
-        loadFeeds(),
-        refreshUnreadCounters(),
-      ]);
+      await Promise.all([loadCategories(), loadFeeds()]);
       if (selectedCategoryId === categoryId) {
         setSelectedCategoryId(null);
-        setSelectedFeedId(null);
         await reloadCurrentEntries();
       }
     } catch (e) {
@@ -821,12 +883,9 @@ export default function Home() {
         method: 'DELETE',
       });
 
-      // Success: refresh feeds
-      await Promise.all([loadFeeds(), refreshUnreadCounters()]);
-      if (selectedFeedId === feedId) {
-        setSelectedFeedId(null);
-        await reloadCurrentEntries();
-      }
+      // Success: refresh feeds/categories so global visibility and unread totals stay in sync.
+      await Promise.all([loadFeeds(), loadCategories()]);
+      await reloadCurrentEntries();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to delete feed');
     } finally {
@@ -902,11 +961,7 @@ export default function Home() {
       });
 
       // Success: refresh feeds/categories (category may be created/forced server-side)
-      await Promise.all([
-        loadFeeds(),
-        loadCategories(),
-        refreshUnreadCounters(),
-      ]);
+      await Promise.all([loadFeeds(), loadCategories()]);
       return true;
     } catch (e) {
       setEditError(e instanceof Error ? e.message : 'Failed to update feed');
@@ -936,9 +991,8 @@ export default function Home() {
     setSearchQuery('');
     setSearchMode(false);
     setSelectedCategoryId(null);
-    setSelectedFeedId(null);
     setIsStarredView(false);
-    setIsAllEntriesView(false);
+    setStatusFilter('unread');
   }, []);
 
   const handleSelectAll = useCallback(() => {
@@ -946,19 +1000,16 @@ export default function Home() {
     setSearchQuery('');
     setSearchMode(false);
     setSelectedCategoryId(null);
-    setSelectedFeedId(null);
     setIsStarredView(false);
-    setIsAllEntriesView(true);
+    setStatusFilter('all');
   }, []);
 
   const handleSelectStarred = useCallback(() => {
-    // Starred view is exclusive from search/category/feed filters.
+    // Starred view is exclusive from search/category filters.
     setIsSearchOpen(false);
     setSearchQuery('');
     setSearchMode(false);
     setSelectedCategoryId(null);
-    setSelectedFeedId(null);
-    setIsAllEntriesView(false);
     setIsStarredView(true);
   }, []);
 
@@ -967,9 +1018,7 @@ export default function Home() {
     setSearchQuery('');
     setSearchMode(false);
     setIsStarredView(false);
-    setIsAllEntriesView(false);
     setSelectedCategoryId(categoryId);
-    setSelectedFeedId(null);
   }, []);
 
   useEffect(() => {
@@ -985,9 +1034,7 @@ export default function Home() {
 
     if (!searchMode) {
       setSearchMode(true);
-      setIsAllEntriesView(false);
       setIsStarredView(false);
-      setSelectedFeedId(null);
       setSelectedCategoryId(null);
       return;
     }
@@ -998,7 +1045,11 @@ export default function Home() {
       setIsLoading(true);
       setError(null);
       setSelectedEntryId(null);
-      loadEntries({ append: false, offset: 0, limit: INITIAL_ENTRIES_LIMIT })
+      loadEntries({
+        append: false,
+        offset: 0,
+        limit: readerPreferences.entries_per_page,
+      })
         .catch((e) =>
           setError(e instanceof Error ? e.message : 'Failed to search'),
         )
@@ -1009,14 +1060,21 @@ export default function Home() {
       win.clearTimeout(timeoutId);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchQuery, isSearchOpen, isProvisioned, searchMode]);
+  }, [
+    loadEntries,
+    readerPreferences.entries_per_page,
+    searchQuery,
+    isSearchOpen,
+    isProvisioned,
+    searchMode,
+  ]);
 
   const fetchOriginalArticle = useCallback(
     async (entryId?: number, options?: { force?: boolean }) => {
       const force = Boolean(options?.force);
       const targetEntry = entryId
-        ? entries.find((e) => e.id === entryId)
-        : selectedEntry;
+        ? entriesRef.current.find((entry) => entry.id === entryId) ?? null
+        : selectedEntryRef.current;
 
       if (!targetEntry || !isProvisioned) return;
 
@@ -1074,10 +1132,8 @@ export default function Home() {
       }
     },
     [
-      entries,
       isProvisioned,
       originalFetchStatusById,
-      selectedEntry,
       setEntries,
     ],
   );
@@ -1087,9 +1143,8 @@ export default function Home() {
       setSelectedEntryId(entryId);
       if (!isProvisioned) return;
       markEntryReadOnOpen(entryId);
-      void fetchOriginalArticle(entryId);
     },
-    [fetchOriginalArticle, isProvisioned, markEntryReadOnOpen],
+    [isProvisioned, markEntryReadOnOpen],
   );
 
   const navigateToPrev = useCallback(() => {
@@ -1104,7 +1159,10 @@ export default function Home() {
     }
   }, [hasNext, selectedIndex, entries, handleEntrySelect]);
 
-  const canSwipe = selectedEntryId !== null && activeModal === 'none';
+  const canSwipe =
+    readerPreferences.entry_swipe &&
+    selectedEntryId !== null &&
+    activeModal === 'none';
   const { appRef, pullState, pullOffset, indicatorHeight, indicatorLabel } =
     useReaderGestures({
       isProvisioned,
@@ -1127,12 +1185,19 @@ export default function Home() {
   // Initial load after provisioning
   useEffect(() => {
     if (!isProvisioned || hasInitialLoadRef.current) return;
-    void refreshAllData().finally(() => {
+    void (async () => {
+      await loadReaderPreferences();
+      await refreshAllData();
       hasInitialLoadRef.current = true;
-    });
-  }, [isProvisioned, refreshAllData]);
+    })();
+  }, [isProvisioned, loadReaderPreferences, refreshAllData]);
 
-  // Reset entries when switching views (category/feed/starred)
+  useEffect(() => {
+    if (activeModal !== 'menu' || !isProvisioned) return;
+    void loadStarredEntries();
+  }, [activeModal, isProvisioned, loadStarredEntries]);
+
+  // Reset entries when switching views or page-size preferences change.
   useEffect(() => {
     if (!isProvisioned || !hasInitialLoadRef.current) return;
     if (searchMode) return;
@@ -1143,12 +1208,12 @@ export default function Home() {
       .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load'))
       .finally(() => setIsLoading(false));
   }, [
-    selectedFeedId,
     selectedCategoryId,
-    isAllEntriesView,
+    statusFilter,
     isStarredView,
     searchMode,
     isProvisioned,
+    readerPreferences.entries_per_page,
     resetEntries,
     setIsLoading,
     setError,
@@ -1228,6 +1293,20 @@ export default function Home() {
         return;
       }
 
+      if (e.key === 'f' || e.key === 'F') {
+        if (!selectedEntryRef.current) return;
+        e.preventDefault();
+        void toggleSelectedStar();
+        return;
+      }
+
+      if (e.key === 'd' || e.key === 'D') {
+        if (!selectedEntryRef.current) return;
+        e.preventDefault();
+        void fetchOriginalArticle(undefined, { force: true });
+        return;
+      }
+
       if (e.key === 'a' || e.key === 'A') {
         e.preventDefault();
         void (async () => {
@@ -1238,13 +1317,13 @@ export default function Home() {
         return;
       }
 
-      // ArrowDown = next entry
-      if (e.key === 'ArrowDown') {
+      // ArrowDown, n, or j = next entry
+      if (e.key === 'ArrowDown' || e.key === 'n' || e.key === 'j') {
         e.preventDefault();
         if (hasNext) navigateToNext();
       }
-      // ArrowUp = previous entry
-      else if (e.key === 'ArrowUp') {
+      // ArrowUp, p, or k = previous entry
+      else if (e.key === 'ArrowUp' || e.key === 'p' || e.key === 'k') {
         e.preventDefault();
         if (hasPrev) navigateToPrev();
       }
@@ -1261,61 +1340,15 @@ export default function Home() {
         if (hasPrev) navigateToPrev();
       }
     },
-    { target: getBrowserWindow() },
+    {
+      enabled: readerPreferences.keyboard_shortcuts,
+      target: getBrowserWindow(),
+    },
   );
 
-  // Auto-fetch original article when entry is selected (safety net)
-  // Primary fetch happens in handleEntrySelect for immediate response
-  // This useEffect acts as a fallback in case handleEntrySelect didn't trigger
-  useEffect(() => {
-    if (!selectedEntry || !isProvisioned) return;
-    if (fetchingOriginalEntryIds.has(selectedEntry.id)) return;
-    if (originalFetchStatusById[selectedEntry.id] === 'success') return;
-
-    // Trigger the fetch as a safety net (small delay to avoid duplicate calls)
-    const timeoutId = setTimeout(() => {
-      if (originalFetchStatusById[selectedEntry.id] !== 'success') {
-        void fetchOriginalArticle(selectedEntry.id);
-      }
-    }, 100);
-
-    return () => clearTimeout(timeoutId);
-  }, [
-    selectedEntry,
-    fetchingOriginalEntryIds,
-    isProvisioned,
-    originalFetchStatusById,
-    fetchOriginalArticle,
-  ]);
-
-  const isUnreadView =
-    !searchMode &&
-    !isStarredView &&
-    !isAllEntriesView &&
-    selectedCategoryId === null &&
-    selectedFeedId === null;
-  const isAllEntriesViewActive =
-    !searchMode &&
-    !isStarredView &&
-    isAllEntriesView &&
-    selectedCategoryId === null &&
-    selectedFeedId === null;
+  const isUnreadMode = !searchMode && !isStarredView && statusFilter === 'unread';
+  const isAllMode = !searchMode && !isStarredView && statusFilter === 'all';
   const canLoadMore = total > entries.length;
-  // const selectedFeedTitle = searchMode
-  //   ? `Search: ${searchQuery}`
-  //   : isStarredView
-  //   ? 'Starred'
-  //   : selectedFeedId === null
-  //   ? 'All feeds'
-  //   : feedsById.get(selectedFeedId)?.title;
-
-  // Filter feeds by selected category
-  // const filteredFeeds = useMemo(() => {
-  //   if (selectedCategoryId === null) {
-  //     return feeds;
-  //   }
-  //   return feeds.filter((feed) => feed.category?.id === selectedCategoryId);
-  // }, [feeds, selectedCategoryId]);
 
   return (
     <>
@@ -1430,8 +1463,8 @@ export default function Home() {
               isOffline={isOffline}
               categories={visibleHeaderCategories}
               selectedCategoryId={selectedCategoryId}
-              isUnreadView={isUnreadView}
-              isAllEntriesView={isAllEntriesViewActive}
+              isUnreadView={isUnreadMode}
+              isAllEntriesView={isAllMode}
               isStarredView={isStarredView}
               categoryUnreadCounts={categoryUnreadCounts}
               totalUnreadCount={totalUnreadCount}
@@ -1458,7 +1491,7 @@ export default function Home() {
               isLoading={isLoading}
               onLoadMore={handleLoadMore}
               searchMode={searchMode}
-              isAllEntriesView={isAllEntriesViewActive}
+              isAllEntriesView={isAllMode}
               isStarredView={isStarredView}
             />
 
@@ -1484,6 +1517,7 @@ export default function Home() {
               hasNext={hasNext}
               isTogglingStar={isTogglingStar}
               isUpdatingStatus={isUpdatingStatus}
+              showReadingTime={readerPreferences.show_reading_time}
             />
           </div>
         )}

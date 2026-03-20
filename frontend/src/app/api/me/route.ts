@@ -3,6 +3,7 @@ import 'server-only';
 import { NextResponse } from 'next/server';
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { mfFetchUser } from '@/lib/miniflux';
+import type { ReaderPreferences } from '@/app/_lib/types';
 
 export const runtime = 'nodejs';
 
@@ -15,22 +16,24 @@ export async function GET() {
 
     const client = await clerkClient();
     const user = await client.users.getUser(userId);
-    const metadata = user.privateMetadata as { minifluxToken?: string } | undefined;
+    const metadata = user.privateMetadata as
+      | { minifluxToken?: string }
+      | undefined;
     const token = metadata?.minifluxToken;
 
     if (!token) {
       return NextResponse.json(
         { error: 'Not provisioned. Call /api/bootstrap first.' },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
-    const data = await mfFetchUser<unknown>(token, '/v1/feeds/counters');
+    const data = await mfFetchUser<ReaderPreferences>(token, '/v1/me');
     return NextResponse.json(data);
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Unknown error' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

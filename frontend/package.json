@@ -26,14 +26,12 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/three": "^0.182.0",
-    "@serwist/turbopack": "^9.2.1",
     "babel-plugin-react-compiler": "1.0.0",
     "esbuild": "^0.25.0",
     "eslint": "^9",
     "eslint-config-next": "16.1.1",
     "raw-loader": "^4.0.2",
     "sass": "^1.97.1",
-    "serwist": "^9.2.1",
     "typescript": "^5"
   }
 }

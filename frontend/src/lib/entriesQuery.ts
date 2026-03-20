@@ -1,5 +1,4 @@
-export const INITIAL_ENTRIES_LIMIT = 250;
-export const ENTRIES_PAGE_SIZE = 50;
+export const DEFAULT_ENTRIES_PAGE_SIZE = 100;
 
 type EntriesQueryOptions = {
   limit?: number;
@@ -8,23 +7,23 @@ type EntriesQueryOptions = {
   direction?: 'asc' | 'desc';
   searchQuery?: string;
   isStarredView?: boolean;
-  selectedFeedId?: number | null;
   selectedCategoryId?: number | null;
   status?: 'read' | 'unread' | 'all' | null;
+  globallyVisible?: boolean;
   changedAfter?: number;
   publishedAfter?: number;
 };
 
 export function buildEntriesUrl({
-  limit = INITIAL_ENTRIES_LIMIT,
+  limit = DEFAULT_ENTRIES_PAGE_SIZE,
   offset = 0,
   order = 'published_at',
   direction = 'desc',
   searchQuery,
   isStarredView = false,
-  selectedFeedId = null,
   selectedCategoryId = null,
   status = 'unread',
+  globallyVisible = false,
   changedAfter,
   publishedAfter,
 }: EntriesQueryOptions): string {
@@ -44,12 +43,12 @@ export function buildEntriesUrl({
     qs.set('status', status);
   }
 
-  if (!trimmedQuery && selectedFeedId) {
-    qs.set('feed_id', String(selectedFeedId));
-  }
-
   if (!trimmedQuery && selectedCategoryId !== null) {
     qs.set('category_id', String(selectedCategoryId));
+  }
+
+  if (globallyVisible) {
+    qs.set('globally_visible', 'true');
   }
 
   if (changedAfter) {

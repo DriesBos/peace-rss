@@ -25,6 +25,14 @@ function getOptionalNumberParam(url: URL, key: string): number | null {
   return Number.isFinite(n) && n > 0 ? Math.floor(n) : null;
 }
 
+function getOptionalBooleanParam(url: URL, key: string): boolean | null {
+  const value = url.searchParams.get(key);
+  if (value === null) return null;
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  return null;
+}
+
 export async function GET(request: Request) {
   try {
     // 1. Require Clerk authentication
@@ -103,6 +111,17 @@ export async function GET(request: Request) {
       categoryId = parsed;
     }
 
+    const globallyVisible = getOptionalBooleanParam(url, 'globally_visible');
+    if (
+      url.searchParams.has('globally_visible') &&
+      globallyVisible === null
+    ) {
+      return NextResponse.json(
+        { error: 'Invalid globally_visible' },
+        { status: 400 }
+      );
+    }
+
     const qs = new URLSearchParams({
       limit: String(limit),
       offset: String(offset),
@@ -127,6 +146,9 @@ export async function GET(request: Request) {
 
     if (feedId) qs.set('feed_id', String(feedId));
     if (categoryId) qs.set('category_id', String(categoryId));
+    if (globallyVisible !== null) {
+      qs.set('globally_visible', globallyVisible ? 'true' : 'false');
+    }
 
     const changedAfter = getOptionalNumberParam(url, 'changed_after');
     if (changedAfter) {

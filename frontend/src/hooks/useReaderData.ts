@@ -2,18 +2,16 @@ import { useCallback, useState } from 'react';
 import type { Category, EntriesResponse, Entry, Feed } from '@/app/_lib/types';
 import {
   buildEntriesUrl,
-  ENTRIES_PAGE_SIZE,
-  INITIAL_ENTRIES_LIMIT,
+  DEFAULT_ENTRIES_PAGE_SIZE,
 } from '@/lib/entriesQuery';
 import { fetchCategories, fetchEntries, fetchFeeds } from '@/lib/readerApi';
 
 export type ReaderView = {
   searchMode: boolean;
   searchQuery: string;
-  isAllEntriesView: boolean;
   isStarredView: boolean;
-  selectedFeedId: number | null;
   selectedCategoryId: number | null;
+  statusFilter: 'unread' | 'all';
 };
 
 type LoadEntriesOptions = {
@@ -28,9 +26,11 @@ type LoadEntriesOptions = {
 export function useReaderData({
   isProvisioned,
   view,
+  pageSize = DEFAULT_ENTRIES_PAGE_SIZE,
 }: {
   isProvisioned: boolean;
   view: ReaderView;
+  pageSize?: number;
 }) {
   const [feeds, setFeeds] = useState<Feed[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -57,7 +57,7 @@ export function useReaderData({
     async (options: LoadEntriesOptions = {}): Promise<EntriesResponse> => {
       const {
         offset = 0,
-        limit = INITIAL_ENTRIES_LIMIT,
+        limit = pageSize,
         status,
         changedAfter,
         publishedAfter: publishedAfterOverride,
@@ -66,23 +66,24 @@ export function useReaderData({
         status ??
         (view.searchMode || view.isStarredView
           ? null
-          : view.isAllEntriesView
-          ? 'all'
-          : undefined);
+          : view.statusFilter);
       const url = buildEntriesUrl({
         limit,
         offset,
         searchQuery: view.searchMode ? view.searchQuery : '',
         isStarredView: view.searchMode ? false : view.isStarredView,
-        selectedFeedId: view.searchMode ? null : view.selectedFeedId,
         selectedCategoryId: view.searchMode ? null : view.selectedCategoryId,
         status: effectiveStatus,
+        globallyVisible:
+          !view.searchMode &&
+          !view.isStarredView &&
+          view.selectedCategoryId === null,
         changedAfter,
         publishedAfter: publishedAfterOverride,
       });
       return fetchEntries(url);
     },
-    [view]
+    [pageSize, view]
   );
 
   const loadEntries = useCallback(
@@ -106,17 +107,17 @@ export function useReaderData({
     return loadEntries({
       append: false,
       offset: 0,
-      limit: INITIAL_ENTRIES_LIMIT,
+      limit: pageSize,
     });
-  }, [loadEntries]);
+  }, [loadEntries, pageSize]);
 
   const loadMore = useCallback(async (): Promise<EntriesResponse> => {
     return loadEntries({
       append: true,
       offset: entries.length,
-      limit: ENTRIES_PAGE_SIZE,
+      limit: pageSize,
     });
-  }, [entries.length, loadEntries]);
+  }, [entries.length, loadEntries, pageSize]);
 
   const refreshAll = useCallback(
     async (extraTasks?: () => Promise<unknown>[]) => {
