@@ -4,59 +4,20 @@ import { BackButton } from '@/components/BackButton/BackButton';
 
 const UPDATE_ITEMS = [
   {
-    date: '01.02.2026',
-    title: 'General Work',
+    date: '20.03.2026',
+    title: 'Caching fixes and new options',
     items: [
-      'Working with wood, dressing a kimono. Craft and repetition are habits.',
-      'This infuses daily life and gives space for pause and moments to enjoy details.',
+      'Resolved issues with caching.',
+      'Added type family "Newspaper"',
+      'Added font sizing option',
+      '"Dark" theme shows wider content on mobile, using screen border as padding',
     ],
   },
   {
     date: '01.02.2026',
-    title: 'Backend',
+    title: 'Application launch',
     items: [
-      'Working with wood, dressing a kimono. Craft and repetition are habits.',
-      'This infuses daily life and gives space for pause and moments to enjoy details.',
-    ],
-  },
-  {
-    date: '01.02.2026',
-    title: 'Menu Styling',
-    items: [
-      'Working with wood, dressing a kimono. Craft and repetition are habits.',
-      'This infuses daily life and gives space for pause and moments to enjoy details.',
-    ],
-  },
-  {
-    date: '01.02.2026',
-    title: 'General Work',
-    items: [
-      'Working with wood, dressing a kimono. Craft and repetition are habits.',
-      'This infuses daily life and gives space for pause and moments to enjoy details.',
-    ],
-  },
-  {
-    date: '01.02.2026',
-    title: 'General Work',
-    items: [
-      'Working with wood, dressing a kimono. Craft and repetition are habits.',
-      'This infuses daily life and gives space for pause and moments to enjoy details.',
-    ],
-  },
-  {
-    date: '01.02.2026',
-    title: 'General Work',
-    items: [
-      'Working with wood, dressing a kimono. Craft and repetition are habits.',
-      'This infuses daily life and gives space for pause and moments to enjoy details.',
-    ],
-  },
-  {
-    date: '01.02.2026',
-    title: 'General Work',
-    items: [
-      'Working with wood, dressing a kimono. Craft and repetition are habits.',
-      'This infuses daily life and gives space for pause and moments to enjoy details.',
+      'Application launch.',
     ],
   },
 ];
