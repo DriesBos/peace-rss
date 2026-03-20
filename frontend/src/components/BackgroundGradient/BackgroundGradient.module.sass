@@ -9,8 +9,10 @@
   pointer-events: none
   user-select: none
   background-image: url('/textures/bg-gradient.png')
-  background-position: center top
+  border-image-repeat: repeat
+  background-position: center
+  background-size: 200px
   background-repeat: repeat
-  background-size: 200px auto
+  filter: grayscale(1) contrast(220%) brightness(68%)
   opacity: calc(var(--background-gradient-active, 0) * var(--background-gradient-opacity, 1))
   transition: opacity var(--transition-theme)
