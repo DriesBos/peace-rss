@@ -18,6 +18,7 @@ type EntryItemProps = {
   url?: string;
   active?: boolean;
   marked: boolean;
+  starred?: boolean;
   onClick?: () => void;
 };
 
@@ -81,6 +82,7 @@ export function EntryItem({
   url,
   active,
   marked,
+  starred,
   onClick,
 }: EntryItemProps) {
   const preview = useMemo(() => {
@@ -104,6 +106,7 @@ export function EntryItem({
       className={styles.entryItem}
       data-active={active}
       data-marked={marked ? 'true' : 'false'}
+      data-starred={starred ? 'true' : 'false'}
       onClick={onClick}
       role="button"
       tabIndex={0}

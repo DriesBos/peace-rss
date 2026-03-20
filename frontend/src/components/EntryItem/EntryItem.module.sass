@@ -7,7 +7,9 @@
   align-items: flex-start
   cursor: pointer
   &[data-marked='true']
-    opacity: 0.5
+    opacity: 0.33
+  &[data-starred='true']
+    background-color: var(--color-bg-secondary)
   &_Body
     flex: 1
     display: flex

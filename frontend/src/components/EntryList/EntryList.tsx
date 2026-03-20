@@ -42,6 +42,8 @@ function LazyEntryItem({
     feedsById.get(entry.feed_id)?.title;
   const published = formatDate(entry.published_at);
 
+
+
   return (
     <div ref={ref} className={styles.lazyEntryWrapper}>
       {inView && (
@@ -52,6 +54,7 @@ function LazyEntryItem({
           publishedAt={published}
           active={isActive}
           marked={entry.status === 'read'}
+          starred={entry.starred}
           content={entry.content}
           url={entry.url}
           onClick={() => onEntryClick(entry.id)}
@@ -84,6 +87,17 @@ export function EntryList({
   searchMode,
   isStarredView,
 }: EntryListProps) {
+
+  console.log('entrylist', entries)
+
+  console.log('canLoadMore', canLoadMore)
+
+  console.log('isLoading', isLoading)
+
+  console.log('searchMode', searchMode)
+
+  console.log('isStarredView', isStarredView)
+
   const emptyMessage = isLoading
     ? 'loading...'
     : searchMode
