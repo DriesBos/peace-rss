@@ -43,6 +43,7 @@
     --color-text: hsla(0, 100%, 46%, 1)
     --color-text-secondary: hsla(0, 100%, 46%, 0.6)
     --color-footer-bg: hsla(0, 100%, 46%, 0.1)
+    
 
   // Spacing
   --quarter-rem: 4px
@@ -93,6 +94,7 @@
   --transition-buttons: 0.25s ease
   --transition-modal: 0.33s ease-in
   --transition-header-toggle: 0.33s ease-in
+
   // Type
   --type-body: 16px
   --type-title: 20px
@@ -104,6 +106,9 @@
   --type-summary: 14px
   --type-count: 10px
   --type-input: 16px
+  --type-family: var(--font-untitled-sans), Helvetica, sans-serif
+  --type-family-display: var(--font-untitled-sans), Helvetica, sans-serif
+  
 
   // Transitions
   --transition-general: 0.33s ease
@@ -139,3 +144,13 @@ body[data-type-size="l"]
   --type-summary: 16px
   --type-count: 11px
   --type-input: 18px
+
+body[data-font-family="newspaper"]
+  --type-family: var(--font-lyon-text), Georgia, 'Times New Roman', Times, serif
+  --type-family-display: var(--font-lyon-display), Georgia, 'Times New Roman', Times, serif
+
+body[data-spacing-wide="true"]
+  --space-sides-general: 0
+  --space-sides-stories: 8px
+
+  

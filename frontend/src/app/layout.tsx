@@ -13,6 +13,7 @@ import { FontFamilyController } from '@/components/FontFamilyController/FontFami
 import Notifications from '@/components/Notifications/Notifications';
 import { GlobalKeybindings } from '@/components/GlobalKeybindings/GlobalKeybindings';
 import { LandingPage } from '@/components/LandingPage/LandingPage';
+import { SpacingWideController } from '@/components/SpacingWideController/SpacingWideController';
 import { TypeSizeController } from '@/components/TypeSizeController/TypeSizeController';
 import { DEFAULT_FONT_FAMILY } from '@/lib/fontFamily';
 import { DEFAULT_TYPE_SIZE } from '@/lib/typeSize';
@@ -228,6 +229,7 @@ export default function RootLayout({
         <body
           className={`${untitledSans.variable} ${soulSister.variable} ${lyonDisplay.variable} ${lyonText.variable}`}
           data-font-family={DEFAULT_FONT_FAMILY}
+          data-spacing-wide="false"
           data-type-size={DEFAULT_TYPE_SIZE}
         >
           <ThemeProvider
@@ -237,6 +239,7 @@ export default function RootLayout({
             enableSystem={true}
             storageKey="peace-rss-theme"
           >
+            <SpacingWideController />
             <FontFamilyController />
             <TypeSizeController />
             <Notifications />
