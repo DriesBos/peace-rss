@@ -84,7 +84,9 @@ export function EntryList({
   searchMode,
   isStarredView,
 }: EntryListProps) {
-  const emptyMessage = searchMode
+  const emptyMessage = isLoading
+    ? 'loading...'
+    : searchMode
     ? 'No results found.'
     : isStarredView
     ? 'No starred entries.'
