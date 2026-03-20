@@ -24,14 +24,16 @@
     display: flex
     flex-direction: column
     gap: var(--space-titlemeta-gap)
-    padding: 0 var(--space-sides-general)
+    padding: 0 var(--space-sides-general-wide)
+    border: 1px solid blue
     // position: sticky
     // top: calc(32px + 16px)
   &_Meta
     display: flex
     color: var(--color-text-secondary)
     gap: 8px
-    padding-left: 0 var(--space-sides-general)
+    padding-left: 0 var(--space-sides-general-wide)
+    border: 1px solid blue
     @include font-meta
     p, i
       @include font-meta
@@ -77,7 +79,8 @@
     max-width: 100%
     position: relative
     margin-bottom: 1rem
-    padding: 0 var(--space-sides-general)
+    padding: 0 var(--space-sides-general-wide)
+    border: 1px solid blue
     img
       position: relative !important
       width: 100%
@@ -89,16 +92,18 @@
     align-items: center
     justify-content: center
     gap: 1rem
-    padding: 0 var(--space-sides-general)
+    padding: 0 var(--space-sides-general-wide)
     color: var(--color-text-secondary)
+    border: 1px solid blue
   &_Loading
     @include font-body
     display: flex
     align-items: center
     justify-content: center
     min-height: 9rem
-    padding: 0 var(--space-sides-general)
+    padding: 0 var(--space-sides-general-wide)
     color: var(--color-text-secondary)
+    border: 1px solid blue
 
 .youtube
   width: 100%

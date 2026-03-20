@@ -56,7 +56,9 @@
   --eight-rem: 128px
   // Spacing Content
   --space-sides-general: 8px
+  --space-sides-general-wide: 8px
   --space-sides-stories: 16px
+  --space-sides-stories-wide: 16px
   --space-content-top: 128px
   --space-content-bottom: 64px
   //// Gap between content container items
@@ -121,6 +123,14 @@
   --index-modal: 600
   --index-menu: 700
 
+body[data-font-family='clean']
+  --type-family: var(--font-untitled-sans), Helvetica, sans-serif
+  --type-family-display: var(--font-untitled-sans), Helvetica, sans-serif
+  
+body[data-font-family="newspaper"]
+  --type-family: var(--font-lyon-text), Georgia, 'Times New Roman', Times, serif
+  --type-family-display: var(--font-lyon-display), Georgia, 'Times New Roman', Times, serif
+
 body[data-type-size="s"]
   --type-body: 14px
   --type-title: 18px
@@ -150,7 +160,7 @@ body[data-font-family="newspaper"]
   --type-family-display: var(--font-lyon-display), Georgia, 'Times New Roman', Times, serif
 
 body[data-spacing-wide="true"]
-  --space-sides-general: 0
-  --space-sides-stories: 8px
+  --space-sides-general-wide: 0
+  --space-sides-stories-wide: 8px
 
   

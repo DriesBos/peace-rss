@@ -25,9 +25,11 @@
     border-right: var(--border-containers)
   &_Menu
     padding: 0 var(--space-sides-general)
+    padding-left: var(--space-sides-general-wide)
     padding-right: var(--space-buttons-gap)
     width: auto
     transition: width var(--transition-header-toggle)
+    border: 1px solid blue
 
   &_Search
     display: flex
@@ -68,10 +70,12 @@
     @include font-nav
     color: var(--color-text-secondary)
     padding: 0 var(--space-sides-general)
+    border: 1px solid blue
   &_Categories
     opacity: 1
     padding: 0 var(--space-sides-general)
     transition: opacity 0.165s ease-in
+    border: 1px solid blue
   &[data-categories-open="true"]
     .header
       &_Categories
@@ -113,6 +117,7 @@
     flex: 1 1 auto
     padding: 0 var(--space-sides-general)
     padding-right: calc(var(--space-sides-general) * 2)
+    
     &::-webkit-scrollbar
       display: none
 
