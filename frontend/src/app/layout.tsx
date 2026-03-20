@@ -79,6 +79,108 @@ const soulSister = localFont({
   variable: '--font-soul-sister',
 });
 
+const lyonDisplay = localFont({
+  src: [
+    {
+      path: '../fonts/lyon/display/LyonDisplay-Light-Trial.woff2',
+      weight: '300',
+      style: 'normal',
+    },
+    {
+      path: '../fonts/lyon/display/LyonDisplay-LightItalic-Trial.woff2',
+      weight: '300',
+      style: 'italic',
+    },
+    {
+      path: '../fonts/lyon/display/LyonDisplay-Regular-Trial.woff2',
+      weight: '400',
+      style: 'normal',
+    },
+    {
+      path: '../fonts/lyon/display/LyonDisplay-RegularItalic-Trial.woff2',
+      weight: '400',
+      style: 'italic',
+    },
+    {
+      path: '../fonts/lyon/display/LyonDisplay-Medium-Trial.woff2',
+      weight: '500',
+      style: 'normal',
+    },
+    {
+      path: '../fonts/lyon/display/LyonDisplay-MediumItalic-Trial.woff2',
+      weight: '500',
+      style: 'italic',
+    },
+    {
+      path: '../fonts/lyon/display/LyonDisplay-Bold-Trial.woff2',
+      weight: '700',
+      style: 'normal',
+    },
+    {
+      path: '../fonts/lyon/display/LyonDisplay-BoldItalic-Trial.woff2',
+      weight: '700',
+      style: 'italic',
+    },
+    {
+      path: '../fonts/lyon/display/LyonDisplay-Black-Trial.woff2',
+      weight: '900',
+      style: 'normal',
+    },
+    {
+      path: '../fonts/lyon/display/LyonDisplay-BlackItalic-Trial.woff2',
+      weight: '900',
+      style: 'italic',
+    },
+  ],
+  variable: '--font-lyon-display',
+});
+
+const lyonText = localFont({
+  src: [
+    {
+      path: '../fonts/lyon/text/Lyon Text Regular Trial.woff2',
+      weight: '400',
+      style: 'normal',
+    },
+    {
+      path: '../fonts/lyon/text/Lyon Text Regular Italic Trial.woff2',
+      weight: '400',
+      style: 'italic',
+    },
+    {
+      path: '../fonts/lyon/text/Lyon Semibold Trial.woff2',
+      weight: '600',
+      style: 'normal',
+    },
+    {
+      path: '../fonts/lyon/text/Lyon Semibold Italic Trial.woff2',
+      weight: '600',
+      style: 'italic',
+    },
+    {
+      path: '../fonts/lyon/text/Lyon Text Bold Trial.woff2',
+      weight: '700',
+      style: 'normal',
+    },
+    {
+      path: '../fonts/lyon/text/Lyon Text Bold Italic Trial.woff2',
+      weight: '700',
+      style: 'italic',
+    },
+    {
+      path: '../fonts/lyon/text/Lyon Text Black Trial.woff2',
+      weight: '900',
+      style: 'normal',
+    },
+    {
+      path: '../fonts/lyon/text/Lyon Text Black Italic Trial.woff2',
+      weight: '900',
+      style: 'italic',
+    },
+  ],
+  variable: '--font-lyon-text',
+});
+
 export const metadata: Metadata = {
   title: 'Komorebi Reader',
   description: 'Enjoy your reading',
@@ -124,7 +226,7 @@ export default function RootLayout({
     <ClerkProvider signInFallbackRedirectUrl="/">
       <html lang="en" suppressHydrationWarning>
         <body
-          className={`${untitledSans.variable} ${soulSister.variable}`}
+          className={`${untitledSans.variable} ${soulSister.variable} ${lyonDisplay.variable} ${lyonText.variable}`}
           data-font-family={DEFAULT_FONT_FAMILY}
           data-type-size={DEFAULT_TYPE_SIZE}
         >
