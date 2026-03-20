@@ -43,6 +43,12 @@ import {
   TYPE_SIZE_LABELS,
   type TypeSize,
 } from '@/lib/typeSize';
+import {
+  isThemeOption,
+  THEME_LABELS,
+  THEME_OPTIONS,
+  type ThemeOption,
+} from '@/lib/theme';
 import { IconArrowShortRight } from '../icons/IconArrowShortRight';
 
 type MenuView = 'feeds' | 'settings' | 'other';
@@ -59,14 +65,6 @@ export type MenuModalProps = {
   onToggleEntryStar: (entryId: number) => Promise<void>;
 };
 
-const THEME_LABELS: Record<string, string> = {
-  light: 'Light',
-  dark: 'Dark',
-  softlight: 'Soft Light',
-  softdark: 'Soft Dark',
-  green: 'Green',
-  nightmode: 'Nightmode',
-};
 const THEME_TOAST_DEBOUNCE_MS = 350;
 
 function buildInitialCollapsedCategories(categories: Category[]) {
@@ -92,7 +90,6 @@ export function MenuModal({
 }: MenuModalProps) {
   const [activeView, setActiveView] = useState<MenuView>('feeds');
   const [nowMs, setNowMs] = useState(() => Date.now());
-  const [localThemeChoice, setLocalThemeChoice] = useState<string | null>(null);
   const [fontFamily, setFontFamilyChoice] = useState<FontFamilyPreference>(
     DEFAULT_FONT_FAMILY,
   );
@@ -100,8 +97,7 @@ export function MenuModal({
   const { theme, setTheme } = useTheme();
 
   const displayTheme =
-    localThemeChoice ??
-    (typeof theme === 'string' && theme in THEME_LABELS ? theme : '');
+    typeof theme === 'string' && isThemeOption(theme) ? theme : '';
   const hasUserAdjustedCollapse = useRef(false);
   const categoriesListRef = useRef<HTMLDivElement | null>(null);
   const [feedsMaxHeight, setFeedsMaxHeight] = useState(0);
@@ -136,7 +132,6 @@ export function MenuModal({
   const handleClose = useCallback(() => {
     hasUserAdjustedCollapse.current = false;
     setActiveView('feeds');
-    setLocalThemeChoice(null);
     setSelectedOpmlFile(null);
     if (opmlFileInputRef.current) {
       opmlFileInputRef.current.value = '';
@@ -292,7 +287,7 @@ export function MenuModal({
   }, []);
 
   const handleThemeChange = useCallback(
-    (nextTheme: string) => {
+    (nextTheme: ThemeOption) => {
       if (nextTheme === theme) return;
       setTheme(nextTheme);
       const label = THEME_LABELS[nextTheme] ?? nextTheme;
@@ -303,18 +298,17 @@ export function MenuModal({
 
   const themeOptions = useMemo(
     () =>
-      Object.entries(THEME_LABELS).map(([value, label]) => ({
+      THEME_OPTIONS.map((value) => ({
         value,
-        label: `${label} theme`,
+        label: `${THEME_LABELS[value]} theme`,
       })),
     [],
   );
 
-  const handleSelectTheme = useCallback(() => {
-    if (!displayTheme) return;
-    handleThemeChange(displayTheme);
-    setLocalThemeChoice(null);
-  }, [handleThemeChange, displayTheme]);
+  const handleThemeChoiceChange = useCallback((nextTheme: string) => {
+    if (!isThemeOption(nextTheme)) return;
+    handleThemeChange(nextTheme);
+  }, [handleThemeChange]);
 
   const typeSizeOptions = useMemo(
     () =>
@@ -650,24 +644,13 @@ export function MenuModal({
                 <LabeledSelect
                   id="theme-select"
                   value={displayTheme}
-                  onChange={setLocalThemeChoice}
+                  onChange={handleThemeChoiceChange}
                   options={themeOptions}
                   placeholder="Select theme"
+                  label="Theme"
                   disabled={isLoading}
                 />
               </div>
-              <Button
-                type="button"
-                variant="nav"
-                onClick={handleSelectTheme}
-                disabled={
-                  isLoading ||
-                  !displayTheme ||
-                  (typeof theme === 'string' && displayTheme === theme)
-                }
-              >
-                <span>Select</span>
-              </Button>
             </div>
 
             <div className={styles.viewLook_typeSizeRow}>

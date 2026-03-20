@@ -9,6 +9,7 @@ import '@/styles/vars.sass';
 import '@/styles/reset.css';
 import '@/styles/globals.sass';
 import { ThemeProvider } from '@/components/ThemeProvider';
+import { BackgroundGradient } from '@/components/BackgroundGradient/BackgroundGradient';
 import { FontFamilyController } from '@/components/FontFamilyController/FontFamilyController';
 import Notifications from '@/components/Notifications/Notifications';
 import { GlobalKeybindings } from '@/components/GlobalKeybindings/GlobalKeybindings';
@@ -16,6 +17,7 @@ import { LandingPage } from '@/components/LandingPage/LandingPage';
 import { SpacingWideController } from '@/components/SpacingWideController/SpacingWideController';
 import { TypeSizeController } from '@/components/TypeSizeController/TypeSizeController';
 import { DEFAULT_FONT_FAMILY } from '@/lib/fontFamily';
+import { DEFAULT_THEME, THEME_OPTIONS } from '@/lib/theme';
 import { DEFAULT_TYPE_SIZE } from '@/lib/typeSize';
 
 const untitledSans = localFont({
@@ -234,8 +236,8 @@ export default function RootLayout({
         >
           <ThemeProvider
             attribute="data-theme"
-            defaultTheme="light"
-            themes={['light', 'dark', 'softlight', 'softdark', 'green', 'nightmode']}
+            defaultTheme={DEFAULT_THEME}
+            themes={THEME_OPTIONS.filter((theme) => theme !== 'system')}
             enableSystem={true}
             storageKey="peace-rss-theme"
           >
@@ -244,6 +246,7 @@ export default function RootLayout({
             <TypeSizeController />
             <Notifications />
             <main>
+              <BackgroundGradient opacity={0.18} />
               <SignedOut>
                 <LandingPage />
               </SignedOut>
