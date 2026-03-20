@@ -117,6 +117,15 @@ export function MenuModal({
     setCollapsedCategories(buildInitialCollapsedCategories(categories));
   }, [categories]);
 
+  const resetMenuState = useCallback(() => {
+    setActiveView('feeds');
+    setSelectedOpmlFile(null);
+    if (opmlFileInputRef.current) {
+      opmlFileInputRef.current.value = '';
+    }
+    resetCollapsedCategories();
+  }, [resetCollapsedCategories]);
+
   const toggleCategoryCollapse = useCallback((categoryId: number | string) => {
     hasUserAdjustedCollapse.current = true;
     setCollapsedCategories((prev) => {
@@ -131,15 +140,12 @@ export function MenuModal({
   }, []);
 
   const handleClose = useCallback(() => {
-    hasUserAdjustedCollapse.current = false;
-    setActiveView('feeds');
-    setSelectedOpmlFile(null);
-    if (opmlFileInputRef.current) {
-      opmlFileInputRef.current.value = '';
-    }
-    resetCollapsedCategories();
     onClose();
-  }, [onClose, resetCollapsedCategories]);
+  }, [onClose]);
+
+  const handleAfterClose = useCallback(() => {
+    resetMenuState();
+  }, [resetMenuState]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -408,7 +414,12 @@ export function MenuModal({
   }, [opmlImportLoading, selectedOpmlFile]);
 
   return (
-    <ModalContainer isOpen={isOpen} onClose={handleClose} ariaLabel="Menu">
+    <ModalContainer
+      isOpen={isOpen}
+      onClose={handleClose}
+      onAfterClose={handleAfterClose}
+      ariaLabel="Menu"
+    >
       <div className={styles.modalMenu}>
         <div className={styles.modalMenu_Nav}>
           <div className={styles.modalMenu_Nav_Buttons}>

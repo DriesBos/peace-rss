@@ -25,9 +25,8 @@
   &[data-categories-open="true"] &_Left
     border-right: var(--border-containers)
   &_Menu
-    padding: 0 var(--space-sides-general)
     padding-left: var(--space-sides-general-wide)
-    padding-right: var(--space-buttons-gap)
+    padding-right: var(--space-icons-gap)
     width: auto
     transition: width var(--transition-header-toggle)
     
@@ -36,7 +35,7 @@
     display: flex
     flex-wrap: nowrap
     align-items: center
-    padding: 0 6px
+    padding: 0 8px
     width: auto
     transition: all var(--transition-header-toggle)
     .searchInput
@@ -62,7 +61,7 @@
     &[data-open="true"]
       height: 20px
       .searchInput
-        margin-left: var(--space-buttons-gap)
+        margin-left: var(--space-icons-gap)
         width: auto
         min-width: 150px
         max-width: 35vw
@@ -70,11 +69,11 @@
   &_Offline
     @include font-nav
     color: var(--color-text-secondary)
-    padding: 0 var(--space-sides-general)
+    padding: 0 var(--space-icons-gap)
     
   &_Categories
     opacity: 1
-    padding: 0 var(--space-sides-general)
+    padding: 0 var(--space-icons-gap)
     transition: opacity 0.165s ease-in
     
   &[data-categories-open="true"]
@@ -93,7 +92,7 @@
     flex-direction: row
     align-items: center
     justify-content: flex-start
-    gap: 12px
+    gap: calc(var(--space-icons-gap) * 2)
     overflow-x: auto
     scrollbar-width: none
     -ms-overflow-style: none
@@ -112,12 +111,12 @@
     flex-wrap: nowrap
     align-items: center
     justify-content: flex-start
-    gap: 12px
+    gap: calc(var(--space-icons-gap) * 2)
     scrollbar-width: none
     -ms-overflow-style: none
     flex: 1 1 auto
-    padding: 0 var(--space-sides-general)
-    padding-right: calc(var(--space-sides-general) * 2)
+    padding: 0 var(--space-icons-gap)
+    padding-right: calc(var(--space-icons-gap) * 2)
     
     &::-webkit-scrollbar
       display: none

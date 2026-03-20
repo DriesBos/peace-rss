@@ -31,7 +31,8 @@
   --space-top-modal: 48px
   --space-bottom-modal: 48px
   // Spacing btns
-  --space-buttons-gap: 6px
+  --space-buttons-gap: 8px
+  --space-icons-gap: 8px
   @media (min-width: $res-tabled)
     --space-sides-general: 16px
     --space-sides-stories: 32px
@@ -42,7 +43,7 @@
   --border-radius-buttons: 4px
   --border-buttons: 1px solid var(--color-text)
   --border-buttons-inactive: 1px solid var(--color-text-secondary)
-  --border-containers: 1px solid var(--color-text-secondary)
+  --border-containers: 1px solid var(--color-text)
 
   // Buttons
   --disabled-opacity: 0.33
@@ -121,11 +122,15 @@ body
     --type-summary: 16px
     --type-count: 11px
     --type-input: 18px
+    --icon-size: 18px
+    --icon-size-small: 14px
+    --icon-size-wide: 36px
 
   // Spacing
   &[data-spacing-wide="true"]
     @media (orientation: portrait)
       --space-sides-general-wide: 2px
       --space-sides-stories-wide: 8px
+      --space-sides-modal: 2px
 
   

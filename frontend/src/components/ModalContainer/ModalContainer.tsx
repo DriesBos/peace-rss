@@ -1,7 +1,6 @@
 'use client';
 
 import {
-  type TransitionEvent,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -9,12 +8,44 @@ import {
   useState,
 } from 'react';
 import { createPortal } from 'react-dom';
+import { gsap } from 'gsap';
+import { useGSAP } from '@gsap/react';
 import styles from './ModalContainer.module.sass';
 import { useDisableScroll } from '@/hooks/useDisableScroll';
+
+gsap.registerPlugin(useGSAP);
+
+const OPEN_DURATION_SECONDS = 0.42;
+const CLOSE_DURATION_SECONDS = 0.32;
+const OVERLAY_DURATION_SECONDS = 0.2;
+const HEIGHT_DURATION_SECONDS = 0.32;
+
+function getDialogTargetHeight(
+  dialog: HTMLDivElement,
+  scroller: HTMLDivElement,
+  content: HTMLDivElement,
+) {
+  const dialogStyles = window.getComputedStyle(dialog);
+  const scrollerStyles = window.getComputedStyle(scroller);
+  const borderTop = Number.parseFloat(dialogStyles.borderTopWidth) || 0;
+  const borderBottom = Number.parseFloat(dialogStyles.borderBottomWidth) || 0;
+  const paddingTop = Number.parseFloat(scrollerStyles.paddingTop) || 0;
+  const paddingBottom = Number.parseFloat(scrollerStyles.paddingBottom) || 0;
+  const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+  const maxHeight = viewportHeight * 0.9;
+
+  return Math.min(
+    Math.ceil(
+      content.offsetHeight + paddingTop + paddingBottom + borderTop + borderBottom,
+    ),
+    Math.floor(maxHeight),
+  );
+}
 
 type ModalContainerProps = {
   isOpen: boolean;
   onClose: () => void;
+  onAfterClose?: () => void;
   ariaLabel?: string;
   children: React.ReactNode;
   containerClassName?: string;
@@ -23,21 +54,28 @@ type ModalContainerProps = {
 export function ModalContainer({
   isOpen,
   onClose,
+  onAfterClose,
   ariaLabel,
   children,
   containerClassName,
 }: ModalContainerProps) {
   // Disable body scroll when modal is open
-  useDisableScroll(isOpen);
+  const [isPresent, setIsPresent] = useState(isOpen);
+  useDisableScroll(isOpen || isPresent);
 
   const [portalTarget, setPortalTarget] = useState<Element | null>(null);
-  const [isPresent, setIsPresent] = useState(isOpen);
-  const [isA11yHidden, setIsA11yHidden] = useState(!isOpen);
 
   const overlayRef = useRef<HTMLDivElement | null>(null);
   const dialogRef = useRef<HTMLDivElement | null>(null);
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const contentRef = useRef<HTMLDivElement | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const previouslyFocusedElementRef = useRef<HTMLElement | null>(null);
+  const hasCapturedFocusRef = useRef(false);
+  const hasPrimedEntranceRef = useRef(false);
+  const isOpeningRef = useRef(false);
+  const isClosingRef = useRef(false);
+  const { contextSafe } = useGSAP({ scope: overlayRef });
 
   useEffect(() => {
     if (typeof document === 'undefined') return;
@@ -93,17 +131,30 @@ export function ModalContainer({
     onClose();
   }, [onClose, restoreFocus]);
 
+  const shouldRender = isOpen || isPresent;
+
   useLayoutEffect(() => {
     if (typeof document === 'undefined') return;
 
     if (isOpen) {
-      setIsPresent(true);
-      setIsA11yHidden(false);
+      if (!isPresent) {
+        const schedule =
+          typeof queueMicrotask === 'function'
+            ? queueMicrotask
+            : (callback: () => void) => Promise.resolve().then(callback);
 
-      previouslyFocusedElementRef.current =
-        document.activeElement instanceof HTMLElement
-          ? document.activeElement
-          : null;
+        schedule(() => {
+          setIsPresent(true);
+        });
+      }
+
+      if (!hasCapturedFocusRef.current) {
+        previouslyFocusedElementRef.current =
+          document.activeElement instanceof HTMLElement
+            ? document.activeElement
+            : null;
+        hasCapturedFocusRef.current = true;
+      }
 
       const closeButton = closeButtonRef.current;
       if (closeButton) {
@@ -116,34 +167,170 @@ export function ModalContainer({
     if (!isPresent) return;
 
     restoreFocus();
-    setIsA11yHidden(true);
+    hasCapturedFocusRef.current = false;
     previouslyFocusedElementRef.current = null;
   }, [isOpen, isPresent, restoreFocus]);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (isOpen) return;
-    if (!isPresent) return;
+  const syncDialogHeight = useCallback(
+    ({ immediate = false }: { immediate?: boolean } = {}) => {
+      if (typeof window === 'undefined') return 0;
 
-    const timeout = window.setTimeout(() => {
-      setIsPresent(false);
-    }, 400);
+      const dialog = dialogRef.current;
+      const scroller = scrollerRef.current;
+      const content = contentRef.current;
+      if (!dialog || !scroller || !content) return 0;
 
-    return () => window.clearTimeout(timeout);
-  }, [isOpen, isPresent]);
+      const nextHeight = getDialogTargetHeight(dialog, scroller, content);
+      gsap.killTweensOf(dialog, 'height');
 
-  const ariaHidden = isOpen ? false : isA11yHidden;
-  const shouldRender = isOpen || isPresent;
+      if (
+        immediate ||
+        !isOpen ||
+        isOpeningRef.current ||
+        isClosingRef.current
+      ) {
+        gsap.set(dialog, { height: nextHeight });
+        return nextHeight;
+      }
 
-  const handleDialogTransitionEnd = useCallback(
-    (event: TransitionEvent<HTMLDivElement>) => {
-      if (event.target !== dialogRef.current) return;
-      if (event.propertyName !== 'transform') return;
-      if (isOpen) return;
-      setIsPresent(false);
+      gsap.to(dialog, {
+        duration: HEIGHT_DURATION_SECONDS,
+        ease: 'power2.out',
+        height: nextHeight,
+        overwrite: 'auto',
+      });
+
+      return nextHeight;
     },
     [isOpen],
   );
+
+  useLayoutEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!shouldRender) return;
+
+    const syncDialogHeightSafely = contextSafe(syncDialogHeight);
+    syncDialogHeightSafely({ immediate: true });
+
+    const content = contentRef.current;
+    if (!content) return;
+
+    let frameId = 0;
+    const scheduleHeightSync = () => {
+      if (frameId !== 0) {
+        window.cancelAnimationFrame(frameId);
+      }
+
+      frameId = window.requestAnimationFrame(() => {
+        frameId = 0;
+        syncDialogHeightSafely();
+      });
+    };
+
+    const resizeObserver =
+      typeof ResizeObserver !== 'undefined'
+        ? new ResizeObserver(() => {
+            scheduleHeightSync();
+          })
+        : null;
+
+    resizeObserver?.observe(content);
+
+    const handleViewportResize = () => {
+      syncDialogHeightSafely();
+    };
+
+    window.addEventListener('resize', handleViewportResize);
+    window.addEventListener('orientationchange', handleViewportResize);
+    window.visualViewport?.addEventListener('resize', handleViewportResize);
+
+    return () => {
+      if (frameId !== 0) {
+        window.cancelAnimationFrame(frameId);
+      }
+      resizeObserver?.disconnect();
+      window.removeEventListener('resize', handleViewportResize);
+      window.removeEventListener('orientationchange', handleViewportResize);
+      window.visualViewport?.removeEventListener('resize', handleViewportResize);
+    };
+  }, [contextSafe, shouldRender, syncDialogHeight]);
+
+  useGSAP(
+    () => {
+      if (!shouldRender) return;
+
+      const overlay = overlayRef.current;
+      const dialog = dialogRef.current;
+      if (!overlay || !dialog) return;
+
+      gsap.killTweensOf(overlay);
+      gsap.killTweensOf(dialog, 'yPercent');
+
+      if (isOpen) {
+        isClosingRef.current = false;
+        isOpeningRef.current = true;
+
+        if (!hasPrimedEntranceRef.current) {
+          gsap.set(overlay, { autoAlpha: 0 });
+          gsap.set(dialog, {
+            force3D: true,
+            yPercent: 100,
+          });
+          hasPrimedEntranceRef.current = true;
+        }
+
+        syncDialogHeight({ immediate: true });
+
+        gsap.to(overlay, {
+          autoAlpha: 1,
+          duration: OVERLAY_DURATION_SECONDS,
+          ease: 'power2.out',
+          overwrite: 'auto',
+        });
+        gsap.to(dialog, {
+          duration: OPEN_DURATION_SECONDS,
+          ease: 'power3.out',
+          force3D: true,
+          overwrite: 'auto',
+          yPercent: 0,
+          onComplete: () => {
+            isOpeningRef.current = false;
+            syncDialogHeight({ immediate: true });
+          },
+        });
+        return;
+      }
+
+      isOpeningRef.current = false;
+      isClosingRef.current = true;
+
+      gsap.to(overlay, {
+        autoAlpha: 0,
+        duration: OVERLAY_DURATION_SECONDS,
+        ease: 'power2.inOut',
+        overwrite: 'auto',
+      });
+      gsap.to(dialog, {
+        duration: CLOSE_DURATION_SECONDS,
+        ease: 'power3.in',
+        force3D: true,
+        overwrite: 'auto',
+        yPercent: 100,
+        onComplete: () => {
+          isClosingRef.current = false;
+          hasPrimedEntranceRef.current = false;
+          setIsPresent(false);
+          onAfterClose?.();
+        },
+      });
+    },
+    {
+      scope: overlayRef,
+      dependencies: [isOpen, onAfterClose, shouldRender, syncDialogHeight],
+    },
+  );
+
+  const ariaHidden = !isOpen;
 
   const modal = (
     <div
@@ -155,7 +342,7 @@ export function ModalContainer({
         requestClose();
       }}
       aria-hidden={ariaHidden}
-      data-active={isOpen}
+      data-present={shouldRender ? 'true' : 'false'}
     >
       <div
         className={[
@@ -169,8 +356,6 @@ export function ModalContainer({
         aria-modal="true"
         aria-label={ariaLabel}
         onClick={(event) => event.stopPropagation()}
-        onTransitionEnd={handleDialogTransitionEnd}
-        data-active={isOpen}
       >
         <button
           type="button"
@@ -181,7 +366,11 @@ export function ModalContainer({
         >
           <div className={styles.modalOverlay_ClosingBar_Button} />
         </button>
-        {children}
+        <div className={styles.modalOverlay_Scroller} ref={scrollerRef}>
+          <div className={styles.modalOverlay_Body} ref={contentRef}>
+            {children}
+          </div>
+        </div>
       </div>
     </div>
   );
