@@ -64,6 +64,7 @@ export default function Home() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
     null,
   );
+  const [isAllEntriesView, setIsAllEntriesView] = useState(false);
   const [isStarredView, setIsStarredView] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchMode, setSearchMode] = useState(false);
@@ -96,24 +97,8 @@ export default function Home() {
   const [activeModal, setActiveModal] = useState<ActiveModal>('none');
   const [isOffline, setIsOffline] = useState(false);
   const hasInitialLoadRef = useRef(false);
-  const lastSyncRef = useRef<number | null>(null);
   const autoMarkTimeoutRef = useRef<number | null>(null);
   const autoMarkInitializedEntryIdRef = useRef<number | null>(null);
-
-  const setLastSync = useCallback((timestamp: number | null) => {
-    lastSyncRef.current = timestamp;
-    const win = getBrowserWindow();
-    if (!win) return;
-    try {
-      if (timestamp === null) {
-        win.localStorage.removeItem('peace-rss-last-sync');
-      } else {
-        win.localStorage.setItem('peace-rss-last-sync', String(timestamp));
-      }
-    } catch {
-      // Ignore storage errors.
-    }
-  }, []);
 
   // Edit modal form state
   const [editType, setEditType] = useState<'feed' | 'category' | null>(null);
@@ -130,11 +115,19 @@ export default function Home() {
     () => ({
       searchMode,
       searchQuery,
+      isAllEntriesView,
       isStarredView,
       selectedFeedId,
       selectedCategoryId,
     }),
-    [searchMode, searchQuery, isStarredView, selectedFeedId, selectedCategoryId],
+    [
+      isAllEntriesView,
+      searchMode,
+      searchQuery,
+      isStarredView,
+      selectedFeedId,
+      selectedCategoryId,
+    ],
   );
 
   const {
@@ -148,10 +141,8 @@ export default function Home() {
     setEntries,
     setIsLoading,
     setError,
-    setTotal,
     loadFeeds,
     loadCategories,
-    fetchEntriesData,
     loadEntries,
     resetEntries,
     refreshAll,
@@ -169,43 +160,6 @@ export default function Home() {
     }
     return ids;
   }, [originalFetchStatusById]);
-
-  const isEntryUnread = useCallback((entry: Entry) => {
-    return (entry.status ?? 'unread') === 'unread';
-  }, []);
-
-  const countLoadedUnreadEntries = useCallback(
-    (list: Entry[]) => {
-      return list.reduce(
-        (sum, entry) => sum + (isEntryUnread(entry) ? 1 : 0),
-        0,
-      );
-    },
-    [isEntryUnread],
-  );
-
-  const mergePreservingSessionReadEntries = useCallback(
-    (nextUnreadEntries: Entry[], sessionReadEntries: Entry[]) => {
-      if (sessionReadEntries.length === 0) return nextUnreadEntries;
-
-      const mergedById = new Map<number, Entry>();
-      for (const entry of nextUnreadEntries) mergedById.set(entry.id, entry);
-
-      for (const entry of sessionReadEntries) {
-        if ((entry.status ?? 'unread') !== 'read') continue;
-        if (!mergedById.has(entry.id)) mergedById.set(entry.id, entry);
-      }
-
-      const merged = Array.from(mergedById.values());
-      merged.sort((a, b) => {
-        const aTime = a.published_at ? new Date(a.published_at).getTime() : 0;
-        const bTime = b.published_at ? new Date(b.published_at).getTime() : 0;
-        return bTime - aTime;
-      });
-      return merged;
-    },
-    [],
-  );
 
   const preserveOriginalContent = useCallback(
     (
@@ -234,7 +188,6 @@ export default function Home() {
     categoryUnreadCounts,
     refreshUnreadCounters,
     refreshStarredCount,
-    getTotalForView,
   } = useUnreadCounters({ isProvisioned, feeds });
 
   const openMenuModal = useCallback(() => {
@@ -393,39 +346,6 @@ export default function Home() {
     };
   }, [entries, selectedEntryId]);
 
-  const mergeEntryDeltas = useCallback(
-    (current: Entry[], delta: Entry[], fetchedIds: Set<number>) => {
-      const map = new Map<number, Entry>();
-      for (const entry of current) {
-        map.set(entry.id, entry);
-      }
-      for (const entry of delta) {
-        const existing = map.get(entry.id);
-        if (!existing) {
-          // Don't introduce read entries into the list; we only keep reads that
-          // originated in this session (i.e. already present in `current`).
-          if ((entry.status ?? 'unread') === 'unread') {
-            map.set(entry.id, entry);
-          }
-          continue;
-        }
-        const merged = { ...existing, ...entry };
-        if (fetchedIds.has(entry.id) && existing.content) {
-          merged.content = existing.content;
-        }
-        map.set(entry.id, merged);
-      }
-      const merged = Array.from(map.values());
-      merged.sort((a, b) => {
-        const aTime = a.published_at ? new Date(a.published_at).getTime() : 0;
-        const bTime = b.published_at ? new Date(b.published_at).getTime() : 0;
-        return bTime - aTime;
-      });
-      return merged;
-    },
-    [],
-  );
-
   // Load starred entries for the menu
   const loadStarredEntries = useCallback(async () => {
     if (!isProvisioned) return;
@@ -444,51 +364,7 @@ export default function Home() {
   }, []);
 
   const refreshAllData = useCallback(async (): Promise<boolean> => {
-    const now = Math.floor(Date.now() / 1000);
     const previousEntriesSnapshot = entriesRef.current;
-    const sessionReadSnapshot = previousEntriesSnapshot.filter(
-      (entry) => (entry.status ?? 'unread') === 'read',
-    );
-    const canIncrementallyRefresh =
-      !searchMode &&
-      !isStarredView &&
-      selectedFeedId === null &&
-      selectedCategoryId === null;
-
-    if (canIncrementallyRefresh && lastSyncRef.current) {
-      try {
-        await Promise.all([loadFeeds(), loadCategories()]);
-        const delta = await fetchEntriesData({
-          offset: 0,
-          limit: INITIAL_ENTRIES_LIMIT,
-          status: 'all',
-          changedAfter: lastSyncRef.current,
-        });
-
-        if (delta.entries.length > 0) {
-          setEntries((prev) =>
-            mergeEntryDeltas(prev, delta.entries, fetchedOriginalSuccessIds),
-          );
-        }
-
-        await Promise.all([
-          refreshUnreadCounters(),
-          refreshStarredCount(),
-          loadStarredEntries(),
-        ]);
-
-        const viewTotal = getTotalForView(view);
-        if (viewTotal !== null) {
-          setTotal(viewTotal);
-        }
-
-        setLastSync(now);
-        return true;
-      } catch (e) {
-        console.error('Incremental refresh failed, falling back', e);
-      }
-    }
-
     const data = await refreshAll(() => [
       refreshUnreadCounters(),
       refreshStarredCount(),
@@ -500,37 +376,18 @@ export default function Home() {
         previousEntriesSnapshot,
         fetchedOriginalSuccessIds,
       );
-      const merged = mergePreservingSessionReadEntries(
-        withContent,
-        sessionReadSnapshot,
-      );
-      setEntries(merged);
-      syncSelection(merged);
+      setEntries(withContent);
+      syncSelection(withContent);
     }
-    if (!data) return false;
-    setLastSync(now);
-    return true;
+    return data !== null;
   }, [
-    fetchEntriesData,
-    getTotalForView,
-    isStarredView,
-    loadCategories,
-    loadFeeds,
     loadStarredEntries,
-    mergeEntryDeltas,
-    mergePreservingSessionReadEntries,
     preserveOriginalContent,
     refreshAll,
     refreshStarredCount,
     refreshUnreadCounters,
-    searchMode,
-    selectedCategoryId,
-    selectedFeedId,
     setEntries,
-    setLastSync,
-    setTotal,
     syncSelection,
-    view,
     fetchedOriginalSuccessIds,
   ]);
 
@@ -546,36 +403,20 @@ export default function Home() {
 
   const reloadCurrentEntries = useCallback(async () => {
     const current = entriesRef.current;
-    const sessionReadSnapshot = current.filter(
-      (entry) => (entry.status ?? 'unread') === 'read',
-    );
-    const limit = Math.max(
-      searchMode || isStarredView
-        ? current.length
-        : countLoadedUnreadEntries(current),
-      INITIAL_ENTRIES_LIMIT,
-    );
+    const limit = Math.max(current.length, INITIAL_ENTRIES_LIMIT);
     const data = await loadEntries({ append: false, offset: 0, limit });
     const withContent = preserveOriginalContent(
       data.entries,
       current,
       fetchedOriginalSuccessIds,
     );
-    const merged = mergePreservingSessionReadEntries(
-      withContent,
-      sessionReadSnapshot,
-    );
-    setEntries(merged);
-    syncSelection(merged);
-    return { ...data, entries: merged };
+    setEntries(withContent);
+    syncSelection(withContent);
+    return { ...data, entries: withContent };
   }, [
-    countLoadedUnreadEntries,
     fetchedOriginalSuccessIds,
-    isStarredView,
     loadEntries,
-    mergePreservingSessionReadEntries,
     preserveOriginalContent,
-    searchMode,
     setEntries,
     syncSelection,
   ]);
@@ -584,13 +425,9 @@ export default function Home() {
     setIsLoading(true);
     setError(null);
     try {
-      const pagingOffset =
-        searchMode || isStarredView
-          ? entries.length
-          : countLoadedUnreadEntries(entries);
       await loadEntries({
         append: true,
-        offset: pagingOffset,
+        offset: entries.length,
         limit: ENTRIES_PAGE_SIZE,
       });
     } catch (e) {
@@ -599,11 +436,8 @@ export default function Home() {
       setIsLoading(false);
     }
   }, [
-    countLoadedUnreadEntries,
     entries,
-    isStarredView,
     loadEntries,
-    searchMode,
     setError,
     setIsLoading,
   ]);
@@ -627,18 +461,11 @@ export default function Home() {
       setError(null);
       try {
         await markEntryStatus([entryId], status);
-        setEntries((prev) =>
-          prev.map((entry) =>
-            entry.id === entryId ? { ...entry, status } : entry,
-          ),
-        );
-        await Promise.all([loadFeeds(), refreshUnreadCounters()]);
-        try {
-          const data = await fetchEntriesData({ offset: 0, limit: 1 });
-          setTotal(data.total ?? 0);
-        } catch {
-          // Ignore count refresh errors; counters will be updated on next refresh.
-        }
+        await Promise.all([
+          reloadCurrentEntries(),
+          loadFeeds(),
+          refreshUnreadCounters(),
+        ]);
         return true;
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Failed to update status');
@@ -648,38 +475,8 @@ export default function Home() {
         setIsUpdatingStatus(false);
       }
     },
-    [
-      fetchEntriesData,
-      loadFeeds,
-      markEntryStatus,
-      refreshUnreadCounters,
-      setTotal,
-    ],
+    [loadFeeds, markEntryStatus, refreshUnreadCounters, reloadCurrentEntries],
   );
-
-  async function markPageRead() {
-    if (entries.length === 0) return;
-    setIsLoading(true);
-    setError(null);
-    try {
-      await markEntryStatus(
-        entries.map((e) => e.id),
-        'read',
-      );
-      setEntries((prev) => prev.map((entry) => ({ ...entry, status: 'read' })));
-      await Promise.all([loadFeeds(), refreshUnreadCounters()]);
-      try {
-        const data = await fetchEntriesData({ offset: 0, limit: 1 });
-        setTotal(data.total ?? 0);
-      } catch {
-        // Ignore count refresh errors; counters will be updated on next refresh.
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to mark page read');
-    } finally {
-      setIsLoading(false);
-    }
-  }
 
   async function toggleSelectedStar() {
     const current = selectedEntryRef.current;
@@ -1037,6 +834,26 @@ export default function Home() {
     setIsCategoriesOpen((prev) => !prev);
   }, []);
 
+  const handleSelectUnread = useCallback(() => {
+    setIsSearchOpen(false);
+    setSearchQuery('');
+    setSearchMode(false);
+    setSelectedCategoryId(null);
+    setSelectedFeedId(null);
+    setIsStarredView(false);
+    setIsAllEntriesView(false);
+  }, []);
+
+  const handleSelectAll = useCallback(() => {
+    setIsSearchOpen(false);
+    setSearchQuery('');
+    setSearchMode(false);
+    setSelectedCategoryId(null);
+    setSelectedFeedId(null);
+    setIsStarredView(false);
+    setIsAllEntriesView(true);
+  }, []);
+
   const handleSelectStarred = useCallback(() => {
     // Starred view is exclusive from search/category/feed filters.
     setIsSearchOpen(false);
@@ -1044,6 +861,7 @@ export default function Home() {
     setSearchMode(false);
     setSelectedCategoryId(null);
     setSelectedFeedId(null);
+    setIsAllEntriesView(false);
     setIsStarredView(true);
   }, []);
 
@@ -1052,6 +870,7 @@ export default function Home() {
     setSearchQuery('');
     setSearchMode(false);
     setIsStarredView(false);
+    setIsAllEntriesView(false);
     setSelectedCategoryId(categoryId);
     setSelectedFeedId(null);
   }, []);
@@ -1069,6 +888,7 @@ export default function Home() {
 
     if (!searchMode) {
       setSearchMode(true);
+      setIsAllEntriesView(false);
       setIsStarredView(false);
       setSelectedFeedId(null);
       setSelectedCategoryId(null);
@@ -1209,14 +1029,6 @@ export default function Home() {
   // Initial load after provisioning
   useEffect(() => {
     if (!isProvisioned || hasInitialLoadRef.current) return;
-    const win = getBrowserWindow();
-    if (win) {
-      const stored = win.localStorage.getItem('peace-rss-last-sync');
-      const parsed = stored ? Number(stored) : null;
-      if (parsed && Number.isFinite(parsed)) {
-        lastSyncRef.current = parsed;
-      }
-    }
     void refreshAllData().finally(() => {
       hasInitialLoadRef.current = true;
     });
@@ -1229,20 +1041,19 @@ export default function Home() {
     setIsLoading(true);
     setError(null);
     setSelectedEntryId(null);
-    setLastSync(null);
     resetEntries()
       .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load'))
       .finally(() => setIsLoading(false));
   }, [
     selectedFeedId,
     selectedCategoryId,
+    isAllEntriesView,
     isStarredView,
     searchMode,
     isProvisioned,
     resetEntries,
     setIsLoading,
     setError,
-    setLastSync,
   ]);
 
   const isEditableTarget = useCallback((target: EventTarget | null) => {
@@ -1415,11 +1226,19 @@ export default function Home() {
     fetchOriginalArticle,
   ]);
 
-  const loadedForPaging =
-    searchMode || isStarredView
-      ? entries.length
-      : countLoadedUnreadEntries(entries);
-  const canLoadMore = total > loadedForPaging;
+  const isUnreadView =
+    !searchMode &&
+    !isStarredView &&
+    !isAllEntriesView &&
+    selectedCategoryId === null &&
+    selectedFeedId === null;
+  const isAllEntriesViewActive =
+    !searchMode &&
+    !isStarredView &&
+    isAllEntriesView &&
+    selectedCategoryId === null &&
+    selectedFeedId === null;
+  const canLoadMore = total > entries.length;
   // const selectedFeedTitle = searchMode
   //   ? `Search: ${searchQuery}`
   //   : isStarredView
@@ -1549,6 +1368,8 @@ export default function Home() {
               isOffline={isOffline}
               categories={visibleHeaderCategories}
               selectedCategoryId={selectedCategoryId}
+              isUnreadView={isUnreadView}
+              isAllEntriesView={isAllEntriesViewActive}
               isStarredView={isStarredView}
               categoryUnreadCounts={categoryUnreadCounts}
               totalUnreadCount={totalUnreadCount}
@@ -1558,6 +1379,8 @@ export default function Home() {
               searchQuery={searchQuery}
               onSearchQueryChange={setSearchQuery}
               onToggleSearch={toggleSearch}
+              onSelectUnread={handleSelectUnread}
+              onSelectAll={handleSelectAll}
               onSelectStarred={handleSelectStarred}
               onSelectCategory={handleSelectCategory}
             />
@@ -1573,6 +1396,7 @@ export default function Home() {
               isLoading={isLoading}
               onLoadMore={handleLoadMore}
               searchMode={searchMode}
+              isAllEntriesView={isAllEntriesViewActive}
               isStarredView={isStarredView}
             />
 

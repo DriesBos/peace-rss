@@ -73,6 +73,7 @@ export type EntryListProps = {
   isLoading: boolean;
   onLoadMore: () => void;
   searchMode: boolean;
+  isAllEntriesView: boolean;
   isStarredView: boolean;
 };
 
@@ -85,6 +86,7 @@ export function EntryList({
   isLoading,
   onLoadMore,
   searchMode,
+  isAllEntriesView,
   isStarredView,
 }: EntryListProps) {
 
@@ -102,6 +104,8 @@ export function EntryList({
     ? 'loading...'
     : searchMode
     ? 'No results found.'
+    : isAllEntriesView
+    ? 'No entries.'
     : isStarredView
     ? 'No starred entries.'
     : 'No unread entries.';

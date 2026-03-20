@@ -18,6 +18,8 @@ export type TheHeaderProps = {
   isOffline: boolean;
   categories: Category[];
   selectedCategoryId: number | null;
+  isUnreadView: boolean;
+  isAllEntriesView: boolean;
   isStarredView: boolean;
   categoryUnreadCounts: Map<number, number>;
   totalUnreadCount: number;
@@ -27,6 +29,8 @@ export type TheHeaderProps = {
   searchQuery: string;
   onSearchQueryChange: (value: string) => void;
   onToggleSearch: () => void;
+  onSelectUnread: () => void;
+  onSelectAll: () => void;
   onSelectStarred: () => void;
   onSelectCategory: (categoryId: number) => void;
 };
@@ -39,14 +43,19 @@ export function TheHeader({
   isOffline,
   categories,
   selectedCategoryId,
+  isUnreadView,
+  isAllEntriesView,
   isStarredView,
   categoryUnreadCounts,
+  totalUnreadCount,
   totalStarredCount,
   isLoading,
   isSearchOpen,
   searchQuery,
   onSearchQueryChange,
   onToggleSearch,
+  onSelectUnread,
+  onSelectAll,
   onSelectStarred,
   onSelectCategory,
 }: TheHeaderProps) {
@@ -130,6 +139,35 @@ export function TheHeader({
             className={styles.header_CategoryList}
             id="header-categories-list"
           >
+            <li>
+              <Button
+                type="button"
+                variant="nav"
+                active={isUnreadView}
+                className={`${styles.header_CategoryList_Item} ${
+                  isUnreadView ? styles.categoryItemActive : ''
+                }`}
+                onClick={onSelectUnread}
+                disabled={isLoading}
+                count={totalUnreadCount ?? 0}
+              >
+                <span>Unread</span>
+              </Button>
+            </li>
+            <li>
+              <Button
+                type="button"
+                variant="nav"
+                active={isAllEntriesView}
+                className={`${styles.header_CategoryList_Item} ${
+                  isAllEntriesView ? styles.categoryItemActive : ''
+                }`}
+                onClick={onSelectAll}
+                disabled={isLoading}
+              >
+                <span>All</span>
+              </Button>
+            </li>
             <li>
               <Button
                 type="button"

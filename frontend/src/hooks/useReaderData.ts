@@ -10,6 +10,7 @@ import { fetchCategories, fetchEntries, fetchFeeds } from '@/lib/readerApi';
 export type ReaderView = {
   searchMode: boolean;
   searchQuery: string;
+  isAllEntriesView: boolean;
   isStarredView: boolean;
   selectedFeedId: number | null;
   selectedCategoryId: number | null;
@@ -61,6 +62,13 @@ export function useReaderData({
         changedAfter,
         publishedAfter: publishedAfterOverride,
       } = options;
+      const effectiveStatus =
+        status ??
+        (view.searchMode || view.isStarredView
+          ? null
+          : view.isAllEntriesView
+          ? 'all'
+          : undefined);
       const url = buildEntriesUrl({
         limit,
         offset,
@@ -68,7 +76,7 @@ export function useReaderData({
         isStarredView: view.searchMode ? false : view.isStarredView,
         selectedFeedId: view.searchMode ? null : view.selectedFeedId,
         selectedCategoryId: view.searchMode ? null : view.selectedCategoryId,
-        status,
+        status: effectiveStatus,
         changedAfter,
         publishedAfter: publishedAfterOverride,
       });
