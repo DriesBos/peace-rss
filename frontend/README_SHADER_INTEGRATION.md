@@ -163,12 +163,6 @@ frontend/
 - Frame rate: 60 FPS target
 - Much faster than previous 3D implementation
 
-### ✅ Accessible
-- Respects `prefers-reduced-motion` (auto-freezes)
-- Pointer events disabled (doesn't block scrolling/clicking)
-- Screen reader friendly (overlay is decorative)
-- Keyboard navigation unaffected
-
 ### ✅ Next.js Compatible
 - Client-side only ("use client" directive)
 - No SSR issues (dynamic import examples provided)

@@ -112,7 +112,7 @@
   width: 100%
   align-items: center
   justify-content: space-between
-  // padding: 0
+  padding: 0
   border: 0
   background: transparent
   appearance: none
@@ -120,6 +120,10 @@
   color: var(--color-text)
   text-align: left
   cursor: pointer
+
+  &:disabled
+    color: var(--color-text-secondary)
+    cursor: not-allowed
 
 // VIEWLOOK
 .viewLook_profileRow

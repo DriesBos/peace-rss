@@ -498,9 +498,11 @@ export function MenuModal({
                   : undefined
               }
             >
-              <div
+              <button
                 className={styles.feedList_Header}
+                type="button"
                 onClick={handleOpenAddModal}
+                disabled={isLoading}
               >
                 <LabelWithCount as="span" count={nonProtectedFeeds.length}>
                   <span>All feeds</span>
@@ -508,7 +510,7 @@ export function MenuModal({
                 <IconWrapper as="span">
                   <IconPlus />
                 </IconWrapper>
-              </div>
+              </button>
               {starredEntries.length > 0 && (
                 <div className={styles.categoryGroup}>
                   <Button
