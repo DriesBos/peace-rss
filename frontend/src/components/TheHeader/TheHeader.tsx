@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import styles from './TheHeader.module.sass';
 import { Button } from '@/components/Button/Button';
 import { IconMenu } from '@/components/icons/IconMenu';
@@ -62,6 +62,8 @@ export function TheHeader({
   onSelectCategory,
 }: TheHeaderProps) {
   const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const headerRef = useRef<HTMLElement | null>(null);
+  const [isStuck, setIsStuck] = useState(false);
 
   useEffect(() => {
     if (!isSearchOpen) return;
@@ -69,8 +71,40 @@ export function TheHeader({
     searchInputRef.current?.select();
   }, [isSearchOpen]);
 
+  const syncStickyState = useCallback(() => {
+    const header = headerRef.current;
+    if (!header) return;
+
+    setIsStuck(header.getBoundingClientRect().top <= 0.5);
+  }, []);
+
+  useEffect(() => {
+    syncStickyState();
+
+    const onScroll = () => {
+      syncStickyState();
+    };
+
+    const onResize = () => {
+      syncStickyState();
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onResize);
+
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onResize);
+    };
+  }, [syncStickyState]);
+
   return (
-    <header className={styles.header} data-categories-open={isCategoriesOpen}>
+    <header
+      ref={headerRef}
+      className={styles.header}
+      data-categories-open={isCategoriesOpen}
+      data-stuck={isStuck}
+    >
       <div className={styles.header_Left}>
         <div className={styles.header_Menu}>
           <Button

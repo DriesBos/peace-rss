@@ -7,15 +7,23 @@ import {
   useRef,
   useState,
   type RefObject,
-  type TransitionEvent,
 } from 'react';
 import { createPortal } from 'react-dom';
+import { gsap } from 'gsap';
+import { useGSAP } from '@gsap/react';
 import styles from './SlidePanel.module.sass';
 import { Button } from '@/components/Button/Button';
 import { IconArrowLeft } from '@/components/icons/IconArrowLeft';
 import { useDisableScroll } from '@/hooks/useDisableScroll';
 import { IconWrapper } from '@/components/icons/IconWrapper/IconWrapper';
 import { useKeydown } from '@/hooks/useKeydown';
+import { MainKomorebiLayer } from '@/components/MainKomorebiLayer/MainKomorebiLayer';
+
+gsap.registerPlugin(useGSAP);
+
+const OPEN_DURATION_SECONDS = 0.42;
+const CLOSE_DURATION_SECONDS = 0.32;
+const OVERLAY_DURATION_SECONDS = 0.2;
 
 type SlidePanelProps = {
   isOpen: boolean;
@@ -32,16 +40,20 @@ export function SlidePanel({
   children,
   scrollContainerRef,
 }: SlidePanelProps) {
-  // Disable body scroll when panel is open
-  useDisableScroll(isOpen);
+  const [isPresent, setIsPresent] = useState(isOpen);
+  useDisableScroll(isOpen || isPresent);
 
   const [portalTarget, setPortalTarget] = useState<Element | null>(null);
-  const [isPresent, setIsPresent] = useState(isOpen);
   const [isA11yHidden, setIsA11yHidden] = useState(!isOpen);
+  const [isHeaderStuck, setIsHeaderStuck] = useState(false);
 
+  const overlayRef = useRef<HTMLDivElement | null>(null);
   const internalContainerRef = useRef<HTMLDivElement | null>(null);
   const containerRef = scrollContainerRef ?? internalContainerRef;
+  const headerRef = useRef<HTMLDivElement | null>(null);
   const previouslyFocusedElementRef = useRef<HTMLElement | null>(null);
+  const hasCapturedFocusRef = useRef(false);
+  const hasPrimedEntranceRef = useRef(false);
 
   useEffect(() => {
     if (typeof document === 'undefined') return;
@@ -92,23 +104,47 @@ export function SlidePanel({
     onClose();
   }, [onClose, restoreFocus]);
 
+  const shouldRender = isOpen || isPresent;
+
+  const syncHeaderStickyState = useCallback(() => {
+    const container = containerRef.current;
+    const header = headerRef.current;
+    if (!container || !header) return;
+
+    const containerTop = container.getBoundingClientRect().top;
+    const headerTop = header.getBoundingClientRect().top;
+    setIsHeaderStuck(headerTop <= containerTop + 0.5);
+  }, [containerRef]);
+
   useLayoutEffect(() => {
     if (typeof document === 'undefined') return;
 
     if (isOpen) {
-      setIsPresent(true);
+      if (!isPresent) {
+        const schedule =
+          typeof queueMicrotask === 'function'
+            ? queueMicrotask
+            : (callback: () => void) => Promise.resolve().then(callback);
+
+        schedule(() => {
+          setIsPresent(true);
+        });
+      }
+
       setIsA11yHidden(false);
 
-      previouslyFocusedElementRef.current =
-        document.activeElement instanceof HTMLElement
-          ? document.activeElement
-          : null;
+      if (!hasCapturedFocusRef.current) {
+        previouslyFocusedElementRef.current =
+          document.activeElement instanceof HTMLElement
+            ? document.activeElement
+            : null;
+        hasCapturedFocusRef.current = true;
+      }
 
       const container = containerRef.current;
       if (container) {
         container.focus({ preventScroll: true });
       }
-
       return;
     }
 
@@ -116,20 +152,34 @@ export function SlidePanel({
 
     restoreFocus();
     setIsA11yHidden(true);
+    hasCapturedFocusRef.current = false;
     previouslyFocusedElementRef.current = null;
   }, [containerRef, isOpen, isPresent, restoreFocus]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (isOpen) return;
-    if (!isPresent) return;
+    if (!shouldRender) return;
 
-    const timeout = window.setTimeout(() => {
-      setIsPresent(false);
-    }, 400);
+    syncHeaderStickyState();
 
-    return () => window.clearTimeout(timeout);
-  }, [isOpen, isPresent]);
+    const container = containerRef.current;
+    if (!container) return;
+
+    const onScroll = () => {
+      syncHeaderStickyState();
+    };
+
+    const onResize = () => {
+      syncHeaderStickyState();
+    };
+
+    container.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onResize);
+
+    return () => {
+      container.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onResize);
+    };
+  }, [containerRef, shouldRender, syncHeaderStickyState]);
 
   // Handle Escape key to close panel
   useKeydown(
@@ -142,27 +192,90 @@ export function SlidePanel({
     {
       enabled: isOpen,
       target: typeof document !== 'undefined' ? document : null,
-    }
+    },
+  );
+
+  useGSAP(
+    () => {
+      if (!shouldRender) return;
+
+      const overlay = overlayRef.current;
+      const container = containerRef.current;
+      if (!overlay || !container) return;
+
+      const prefersReducedMotion =
+        typeof window !== 'undefined' &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      const openDuration = prefersReducedMotion ? 0 : OPEN_DURATION_SECONDS;
+      const closeDuration = prefersReducedMotion ? 0 : CLOSE_DURATION_SECONDS;
+      const overlayDuration = prefersReducedMotion ? 0 : OVERLAY_DURATION_SECONDS;
+
+      gsap.killTweensOf(overlay);
+      gsap.killTweensOf(container);
+
+      if (isOpen) {
+        if (!hasPrimedEntranceRef.current) {
+          gsap.set(overlay, { autoAlpha: 0 });
+          gsap.set(container, {
+            autoAlpha: 1,
+            force3D: true,
+            xPercent: 100,
+            opacity: 0,
+          });
+          hasPrimedEntranceRef.current = true;
+        }
+
+        gsap.to(overlay, {
+          autoAlpha: 1,
+          duration: overlayDuration,
+          ease: 'power2.out',
+          overwrite: 'auto',
+        });
+        gsap.to(container, {
+          duration: openDuration,
+          ease: 'power3.out',
+          force3D: true,
+          overwrite: 'auto',
+          xPercent: 0,
+          opacity: 1,
+        });
+        return;
+      }
+
+      gsap.to(overlay, {
+        autoAlpha: 0,
+        duration: overlayDuration,
+        ease: 'power2.inOut',
+        overwrite: 'auto',
+      });
+      gsap.to(container, {
+        duration: closeDuration,
+        ease: 'power3.in',
+        force3D: true,
+        overwrite: 'auto',
+        xPercent: 100,
+        opacity: 0,
+        onComplete: () => {
+          hasPrimedEntranceRef.current = false;
+          setIsPresent(false);
+        },
+      });
+    },
+    {
+      scope: overlayRef,
+      dependencies: [containerRef, isOpen, shouldRender],
+    },
   );
 
   const ariaHidden = isOpen ? false : isA11yHidden;
-  const shouldRender = isOpen || isPresent;
-
-  const handleContainerTransitionEnd = useCallback(
-    (event: TransitionEvent<HTMLDivElement>) => {
-      if (event.target !== containerRef.current) return;
-      if (event.propertyName !== 'opacity') return;
-      if (isOpen) return;
-      setIsPresent(false);
-    },
-    [containerRef, isOpen],
-  );
 
   const panel = (
     <>
       {/* Backdrop overlay */}
       <div
         className={styles.slidePanel_Backdrop}
+        ref={overlayRef}
         onClick={() => {
           if (!isOpen) return;
           requestClose();
@@ -181,10 +294,16 @@ export function SlidePanel({
         aria-hidden={ariaHidden}
         data-open={isOpen}
         tabIndex={-1}
-        onTransitionEnd={handleContainerTransitionEnd}
       >
+        <div className={styles.slidePanel_Background} aria-hidden="true">
+          <MainKomorebiLayer />
+        </div>
         <div className={styles.slidePanel_Content}>
-          <div className={styles.slidePanel_Header}>
+          <div
+            ref={headerRef}
+            className={styles.slidePanel_Header}
+            data-stuck={isHeaderStuck}
+          >
             <Button
               type="button"
               variant="nav"

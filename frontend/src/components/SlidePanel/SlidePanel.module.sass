@@ -8,9 +8,7 @@
     z-index: calc(var(--index-slidepanel) - 1)
     opacity: 0
     pointer-events: none
-    transition: opacity 0.3s ease-in-out
     &[data-open="true"]
-      opacity: 1
       pointer-events: auto
 
   &_Container
@@ -22,7 +20,6 @@
     max-width: 100%
     min-height: 100lvh
     opacity: 0
-    transition: opacity 0.33s ease
     z-index: var(--index-slidepanel)
     overflow-y: auto
     scrollbar-width: none
@@ -32,11 +29,20 @@
     &::-webkit-scrollbar
       display: none
     &[data-open="true"]
-      opacity: 1
       pointer-events: auto
+
+  &_Background
+    position: absolute
+    inset: 0
+    z-index: 0
+    overflow: hidden
+    pointer-events: none
+    background: var(--color-app)
+    background: color-mix(in srgb, var(--color-app) 82%, transparent)
 
   &_Content
     position: relative
+    z-index: 1
     min-height: 100%
     display: flex
     flex-direction: column
@@ -53,3 +59,10 @@
     padding: 0 var(--space-sides-general-wide)
     flex-shrink: 0
     height: 50px
+    background-color: transparent
+    border-bottom: var(--border-containers)
+    border-bottom-width: 0
+    transition: background-color var(--transition-theme), border-bottom-width var(--transition-theme)
+    &[data-stuck="true"]
+      background-color: var(--color-app)
+      border-bottom-width: 1px

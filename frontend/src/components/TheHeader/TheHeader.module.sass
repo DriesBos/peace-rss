@@ -11,6 +11,13 @@
   z-index: calc(var(--index-newsfeed) + 1)
   overflow: visible
   height: 50px
+  background-color: transparent
+  border-bottom: var(--border-containers)
+  border-bottom-width: 0
+  transition: background-color var(--transition-theme), border-bottom-width var(--transition-theme)
+  &[data-stuck="true"]
+    background-color: var(--color-app)
+    border-bottom-width: 1px
   &_Left
     position: relative
     display: flex

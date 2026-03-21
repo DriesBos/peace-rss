@@ -3,6 +3,15 @@ import { EscapeToHome } from '@/components/EscapeToHome/EscapeToHome';
 import { BackButton } from '@/components/BackButton/BackButton';
 
 const UPDATE_ITEMS = [
+    {
+    date: '21.03.2026',
+    title: 'Theming and minor fixes',
+    items: [
+      'Added komorebi effect as an option',
+      'Improved menu and page animation effect', 
+      'Increased touch surface of buttons'
+    ],
+  },
   {
     date: '20.03.2026',
     title: 'Caching fixes and new options',
