@@ -1,17 +1,28 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import { useSyncExternalStore } from "react";
+import { useTheme } from "next-themes";
 import { KomorebiDesktop } from "./KomorebiDesktop";
 import { KomorebiSafari } from "./KomorebiSafari";
 import { KomorebiIOS } from "./KomorebiIOS";
+import { getEffectiveTheme } from "@/lib/theme";
 
 type Platform = "desktop" | "safari" | "ios";
 
 type KomorebiShaderProps = {
   opacity?: number;
   textureUrl?: string;
+  darkTextureUrl?: string;
   blurPx?: number;
   displacementScale?: number;
+};
+
+type ThemeSettings = {
+  blendMode: CSSProperties["mixBlendMode"];
+  layerColor: string;
+  opacity: number;
+  textureUrl: string;
 };
 
 /**
@@ -80,28 +91,59 @@ function subscribe() {
 export default function KomorebiShader({
   opacity = 0.1,
   textureUrl = "/images/leaves.png",
+  darkTextureUrl = "/images/leaves-inverted.png",
   blurPx = 9,
   displacementScale = 50,
 }: KomorebiShaderProps) {
+  const { resolvedTheme, theme } = useTheme();
+
   // Detect platform on client using useSyncExternalStore for hydration safety
   const platform = useSyncExternalStore(subscribe, getPlatform, getServerSnapshot);
+
+  if (theme === undefined && resolvedTheme === undefined) {
+    return null;
+  }
+
+  const effectiveTheme = getEffectiveTheme(theme, resolvedTheme);
+
+  if (effectiveTheme === "night") {
+    return null;
+  }
+
+  const themeSettings: ThemeSettings =
+    effectiveTheme === "dark"
+      ? {
+          blendMode: "screen",
+          layerColor: "rgba(244, 233, 201, 0.92)",
+          opacity: opacity * 0.8,
+          textureUrl: darkTextureUrl,
+        }
+      : {
+          blendMode: "multiply",
+          layerColor: "rgba(20, 16, 10, 0.9)",
+          opacity,
+          textureUrl,
+        };
 
   switch (platform) {
     case "ios":
       return (
         <KomorebiIOS
-          opacity={opacity}
-          textureUrl={textureUrl}
+          opacity={themeSettings.opacity}
           blurPx={blurPx}
+          layerColor={themeSettings.layerColor}
+          maskUrl={themeSettings.textureUrl}
         />
       );
 
     case "safari":
       return (
         <KomorebiSafari
-          opacity={opacity}
-          textureUrl={textureUrl}
+          opacity={themeSettings.opacity}
+          blendMode={themeSettings.blendMode}
           blurPx={blurPx}
+          layerColor={themeSettings.layerColor}
+          maskUrl={themeSettings.textureUrl}
         />
       );
 
@@ -109,10 +151,12 @@ export default function KomorebiShader({
     default:
       return (
         <KomorebiDesktop
-          opacity={opacity}
-          textureUrl={textureUrl}
+          opacity={themeSettings.opacity}
+          blendMode={themeSettings.blendMode}
           blurPx={blurPx}
           displacementScale={displacementScale}
+          layerColor={themeSettings.layerColor}
+          maskUrl={themeSettings.textureUrl}
         />
       );
   }

@@ -34,4 +34,5 @@ This markdown contains the application plan.
 
 ## Agents
 
-- When finishing a task, docker compose down and up to restart the app
+- After each completed task that affects the app, recompose it from the repo root with `docker compose up -d --build`
+- Use `docker compose down` first only when a clean restart is needed

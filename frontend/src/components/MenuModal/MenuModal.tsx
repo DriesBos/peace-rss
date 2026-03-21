@@ -44,6 +44,14 @@ import {
   type TypeSize,
 } from '@/lib/typeSize';
 import {
+  DEFAULT_KOMOREBI_MAIN,
+  getAppliedKomorebiMain,
+  isKomorebiMainPreference,
+  KOMOREBI_MAIN_LABELS,
+  setKomorebiMain,
+  type KomorebiMainPreference,
+} from '@/lib/komorebi';
+import {
   DEFAULT_THEME,
   isThemeOption,
   THEME_LABELS,
@@ -93,6 +101,9 @@ export function MenuModal({
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [fontFamily, setFontFamilyChoice] = useState<FontFamilyPreference>(
     DEFAULT_FONT_FAMILY,
+  );
+  const [komorebiMain, setKomorebiMainChoice] = useState<KomorebiMainPreference>(
+    DEFAULT_KOMOREBI_MAIN,
   );
   const [typeSize, setTypeSizeChoice] = useState<TypeSize>(DEFAULT_TYPE_SIZE);
   const { theme, setTheme } = useTheme();
@@ -154,6 +165,7 @@ export function MenuModal({
     }
 
     setFontFamilyChoice(getAppliedFontFamily());
+    setKomorebiMainChoice(getAppliedKomorebiMain());
     setTypeSizeChoice(getAppliedTypeSize());
   }, [isOpen]);
 
@@ -342,11 +354,27 @@ export function MenuModal({
     [],
   );
 
+  const komorebiMainOptions = useMemo(
+    () =>
+      Object.entries(KOMOREBI_MAIN_LABELS).map(([value, label]) => ({
+        value,
+        label,
+      })),
+    [],
+  );
+
   const handleFontFamilyChange = useCallback((nextFontFamily: string) => {
     if (!isFontFamilyPreference(nextFontFamily)) return;
 
     setFontFamilyChoice(nextFontFamily);
     setFontFamily(nextFontFamily);
+  }, []);
+
+  const handleKomorebiMainChange = useCallback((nextKomorebiMain: string) => {
+    if (!isKomorebiMainPreference(nextKomorebiMain)) return;
+
+    setKomorebiMainChoice(nextKomorebiMain);
+    setKomorebiMain(nextKomorebiMain);
   }, []);
 
   const handleOpmlFileChange = useCallback(
@@ -686,6 +714,19 @@ export function MenuModal({
                   onChange={handleFontFamilyChange}
                   options={fontFamilyOptions}
                   label="Typography"
+                  disabled={isLoading}
+                />
+              </div>
+            </div>
+
+            <div className={styles.viewLook_komorebiMainRow}>
+              <div className={styles.viewLook_komorebiMainField}>
+                <LabeledSelect
+                  id="komorebi-main-select"
+                  value={komorebiMain}
+                  onChange={handleKomorebiMainChange}
+                  options={komorebiMainOptions}
+                  label="Background effect"
                   disabled={isLoading}
                 />
               </div>

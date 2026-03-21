@@ -12,10 +12,13 @@ import { ThemeProvider } from '@/components/ThemeProvider';
 import { FontFamilyController } from '@/components/FontFamilyController/FontFamilyController';
 import Notifications from '@/components/Notifications/Notifications';
 import { GlobalKeybindings } from '@/components/GlobalKeybindings/GlobalKeybindings';
+import { KomorebiMainController } from '@/components/KomorebiMainController/KomorebiMainController';
 import { LandingPage } from '@/components/LandingPage/LandingPage';
+import { MainKomorebiLayer } from '@/components/MainKomorebiLayer/MainKomorebiLayer';
 import { SpacingWideController } from '@/components/SpacingWideController/SpacingWideController';
 import { TypeSizeController } from '@/components/TypeSizeController/TypeSizeController';
 import { DEFAULT_FONT_FAMILY } from '@/lib/fontFamily';
+import { DEFAULT_KOMOREBI_MAIN } from '@/lib/komorebi';
 import { DEFAULT_THEME, THEME_OPTIONS } from '@/lib/theme';
 import { DEFAULT_TYPE_SIZE } from '@/lib/typeSize';
 
@@ -165,12 +168,15 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const showLandingPageInDevelopment = process.env.NODE_ENV === 'development';
+
   return (
     <ClerkProvider signInFallbackRedirectUrl="/">
       <html lang="en" suppressHydrationWarning>
         <body
           className={`${untitledSans.variable} ${soulSister.variable} ${cheltenham.variable} ${imperial.variable}`}
           data-font-family={DEFAULT_FONT_FAMILY}
+          data-komorebi-main={DEFAULT_KOMOREBI_MAIN}
           data-spacing-wide="false"
           data-type-size={DEFAULT_TYPE_SIZE}
         >
@@ -184,15 +190,23 @@ export default function RootLayout({
             <SpacingWideController />
             <FontFamilyController />
             <TypeSizeController />
+            <KomorebiMainController />
             <Notifications />
             <main>
-              <SignedOut>
+              {showLandingPageInDevelopment ? (
                 <LandingPage />
-              </SignedOut>
-              <SignedIn>
-                <GlobalKeybindings />
-                {children}
-              </SignedIn>
+              ) : (
+                <>
+                  <SignedOut>
+                    <LandingPage />
+                  </SignedOut>
+                  <SignedIn>
+                    <MainKomorebiLayer />
+                    <GlobalKeybindings />
+                    {children}
+                  </SignedIn>
+                </>
+              )}
             </main>
             <div id="modal-root" />
           </ThemeProvider>

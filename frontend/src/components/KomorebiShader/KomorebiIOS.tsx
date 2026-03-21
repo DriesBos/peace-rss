@@ -4,7 +4,8 @@ import styles from "./KomorebiIOS.module.sass";
 
 type KomorebiIOSProps = {
   opacity?: number;
-  textureUrl?: string;
+  maskUrl?: string;
+  layerColor?: string;
   blurPx?: number;
 };
 
@@ -20,7 +21,8 @@ type KomorebiIOSProps = {
  */
 export function KomorebiIOS({
   opacity = 0.1,
-  textureUrl = "/images/leaves.png",
+  maskUrl = "/images/leaves.png",
+  layerColor = "rgba(20, 16, 10, 0.9)",
   blurPx = 9,
 }: KomorebiIOSProps) {
   return (
@@ -30,9 +32,17 @@ export function KomorebiIOS({
           className={styles.leaves}
           style={{
             opacity,
-            backgroundImage: `url(${textureUrl})`,
+            backgroundColor: layerColor,
             WebkitFilter: `blur(${blurPx}px)`,
             filter: `blur(${blurPx}px)`,
+            WebkitMaskImage: `url(${maskUrl})`,
+            WebkitMaskPosition: "center",
+            WebkitMaskRepeat: "no-repeat",
+            WebkitMaskSize: "cover",
+            maskImage: `url(${maskUrl})`,
+            maskPosition: "center",
+            maskRepeat: "no-repeat",
+            maskSize: "cover",
           }}
         />
       </div>

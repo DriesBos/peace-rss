@@ -1,10 +1,13 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import styles from "./KomorebiDesktop.module.sass";
 
 type KomorebiDesktopProps = {
   opacity?: number;
-  textureUrl?: string;
+  maskUrl?: string;
+  layerColor?: string;
+  blendMode?: CSSProperties["mixBlendMode"];
   blurPx?: number;
   displacementScale?: number;
 };
@@ -16,7 +19,9 @@ type KomorebiDesktopProps = {
  */
 export function KomorebiDesktop({
   opacity = 0.1,
-  textureUrl = "/images/leaves.png",
+  maskUrl = "/images/leaves.png",
+  layerColor = "rgba(20, 16, 10, 0.9)",
+  blendMode = "multiply",
   blurPx = 9,
   displacementScale = 50,
 }: KomorebiDesktopProps) {
@@ -46,8 +51,17 @@ export function KomorebiDesktop({
           className={styles.leaves}
           style={{
             opacity,
-            backgroundImage: `url(${textureUrl})`,
+            backgroundColor: layerColor,
             filter: filterValue,
+            mixBlendMode: blendMode,
+            WebkitMaskImage: `url(${maskUrl})`,
+            WebkitMaskPosition: "center",
+            WebkitMaskRepeat: "no-repeat",
+            WebkitMaskSize: "cover",
+            maskImage: `url(${maskUrl})`,
+            maskPosition: "center",
+            maskRepeat: "no-repeat",
+            maskSize: "cover",
           }}
         />
       </div>

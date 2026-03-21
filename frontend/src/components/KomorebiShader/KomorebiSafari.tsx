@@ -1,10 +1,13 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import styles from "./KomorebiSafari.module.sass";
 
 type KomorebiSafariProps = {
   opacity?: number;
-  textureUrl?: string;
+  maskUrl?: string;
+  layerColor?: string;
+  blendMode?: CSSProperties["mixBlendMode"];
   blurPx?: number;
 };
 
@@ -15,7 +18,9 @@ type KomorebiSafariProps = {
  */
 export function KomorebiSafari({
   opacity = 0.1,
-  textureUrl = "/images/leaves.png",
+  maskUrl = "/images/leaves.png",
+  layerColor = "rgba(20, 16, 10, 0.9)",
+  blendMode = "multiply",
   blurPx = 9,
 }: KomorebiSafariProps) {
   return (
@@ -25,9 +30,18 @@ export function KomorebiSafari({
           className={styles.leaves}
           style={{
             opacity,
-            backgroundImage: `url(${textureUrl})`,
+            backgroundColor: layerColor,
             filter: `blur(${blurPx}px)`,
+            mixBlendMode: blendMode,
             WebkitFilter: `blur(${blurPx}px)`,
+            WebkitMaskImage: `url(${maskUrl})`,
+            WebkitMaskPosition: "center",
+            WebkitMaskRepeat: "no-repeat",
+            WebkitMaskSize: "cover",
+            maskImage: `url(${maskUrl})`,
+            maskPosition: "center",
+            maskRepeat: "no-repeat",
+            maskSize: "cover",
           }}
         />
       </div>
