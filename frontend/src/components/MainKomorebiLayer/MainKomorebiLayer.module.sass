@@ -1,0 +1,12 @@
+.layer
+  pointer-events: none
+  opacity: 0
+  will-change: opacity
+  transition: opacity 320ms ease
+
+.layerVisible
+  opacity: 1
+
+@media (prefers-reduced-motion: reduce)
+  .layer
+    transition: none

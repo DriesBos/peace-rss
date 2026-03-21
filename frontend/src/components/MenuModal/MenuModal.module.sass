@@ -109,8 +109,17 @@
 
 .feedList_Header
   display: flex
+  width: 100%
   align-items: center
   justify-content: space-between
+  // padding: 0
+  border: 0
+  background: transparent
+  appearance: none
+  font: inherit
+  color: var(--color-text)
+  text-align: left
+  cursor: pointer
 
 // VIEWLOOK
 .viewLook_profileRow
@@ -189,8 +198,11 @@
   display: flex
   align-items: center
   justify-content: space-between
+  color: var(--color-text)
+  text-decoration: none
+  @include font-nav
 
-.viewOther_Links a, .viewOther_Footer a
+.viewOther_Footer a
   color: var(--color-text)
   text-decoration: none
   @include font-nav

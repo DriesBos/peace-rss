@@ -5,6 +5,7 @@ interface IconWrapperProps {
   children: React.ReactNode;
   className?: string;
   mirrored?: boolean;
+  as?: 'div' | 'span';
 }
 
 export const IconWrapper: React.FC<IconWrapperProps> = ({
@@ -12,14 +13,15 @@ export const IconWrapper: React.FC<IconWrapperProps> = ({
   children,
   className = '',
   mirrored,
+  as: Component = 'div',
 }) => {
   return (
-    <div
+    <Component
       className={`${styles.iconWrapper} ${className}`}
       data-variant={variant}
       data-mirrored={mirrored}
     >
       {children}
-    </div>
+    </Component>
   );
 };

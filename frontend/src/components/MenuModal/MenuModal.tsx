@@ -498,21 +498,16 @@ export function MenuModal({
                   : undefined
               }
             >
-              <div className={styles.feedList_Header}>
-                <LabelWithCount count={nonProtectedFeeds.length}>
+              <div
+                className={styles.feedList_Header}
+                onClick={handleOpenAddModal}
+              >
+                <LabelWithCount as="span" count={nonProtectedFeeds.length}>
                   <span>All feeds</span>
-                </LabelWithCount>{' '}
-                <Button
-                  type="button"
-                  onClick={handleOpenAddModal}
-                  disabled={isLoading}
-                  variant="icon"
-                  icon="plus"
-                >
-                  <IconWrapper>
-                    <IconPlus />
-                  </IconWrapper>
-                </Button>
+                </LabelWithCount>
+                <IconWrapper as="span">
+                  <IconPlus />
+                </IconWrapper>
               </div>
               {starredEntries.length > 0 && (
                 <div className={styles.categoryGroup}>
@@ -788,24 +783,24 @@ export function MenuModal({
         {activeView === 'other' && (
           <div className={styles.viewOther}>
             <div className={styles.viewOther_Links}>
-              <div className={styles.viewOther_Links_Item}>
-                <Link href="/about">About</Link>
+              <Link href="/about" className={styles.viewOther_Links_Item}>
+                <span>About</span>
                 <IconWrapper>
                   <IconArrowShortRight />
                 </IconWrapper>
-              </div>
-              <div className={styles.viewOther_Links_Item}>
-                <Link href="/updates">Updates</Link>
+              </Link>
+              <Link href="/updates" className={styles.viewOther_Links_Item}>
+                <span>Updates</span>
                 <IconWrapper>
                   <IconArrowShortRight />
                 </IconWrapper>
-              </div>
-              <div className={styles.viewOther_Links_Item}>
-                <Link href="/tips">Tips</Link>
+              </Link>
+              <Link href="/tips" className={styles.viewOther_Links_Item}>
+                <span>Tips</span>
                 <IconWrapper>
                   <IconArrowShortRight />
                 </IconWrapper>
-              </div>
+              </Link>
             </div>
 
             <div className={styles.viewOther_Footer}>
