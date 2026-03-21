@@ -156,9 +156,14 @@ export function ModalContainer({
         hasCapturedFocusRef.current = true;
       }
 
-      const closeButton = closeButtonRef.current;
-      if (closeButton) {
-        closeButton.focus({ preventScroll: true });
+      const isTouchLikeDevice =
+        typeof window !== 'undefined' &&
+        window.matchMedia('(hover: none), (pointer: coarse)').matches;
+
+      if (isTouchLikeDevice) {
+        dialogRef.current?.focus({ preventScroll: true });
+      } else {
+        closeButtonRef.current?.focus({ preventScroll: true });
       }
 
       return;
@@ -355,6 +360,7 @@ export function ModalContainer({
         role="dialog"
         aria-modal="true"
         aria-label={ariaLabel}
+        tabIndex={-1}
         onClick={(event) => event.stopPropagation()}
       >
         <button

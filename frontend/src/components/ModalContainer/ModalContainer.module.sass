@@ -33,6 +33,7 @@
     will-change: transform, height
     backface-visibility: hidden
     -webkit-backface-visibility: hidden
+    outline: none
 
   &_Scroller
     display: flex
@@ -66,6 +67,15 @@
     justify-content: center
     padding: var(--one-rem) 0
     cursor: pointer
+    outline: none
+    touch-action: manipulation
+    -webkit-tap-highlight-color: transparent
+    -webkit-touch-callout: none
+    &:focus
+      outline: none
+    &:focus-visible
+      .modalOverlay_ClosingBar_Button
+        box-shadow: 0 0 0 2px var(--color-text)
     &_Button
       width: var(--two-rem)
       height: 3px
