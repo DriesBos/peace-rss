@@ -2,7 +2,7 @@ export const THEME_OPTIONS = [
   'system',
   'light',
   'dark',
-  'nightmode',
+  'night',
 ] as const;
 
 export type ThemeOption = (typeof THEME_OPTIONS)[number];
@@ -14,7 +14,7 @@ export const THEME_LABELS: Record<ThemeOption, string> = {
   system: 'System',
   light: 'Light',
   dark: 'Dark',
-  nightmode: 'Night',
+  night: 'Night',
 };
 
 export function isThemeOption(value: string): value is ThemeOption {
@@ -24,15 +24,16 @@ export function isThemeOption(value: string): value is ThemeOption {
 export function normalizeLegacyTheme(value: string | undefined): ThemeOption | null {
   if (value === 'green' || value === 'softdark') return 'dark';
   if (value === 'softlight') return 'light';
-  if (value === 'system' || value === 'light' || value === 'dark' || value === 'nightmode') {
+  if (value === 'nightmode') return 'night';
+  if (value === 'system' || value === 'light' || value === 'dark' || value === 'night') {
     return value;
   }
   return null;
 }
 
-export function isSystemNightmodeWindow(date: Date = new Date()) {
+export function isSystemNightWindow(date: Date = new Date()) {
   const hour = date.getHours();
-  return hour >= 0 && hour < 5;
+  return hour >= 23 || hour < 6;
 }
 
 export function getEffectiveTheme(
@@ -42,12 +43,12 @@ export function getEffectiveTheme(
 ): ResolvedThemeOption {
   const normalizedTheme = normalizeLegacyTheme(theme);
 
-  if (normalizedTheme === 'light' || normalizedTheme === 'dark' || normalizedTheme === 'nightmode') {
+  if (normalizedTheme === 'light' || normalizedTheme === 'dark' || normalizedTheme === 'night') {
     return normalizedTheme;
   }
 
   if (normalizedTheme === 'system') {
-    if (isSystemNightmodeWindow(date)) return 'nightmode';
+    if (isSystemNightWindow(date)) return 'night';
     return resolvedTheme === 'dark' ? 'dark' : 'light';
   }
 

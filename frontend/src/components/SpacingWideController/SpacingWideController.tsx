@@ -15,8 +15,7 @@ export function SpacingWideController() {
 
   useEffect(() => {
     const effectiveTheme = getEffectiveTheme(theme, resolvedTheme);
-    const isDarkTheme =
-      effectiveTheme === 'dark' || effectiveTheme === 'nightmode';
+    const isDarkTheme = effectiveTheme === 'dark' || effectiveTheme === 'night';
     applySpacingWide(isDarkTheme);
   }, [resolvedTheme, theme]);
 
