@@ -1,29 +1,22 @@
+@use './geometry' as geometry
+
 // KomorebiDesktop - Full effect for Chrome, Firefox, Edge, etc.
 // Uses SVG filters, matrix3d transforms, and mix-blend-mode
 
 .komorebi
-  position: fixed
-  top: 0
-  left: 0
-  width: 100vw
-  height: 100vh
+  @include geometry.root-frame(fixed, 100vw, 100vh)
   z-index: var(--index-komorebi, 50)
   pointer-events: none
   overflow: hidden
 
 .svgDefs
   width: 0
-  height: 0
+  height: 0red
   position: absolute
 
 .perspective
-  position: absolute
-  top: -30vh
-  right: 0px
-  width: 80vw
-  height: 130vh
+  @include geometry.perspective-frame
   background-blend-mode: darken
-  transform-origin: right top
   -webkit-transform-style: preserve-3d
   transform-style: preserve-3d
   -webkit-transform: matrix3d(0.75, -0.0625, 0, 0.0008, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1)
@@ -33,11 +26,7 @@
   backface-visibility: hidden
 
 .leaves
-  position: absolute
-  bottom: -20px
-  right: -700px
-  width: 1600px
-  height: 1400px
+  @include geometry.leaves-frame
   will-change: filter, transform, opacity
   -webkit-backface-visibility: hidden
   backface-visibility: hidden

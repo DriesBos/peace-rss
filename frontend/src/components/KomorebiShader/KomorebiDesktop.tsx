@@ -16,6 +16,7 @@ type KomorebiDesktopProps = {
  * Desktop/Chrome version of the Komorebi effect.
  * Uses full SVG filters (feTurbulence + feDisplacementMap) for wind animation,
  * complex 3D matrix transforms, and mix-blend-mode for the best visual effect.
+ * Inspired by https://github.com/jackyzha0/sunlit
  */
 export function KomorebiDesktop({
   opacity = 0.1,

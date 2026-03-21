@@ -1,36 +1,70 @@
+@use './geometry' as geometry
+
 // KomorebiIOS - iOS Safari version
 // Pure 2D transforms only - avoids all iOS rendering issues
 // No SVG filters, no mix-blend-mode, no 3D transforms
 
 .komorebi
-  position: absolute
-  top: 0
-  left: 0
-  width: 100%
-  height: 100%
+  @include geometry.root-frame(absolute, 100%, 100%)
   z-index: var(--index-komorebi, 50)
   pointer-events: none
   overflow: hidden
 
-.perspective
+.diffusion
+  @include geometry.diffusion-frame
+  pointer-events: none
+  overflow: hidden
+
+.progressiveBlur
   position: absolute
-  top: -30vh
-  right: 0px
-  width: 80vw
-  height: 130vh
-  transform-origin: right top
+  inset: 0
+
+.blurLayer
+  position: absolute
+  inset: 0
+  -webkit-mask-image: linear-gradient(246deg, transparent 16%, transparent var(--stop-1), rgba(0, 0, 0, 0.35) calc(var(--stop-1) + 6%), black var(--stop-2), black)
+  mask-image: linear-gradient(246deg, transparent 16%, transparent var(--stop-1), rgba(0, 0, 0, 0.35) calc(var(--stop-1) + 6%), black var(--stop-2), black)
+  -webkit-backdrop-filter: blur(var(--blur-amount))
+  backdrop-filter: blur(var(--blur-amount))
+  opacity: var(--layer-opacity)
+
+.blurLayerNear
+  --blur-amount: 6px
+  --layer-opacity: 0.52
+  --stop-1: 0%
+  --stop-2: 16%
+
+.blurLayerMid
+  --blur-amount: 14px
+  --layer-opacity: 0.7
+  --stop-1: 26%
+  --stop-2: 56%
+
+.blurLayerFar
+  --blur-amount: 28px
+  --layer-opacity: 0.82
+  --stop-1: 50%
+  --stop-2: 78%
+
+.perspective
+  @include geometry.perspective-frame
   // Simple 2D skew to simulate depth - reliable on iOS
   -webkit-transform: skewY(-4deg) scaleX(0.75)
   transform: skewY(-4deg) scaleX(0.75)
 
 .leaves
-  position: absolute
-  bottom: -20px
-  right: -700px
-  width: 1600px
-  height: 1400px
+  @include geometry.leaves-frame
+  will-change: transform, filter, opacity
+  -webkit-transform-origin: center center
+  transform-origin: center center
+
+.leavesPrimary
   -webkit-animation: billow-ios 10s ease-in-out infinite alternate
   animation: billow-ios 10s ease-in-out infinite alternate
+
+.leavesSecondary
+  -webkit-animation: billow-ios-secondary 13s ease-in-out infinite alternate
+  animation: billow-ios-secondary 13s ease-in-out infinite alternate
 
 // Pure 2D animation - reliable on iOS Safari
 @-webkit-keyframes billow-ios
@@ -72,3 +106,43 @@
   100%
     -webkit-transform: translate(0, 0) scale(1)
     transform: translate(0, 0) scale(1)
+
+@-webkit-keyframes billow-ios-secondary
+  0%
+    -webkit-transform: translate(0.7%, 0.3%) scale(1.045)
+    transform: translate(0.7%, 0.3%) scale(1.045)
+  20%
+    -webkit-transform: translate(-0.5%, -0.4%) scale(1.02)
+    transform: translate(-0.5%, -0.4%) scale(1.02)
+  40%
+    -webkit-transform: translate(0.9%, 0.2%) scale(1.035)
+    transform: translate(0.9%, 0.2%) scale(1.035)
+  60%
+    -webkit-transform: translate(-0.2%, 0.6%) scale(1.01)
+    transform: translate(-0.2%, 0.6%) scale(1.01)
+  80%
+    -webkit-transform: translate(0.5%, -0.5%) scale(1.05)
+    transform: translate(0.5%, -0.5%) scale(1.05)
+  100%
+    -webkit-transform: translate(0.1%, 0.1%) scale(1.04)
+    transform: translate(0.1%, 0.1%) scale(1.04)
+
+@keyframes billow-ios-secondary
+  0%
+    -webkit-transform: translate(0.7%, 0.3%) scale(1.045)
+    transform: translate(0.7%, 0.3%) scale(1.045)
+  20%
+    -webkit-transform: translate(-0.5%, -0.4%) scale(1.02)
+    transform: translate(-0.5%, -0.4%) scale(1.02)
+  40%
+    -webkit-transform: translate(0.9%, 0.2%) scale(1.035)
+    transform: translate(0.9%, 0.2%) scale(1.035)
+  60%
+    -webkit-transform: translate(-0.2%, 0.6%) scale(1.01)
+    transform: translate(-0.2%, 0.6%) scale(1.01)
+  80%
+    -webkit-transform: translate(0.5%, -0.5%) scale(1.05)
+    transform: translate(0.5%, -0.5%) scale(1.05)
+  100%
+    -webkit-transform: translate(0.1%, 0.1%) scale(1.04)
+    transform: translate(0.1%, 0.1%) scale(1.04)

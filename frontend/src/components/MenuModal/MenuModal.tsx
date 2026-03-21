@@ -679,6 +679,13 @@ export function MenuModal({
 
         {activeView === 'settings' && (
           <div className={styles.viewLook}>
+            <div className={styles.viewLook_profileRow}>
+              <div className={styles.viewLook_profileField}>
+                <span>Profile</span>
+                <UserButton />
+              </div>
+            </div>
+
             <div className={styles.viewLook_themeSelectRow}>
               <div className={styles.viewLook_themeSelectField}>
                 <LabeledSelect
@@ -781,10 +788,6 @@ export function MenuModal({
         {activeView === 'other' && (
           <div className={styles.viewOther}>
             <div className={styles.viewOther_Links}>
-              <div className={styles.viewOther_Profile}>
-                <span>Profile</span>
-                <UserButton />
-              </div>
               <div className={styles.viewOther_Links_Item}>
                 <Link href="/about">About</Link>
                 <IconWrapper>

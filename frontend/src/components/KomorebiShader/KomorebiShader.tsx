@@ -142,6 +142,7 @@ export default function KomorebiShader({
           opacity={themeSettings.opacity}
           blendMode={themeSettings.blendMode}
           blurPx={blurPx}
+          displacementScale={Math.max(18, Math.round(displacementScale * 0.48))}
           layerColor={themeSettings.layerColor}
           maskUrl={themeSettings.textureUrl}
         />

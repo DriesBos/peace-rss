@@ -1,0 +1,55 @@
+@mixin root-frame($position, $width, $height)
+  position: $position
+  top: 0
+  left: 0
+  width: $width
+  height: $height
+  // Primary tuning knobs for visual placement.
+  --komorebi-scale: clamp(150vmin, 200vmin, 250vmin)
+  --komorebi-stage-top: -0.27
+  --komorebi-stage-width-scale: 1.14
+  --komorebi-stage-height-scale: 1.17
+  --komorebi-leaves-width-scale: 1.33
+  --komorebi-leaves-offset-x: -0.4375
+  --komorebi-leaves-offset-y: -0.0125
+
+  // Secondary knobs, kept for parity with the unused diffusion frame.
+  --komorebi-diffusion-offset-top: -0.16
+  --komorebi-diffusion-offset-right: -0.1
+  --komorebi-diffusion-width-scale: 1.08
+  --komorebi-diffusion-height-scale: 1.13
+
+  // Derived values consumed by the mixins below.
+  --komorebi-geometry: var(--komorebi-scale)
+  --komorebi-diffusion-top: calc(var(--komorebi-scale) * var(--komorebi-diffusion-offset-top))
+  --komorebi-diffusion-right: calc(var(--komorebi-scale) * var(--komorebi-diffusion-offset-right))
+  --komorebi-diffusion-width: calc(var(--komorebi-scale) * var(--komorebi-diffusion-width-scale))
+  --komorebi-diffusion-height: calc(var(--komorebi-scale) * var(--komorebi-diffusion-height-scale))
+  --komorebi-perspective-top: calc(var(--komorebi-scale) * var(--komorebi-stage-top))
+  --komorebi-perspective-width: calc(var(--komorebi-scale) * var(--komorebi-stage-width-scale))
+  --komorebi-perspective-height: calc(var(--komorebi-scale) * var(--komorebi-stage-height-scale))
+  --komorebi-leaves-width: calc(var(--komorebi-scale) * var(--komorebi-leaves-width-scale))
+  --komorebi-leaves-right: calc(var(--komorebi-leaves-width) * var(--komorebi-leaves-offset-x))
+  --komorebi-leaves-bottom: calc(var(--komorebi-leaves-width) * var(--komorebi-leaves-offset-y))
+
+@mixin diffusion-frame
+  position: absolute
+  top: var(--komorebi-diffusion-top)
+  right: var(--komorebi-diffusion-right)
+  width: var(--komorebi-diffusion-width)
+  height: var(--komorebi-diffusion-height)
+
+@mixin perspective-frame
+  position: absolute
+  top: var(--komorebi-perspective-top)
+  right: 0
+  width: var(--komorebi-perspective-width)
+  height: var(--komorebi-perspective-height)
+  transform-origin: right center
+
+@mixin leaves-frame
+  position: absolute
+  bottom: var(--komorebi-leaves-bottom)
+  right: var(--komorebi-leaves-right)
+  width: var(--komorebi-leaves-width)
+  aspect-ratio: 8 / 7

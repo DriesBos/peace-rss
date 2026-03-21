@@ -25,16 +25,36 @@ export function KomorebiIOS({
   layerColor = "rgba(20, 16, 10, 0.9)",
   blurPx = 9,
 }: KomorebiIOSProps) {
+  const secondaryBlurPx = Math.max(blurPx + 6, Math.round(blurPx * 1.65));
+  const secondaryOpacity = opacity * 0.56;
+
   return (
     <div aria-hidden="true" className={styles.komorebi}>
       <div className={styles.perspective}>
         <div
-          className={styles.leaves}
+          className={`${styles.leaves} ${styles.leavesPrimary}`}
           style={{
             opacity,
             backgroundColor: layerColor,
             WebkitFilter: `blur(${blurPx}px)`,
             filter: `blur(${blurPx}px)`,
+            WebkitMaskImage: `url(${maskUrl})`,
+            WebkitMaskPosition: "center",
+            WebkitMaskRepeat: "no-repeat",
+            WebkitMaskSize: "cover",
+            maskImage: `url(${maskUrl})`,
+            maskPosition: "center",
+            maskRepeat: "no-repeat",
+            maskSize: "cover",
+          }}
+        />
+        <div
+          className={`${styles.leaves} ${styles.leavesSecondary}`}
+          style={{
+            opacity: secondaryOpacity,
+            backgroundColor: layerColor,
+            WebkitFilter: `blur(${secondaryBlurPx}px)`,
+            filter: `blur(${secondaryBlurPx}px)`,
             WebkitMaskImage: `url(${maskUrl})`,
             WebkitMaskPosition: "center",
             WebkitMaskRepeat: "no-repeat",

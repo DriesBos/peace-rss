@@ -202,8 +202,10 @@ export default function RootLayout({
                   </SignedOut>
                   <SignedIn>
                     <MainKomorebiLayer />
-                    <GlobalKeybindings />
-                    {children}
+                    <div className="mainContentLayer">
+                      <GlobalKeybindings />
+                      {children}
+                    </div>
                   </SignedIn>
                 </>
               )}

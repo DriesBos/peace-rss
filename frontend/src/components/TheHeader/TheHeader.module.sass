@@ -11,12 +11,10 @@
   z-index: calc(var(--index-newsfeed) + 1)
   overflow: visible
   height: 50px
-  background: var(--color-app)
   &_Left
     position: relative
     display: flex
     flex-direction: row
-    background: var(--color-app)
     align-items: center
     flex: 0 0 auto
     height: 2rem
@@ -29,13 +27,13 @@
     padding-right: var(--space-icons-gap)
     width: auto
     transition: width var(--transition-header-toggle)
-    
 
   &_Search
     display: flex
     flex-wrap: nowrap
     align-items: center
     padding: 0 8px
+    padding-right: calc(var(--space-icons-gap) * 2)
     width: auto
     transition: all var(--transition-header-toggle)
     .searchInput
@@ -115,8 +113,8 @@
     scrollbar-width: none
     -ms-overflow-style: none
     flex: 1 1 auto
-    padding: 0 var(--space-icons-gap)
-    padding-right: calc(var(--space-icons-gap) * 2)
+    padding: 0 calc(var(--space-icons-gap) * 2)
+    padding-right: calc(var(--space-icons-gap) * 3)
     
     &::-webkit-scrollbar
       display: none

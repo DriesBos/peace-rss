@@ -110,6 +110,20 @@
   justify-content: space-between
 
 // VIEWLOOK
+.viewLook_profileRow
+  display: flex
+  width: 100%
+
+.viewLook_profileField
+  display: flex
+  flex: 1 1 auto
+  align-items: center
+  justify-content: space-between
+  gap: var(--half-rem)
+  @include font-nav
+  min-height: 20px
+  overflow: visible
+
 .viewLook_themeSelectRow
   display: flex
   width: 100%
@@ -172,15 +186,6 @@
   display: flex
   align-items: center
   justify-content: space-between
-
-.viewOther_Profile
-  display: inline-flex
-  align-items: center
-  justify-content: space-between
-  gap: var(--half-rem)
-  @include font-nav
-  height: 20px
-  overflow: visible
 
 .viewOther_Links a, .viewOther_Footer a
   color: var(--color-text)
