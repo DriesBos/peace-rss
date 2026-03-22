@@ -552,30 +552,37 @@ export function EntryPanel({
   isUpdatingStatus,
   showReadingTime,
 }: EntryPanelProps) {
-  const lazy = useLazyEntryContent(entry?.content, entry?.url);
-  const selectedIsStarred = Boolean(entry?.starred);
+  const [displayEntry, setDisplayEntry] = useState<Entry | null>(entry);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
   const lastEntryIdRef = useRef<number | null>(null);
-  const entryId = entry?.id ?? null;
+  const currentEntry = entry ?? displayEntry;
+  const entryId = currentEntry?.id ?? null;
+  const lazy = useLazyEntryContent(currentEntry?.content, currentEntry?.url);
+  const selectedIsStarred = Boolean(currentEntry?.starred);
   const [pinnedLeadImage, setPinnedLeadImage] = useState<LeadImageData | null>(
     null,
   );
   const [isPinnedLeadImageErrored, setIsPinnedLeadImageErrored] =
     useState(false);
-  const content = entry?.content?.trim() ?? '';
+  const content = currentEntry?.content?.trim() ?? '';
   const hasContent = Boolean(content);
   const readingTimeLabel = showReadingTime
-    ? formatReadingTime(entry?.reading_time)
+    ? formatReadingTime(currentEntry?.reading_time)
     : '';
   const sourceFeedTitle =
-    entry?.feed_title ??
-    entry?.feed?.title ??
-    (entry ? feedsById.get(entry.feed_id)?.title : undefined);
-  const hasSourceMeta = Boolean(sourceFeedTitle || entry?.author);
+    currentEntry?.feed_title ??
+    currentEntry?.feed?.title ??
+    (currentEntry ? feedsById.get(currentEntry.feed_id)?.title : undefined);
+  const hasSourceMeta = Boolean(sourceFeedTitle || currentEntry?.author);
   const originalFetchFailed = originalFetchStatus === 'error';
   const showContent = hasContent;
-  const showLoading = Boolean(entry) && fetchingOriginal && !showContent;
+  const showLoading = Boolean(currentEntry) && fetchingOriginal && !showContent;
+
+  useEffect(() => {
+    if (!entry) return;
+    setDisplayEntry(entry);
+  }, [entry]);
 
   const handleExternalLinkIntent = (event: {
     target: EventTarget | null;
@@ -588,18 +595,18 @@ export function EntryPanel({
 
   const leadImage = lazy?.leadImage ?? null;
   const fallbackThumbnailUrl = useMemo(() => {
-    const extracted = extractThumbnailFromHtml(entry?.content);
-    return resolveAbsoluteUrl(extracted, entry?.url);
-  }, [entry?.content, entry?.url]);
+    const extracted = extractThumbnailFromHtml(currentEntry?.content);
+    return resolveAbsoluteUrl(extracted, currentEntry?.url);
+  }, [currentEntry?.content, currentEntry?.url]);
   const preferredThumbnail = useMemo<LeadImageData | null>(() => {
     if (leadImage) {
       const leadImageUrl = leadImage.url.trim();
       if (leadImageUrl) {
-      return {
-        url: leadImageUrl,
-        width: leadImage.width,
-        height: leadImage.height,
-      };
+        return {
+          url: leadImageUrl,
+          width: leadImage.width,
+          height: leadImage.height,
+        };
       }
     }
 
@@ -700,24 +707,25 @@ export function EntryPanel({
     <SlidePanel
       isOpen={!!entry}
       onClose={onClose}
+      onAfterClose={() => setDisplayEntry(null)}
       ariaLabel="Entry details"
       scrollContainerRef={scrollContainerRef}
     >
       <ScrollToTop
         containerRef={scrollContainerRef}
-        triggerKey={entry?.id}
-        isActive={!!entry}
+        triggerKey={currentEntry?.id}
+        isActive={!!currentEntry}
       />
-      {entry && (
+      {currentEntry && (
         <div className={styles.entry_Container}>
           <div className={styles.entry_Header}>
-            <h1>{entry.title || '(untitled)'}</h1>
+            <h1>{currentEntry.title || '(untitled)'}</h1>
             <div className={styles.entry_Meta}>
-              {hasSourceMeta || entry.published_at || readingTimeLabel ? (
+              {hasSourceMeta || currentEntry.published_at || readingTimeLabel ? (
                 <>
-                  {entry.published_at && (
+                  {currentEntry.published_at && (
                     <p>
-                      <FormattedDate date={entry.published_at} />
+                      <FormattedDate date={currentEntry.published_at} />
                     </p>
                   )}
                   {readingTimeLabel ? <p>{readingTimeLabel}</p> : null}
@@ -725,7 +733,7 @@ export function EntryPanel({
                     <p>
                       From:{' '}
                       <i>
-                        {entry.author && `By: ${entry.author}, `}
+                        {currentEntry.author && `By: ${currentEntry.author}, `}
                         {sourceFeedTitle ?? ''}
                       </i>
                     </p>
@@ -794,7 +802,7 @@ export function EntryPanel({
               <div>
                 <a
                   className={styles.link}
-                  href={entry.url}
+                  href={currentEntry.url}
                   target="_blank"
                   rel="noreferrer"
                   onClick={onOpenExternalLink}
@@ -823,7 +831,7 @@ export function EntryPanel({
                 <span>{selectedIsStarred ? 'Unstar' : 'Star'}</span>
               </Button>
               <a
-                href={entry.url}
+                href={currentEntry.url}
                 target="_blank"
                 rel="noreferrer"
                 title="Source link"
@@ -862,17 +870,21 @@ export function EntryPanel({
               </Button>
               <Button
                 onClick={() =>
-                  onSetStatus(entry.status === 'unread' ? 'read' : 'unread')
+                  onSetStatus(
+                    currentEntry.status === 'unread' ? 'read' : 'unread',
+                  )
                 }
                 disabled={isUpdatingStatus}
                 type="button"
                 title={
-                  entry.status === 'unread' ? 'Mark as read' : 'Mark as unread'
+                  currentEntry.status === 'unread'
+                    ? 'Mark as read'
+                    : 'Mark as unread'
                 }
                 className={styles.actionsList_Item}
               >
                 <span>
-                  {entry.status === 'unread'
+                  {currentEntry.status === 'unread'
                     ? 'Mark as read'
                     : 'Mark as unread'}
                 </span>

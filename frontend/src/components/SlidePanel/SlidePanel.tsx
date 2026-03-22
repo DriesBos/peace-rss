@@ -28,6 +28,7 @@ const OVERLAY_DURATION_SECONDS = 0.2;
 type SlidePanelProps = {
   isOpen: boolean;
   onClose: () => void;
+  onAfterClose?: () => void;
   ariaLabel?: string;
   children: React.ReactNode;
   scrollContainerRef?: RefObject<HTMLDivElement | null>;
@@ -36,6 +37,7 @@ type SlidePanelProps = {
 export function SlidePanel({
   isOpen,
   onClose,
+  onAfterClose,
   ariaLabel = 'Detail panel',
   children,
   scrollContainerRef,
@@ -48,6 +50,7 @@ export function SlidePanel({
   const [isHeaderStuck, setIsHeaderStuck] = useState(false);
 
   const overlayRef = useRef<HTMLDivElement | null>(null);
+  const panelRef = useRef<HTMLDivElement | null>(null);
   const internalContainerRef = useRef<HTMLDivElement | null>(null);
   const containerRef = scrollContainerRef ?? internalContainerRef;
   const headerRef = useRef<HTMLDivElement | null>(null);
@@ -200,8 +203,8 @@ export function SlidePanel({
       if (!shouldRender) return;
 
       const overlay = overlayRef.current;
-      const container = containerRef.current;
-      if (!overlay || !container) return;
+      const panel = panelRef.current;
+      if (!overlay || !panel) return;
 
       const prefersReducedMotion =
         typeof window !== 'undefined' &&
@@ -212,16 +215,14 @@ export function SlidePanel({
       const overlayDuration = prefersReducedMotion ? 0 : OVERLAY_DURATION_SECONDS;
 
       gsap.killTweensOf(overlay);
-      gsap.killTweensOf(container);
+      gsap.killTweensOf(panel);
 
       if (isOpen) {
         if (!hasPrimedEntranceRef.current) {
           gsap.set(overlay, { autoAlpha: 0 });
-          gsap.set(container, {
-            autoAlpha: 1,
+          gsap.set(panel, {
             force3D: true,
             xPercent: 100,
-            opacity: 0,
           });
           hasPrimedEntranceRef.current = true;
         }
@@ -232,13 +233,12 @@ export function SlidePanel({
           ease: 'power2.out',
           overwrite: 'auto',
         });
-        gsap.to(container, {
+        gsap.to(panel, {
           duration: openDuration,
           ease: 'power3.out',
           force3D: true,
           overwrite: 'auto',
           xPercent: 0,
-          opacity: 1,
         });
         return;
       }
@@ -249,22 +249,22 @@ export function SlidePanel({
         ease: 'power2.inOut',
         overwrite: 'auto',
       });
-      gsap.to(container, {
+      gsap.to(panel, {
         duration: closeDuration,
         ease: 'power3.in',
         force3D: true,
         overwrite: 'auto',
         xPercent: 100,
-        opacity: 0,
         onComplete: () => {
           hasPrimedEntranceRef.current = false;
           setIsPresent(false);
+          onAfterClose?.();
         },
       });
     },
     {
       scope: overlayRef,
-      dependencies: [containerRef, isOpen, shouldRender],
+      dependencies: [containerRef, isOpen, onAfterClose, shouldRender],
     },
   );
 
@@ -287,36 +287,41 @@ export function SlidePanel({
       {/* Slide panel */}
       <div
         className={styles.slidePanel_Container}
-        ref={containerRef}
+        ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-label={ariaLabel}
         aria-hidden={ariaHidden}
         data-open={isOpen}
-        tabIndex={-1}
       >
         <div className={styles.slidePanel_Background} aria-hidden="true">
           <MainKomorebiLayer />
         </div>
-        <div className={styles.slidePanel_Content}>
-          <div
-            ref={headerRef}
-            className={styles.slidePanel_Header}
-            data-stuck={isHeaderStuck}
-          >
-            <Button
-              type="button"
-              variant="nav"
-              onClick={requestClose}
-              aria-label="Close detail panel"
+        <div
+          className={styles.slidePanel_Scroller}
+          ref={containerRef}
+          tabIndex={-1}
+        >
+          <div className={styles.slidePanel_Content}>
+            <div
+              ref={headerRef}
+              className={styles.slidePanel_Header}
+              data-stuck={isHeaderStuck}
             >
-              <IconWrapper variant="wide">
-                <IconArrowLeft />
-              </IconWrapper>
-              <span>Back</span>
-            </Button>
+              <Button
+                type="button"
+                variant="nav"
+                onClick={requestClose}
+                aria-label="Close detail panel"
+              >
+                <IconWrapper variant="wide">
+                  <IconArrowLeft />
+                </IconWrapper>
+                <span>Back</span>
+              </Button>
+            </div>
+            {children}
           </div>
-          {children}
         </div>
       </div>
     </>

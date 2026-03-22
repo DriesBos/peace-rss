@@ -19,17 +19,30 @@
     width: 100vw
     max-width: 100%
     min-height: 100lvh
-    opacity: 0
     z-index: var(--index-slidepanel)
+    overflow: hidden
+    pointer-events: none
+    background: var(--color-app)
+    will-change: transform
+    backface-visibility: hidden
+    -webkit-backface-visibility: hidden
+    overscroll-behavior: none
+    outline: none
+    &[data-open="true"]
+      pointer-events: auto
+
+  &_Scroller
+    position: relative
+    z-index: 1
+    min-height: 100%
+    height: 100%
     overflow-y: auto
     scrollbar-width: none
     -ms-overflow-style: none
-    pointer-events: none
-    background: var(--color-app)
+    -webkit-overflow-scrolling: touch
+    overscroll-behavior: contain
     &::-webkit-scrollbar
       display: none
-    &[data-open="true"]
-      pointer-events: auto
 
   &_Background
     position: absolute
@@ -42,7 +55,6 @@
 
   &_Content
     position: relative
-    z-index: 1
     min-height: 100%
     display: flex
     flex-direction: column
