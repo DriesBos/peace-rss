@@ -25,6 +25,20 @@ const OPEN_DURATION_SECONDS = 0.42;
 const CLOSE_DURATION_SECONDS = 0.32;
 const OVERLAY_DURATION_SECONDS = 0.2;
 
+function getClosedPanelOffset(panel: HTMLDivElement) {
+  const rectWidth = panel.getBoundingClientRect().width;
+
+  if (rectWidth > 0) {
+    return Math.ceil(rectWidth);
+  }
+
+  if (typeof window !== 'undefined') {
+    return Math.ceil(window.visualViewport?.width ?? window.innerWidth);
+  }
+
+  return 0;
+}
+
 type SlidePanelProps = {
   isOpen: boolean;
   onClose: () => void;
@@ -218,11 +232,13 @@ export function SlidePanel({
       gsap.killTweensOf(panel);
 
       if (isOpen) {
+        const closedOffset = getClosedPanelOffset(panel);
+
         if (!hasPrimedEntranceRef.current) {
           gsap.set(overlay, { autoAlpha: 0 });
           gsap.set(panel, {
             force3D: true,
-            xPercent: 100,
+            x: closedOffset,
           });
           hasPrimedEntranceRef.current = true;
         }
@@ -238,10 +254,12 @@ export function SlidePanel({
           ease: 'power3.out',
           force3D: true,
           overwrite: 'auto',
-          xPercent: 0,
+          x: 0,
         });
         return;
       }
+
+      const closedOffset = getClosedPanelOffset(panel);
 
       gsap.to(overlay, {
         autoAlpha: 0,
@@ -254,7 +272,7 @@ export function SlidePanel({
         ease: 'power3.in',
         force3D: true,
         overwrite: 'auto',
-        xPercent: 100,
+        x: closedOffset,
         onComplete: () => {
           hasPrimedEntranceRef.current = false;
           setIsPresent(false);
@@ -285,45 +303,51 @@ export function SlidePanel({
       />
 
       {/* Slide panel */}
-      <div
-        className={styles.slidePanel_Container}
-        ref={panelRef}
-        role="dialog"
-        aria-modal="true"
-        aria-label={ariaLabel}
-        aria-hidden={ariaHidden}
-        data-open={isOpen}
-      >
-        <div className={styles.slidePanel_Background} aria-hidden="true">
-          <MainKomorebiLayer />
-        </div>
         <div
-          className={styles.slidePanel_Scroller}
-          ref={containerRef}
-          tabIndex={-1}
+          className={styles.slidePanel_Frame}
+          aria-hidden={ariaHidden}
+          data-open={isOpen}
         >
-          <div className={styles.slidePanel_Content}>
-            <div
-              ref={headerRef}
-              className={styles.slidePanel_Header}
-              data-stuck={isHeaderStuck}
-            >
-              <Button
-                type="button"
-                variant="nav"
-                onClick={requestClose}
-                aria-label="Close detail panel"
-              >
-                <IconWrapper variant="wide">
-                  <IconArrowLeft />
-                </IconWrapper>
-                <span>Back</span>
-              </Button>
+          <div
+            className={styles.slidePanel_Container}
+            ref={panelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label={ariaLabel}
+            aria-hidden={ariaHidden}
+            data-open={isOpen}
+          >
+            <div className={styles.slidePanel_Background} aria-hidden="true">
+              <MainKomorebiLayer />
             </div>
-            {children}
+            <div
+              className={styles.slidePanel_Scroller}
+              ref={containerRef}
+              tabIndex={-1}
+            >
+              <div className={styles.slidePanel_Content}>
+                <div
+                  ref={headerRef}
+                  className={styles.slidePanel_Header}
+                  data-stuck={isHeaderStuck}
+                >
+                  <Button
+                    type="button"
+                    variant="nav"
+                    onClick={requestClose}
+                    aria-label="Close detail panel"
+                  >
+                    <IconWrapper variant="wide">
+                      <IconArrowLeft />
+                    </IconWrapper>
+                    <span>Back</span>
+                  </Button>
+                </div>
+                {children}
+              </div>
+            </div>
           </div>
         </div>
-      </div>
     </>
   );
 

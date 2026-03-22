@@ -11,25 +11,32 @@
     &[data-open="true"]
       pointer-events: auto
 
-  &_Container
+  &_Frame
     position: fixed
-    top: 0
-    right: -1px
-    bottom: 0
+    inset: 0
+    z-index: var(--index-slidepanel)
+    display: flex
+    justify-content: flex-end
+    pointer-events: none
+
+  &_Container
+    position: relative
     width: 100vw
     max-width: 100%
-    min-height: 100lvh
-    z-index: var(--index-slidepanel)
+    min-height: 100vh
+    min-height: 100dvh
+    height: 100vh
+    height: 100dvh
     overflow: hidden
-    pointer-events: none
+    pointer-events: auto
     background: var(--color-app)
+    transform: translate3d(100%, 0, 0)
     will-change: transform
     backface-visibility: hidden
     -webkit-backface-visibility: hidden
+    contain: paint
     overscroll-behavior: none
     outline: none
-    &[data-open="true"]
-      pointer-events: auto
 
   &_Scroller
     position: relative
