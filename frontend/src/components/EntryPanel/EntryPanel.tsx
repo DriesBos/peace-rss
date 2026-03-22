@@ -12,7 +12,6 @@ import { IconArrowShortLeft } from '@/components/icons/IconArrowShortLeft';
 import { IconArrowShortRight } from '@/components/icons/IconArrowShortRight';
 import { ScrollToTop } from '@/components/ScrollToTop/ScrollToTop';
 import type { Entry, Feed } from '@/app/_lib/types';
-import { formatReadingTime } from '@/lib/readingTime';
 import { extractYouTubeVideoId, getYouTubeEmbedUrl } from '@/lib/youtube';
 import { IconWrapper } from '../icons/IconWrapper/IconWrapper';
 import { IconStar } from '../icons/IconStar';
@@ -531,7 +530,6 @@ export type EntryPanelProps = {
   hasNext: boolean;
   isTogglingStar: boolean;
   isUpdatingStatus: boolean;
-  showReadingTime: boolean;
 };
 
 export function EntryPanel({
@@ -550,7 +548,6 @@ export function EntryPanel({
   hasNext,
   isTogglingStar,
   isUpdatingStatus,
-  showReadingTime,
 }: EntryPanelProps) {
   const [displayEntry, setDisplayEntry] = useState<Entry | null>(entry);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
@@ -567,9 +564,6 @@ export function EntryPanel({
     useState(false);
   const content = currentEntry?.content?.trim() ?? '';
   const hasContent = Boolean(content);
-  const readingTimeLabel = showReadingTime
-    ? formatReadingTime(currentEntry?.reading_time)
-    : '';
   const sourceFeedTitle =
     currentEntry?.feed_title ??
     currentEntry?.feed?.title ??
@@ -721,17 +715,15 @@ export function EntryPanel({
           <div className={styles.entry_Header}>
             <h1>{currentEntry.title || '(untitled)'}</h1>
             <div className={styles.entry_Meta}>
-              {hasSourceMeta || currentEntry.published_at || readingTimeLabel ? (
+              {hasSourceMeta || currentEntry.published_at ? (
                 <>
                   {currentEntry.published_at && (
                     <p>
                       <FormattedDate date={currentEntry.published_at} />
                     </p>
                   )}
-                  {readingTimeLabel ? <p>{readingTimeLabel}</p> : null}
                   {hasSourceMeta ? (
                     <p>
-                      From:{' '}
                       <i>
                         {currentEntry.author && `By: ${currentEntry.author}, `}
                         {sourceFeedTitle ?? ''}

@@ -23,8 +23,8 @@ export type EditModalProps = {
   editLoading: boolean;
   editError: string | null;
   onClose: () => void;
-  onDeleteCategory: (categoryId: number) => void;
-  onDeleteFeed: (feedId: number) => void;
+  onDeleteCategory: (categoryId: number) => Promise<boolean>;
+  onDeleteFeed: (feedId: number) => Promise<boolean>;
   onUpdateCategory: (e: React.FormEvent) => Promise<boolean>;
   onUpdateFeed: (e: React.FormEvent) => Promise<boolean>;
   onChangeTitle: (value: string) => void;
@@ -52,6 +52,28 @@ export function EditModal({
   onChangeFeedUrl,
   onChangeCategoryId,
 }: EditModalProps) {
+  const handleDeleteCategory = async () => {
+    if (!editItemId) return;
+    if (!confirm('Are you sure you want to delete this category?')) return;
+
+    const didSucceed = await onDeleteCategory(editItemId);
+    if (didSucceed) {
+      toast.success(NOTIFICATION_COPY.app.categoryDeleted);
+      onClose();
+    }
+  };
+
+  const handleDeleteFeed = async () => {
+    if (!editItemId) return;
+    if (!confirm('Are you sure you want to delete this feed?')) return;
+
+    const didSucceed = await onDeleteFeed(editItemId);
+    if (didSucceed) {
+      toast.success(NOTIFICATION_COPY.app.feedDeleted);
+      onClose();
+    }
+  };
+
   const handleSubmitCategory = async (event: React.FormEvent) => {
     const didSucceed = await onUpdateCategory(event);
     if (didSucceed) {
@@ -133,18 +155,7 @@ export function EditModal({
                   <Button
                     variant="primary"
                     type="button"
-                    onClick={() => {
-                      if (
-                        editItemId &&
-                        confirm(
-                          'Are you sure you want to delete this category?',
-                        )
-                      ) {
-                        onDeleteCategory(editItemId);
-                        toast(NOTIFICATION_COPY.app.categoryDeleted);
-                        onClose();
-                      }
-                    }}
+                    onClick={() => void handleDeleteCategory()}
                     disabled={editLoading}
                   >
                     Delete
@@ -217,16 +228,7 @@ export function EditModal({
               <Button
                 variant="primary"
                 type="button"
-                onClick={() => {
-                  if (
-                    editItemId &&
-                    confirm('Are you sure you want to delete this feed?')
-                  ) {
-                    onDeleteFeed(editItemId);
-                    toast(NOTIFICATION_COPY.app.feedDeleted);
-                    onClose();
-                  }
-                }}
+                onClick={() => void handleDeleteFeed()}
                 disabled={editLoading}
               >
                 Delete

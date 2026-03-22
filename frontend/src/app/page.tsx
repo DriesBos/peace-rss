@@ -858,14 +858,11 @@ export default function Home() {
     }
   }
 
-  async function deleteCategory(categoryId: number) {
+  async function deleteCategory(categoryId: number): Promise<boolean> {
     const category = categories.find((cat) => cat.id === categoryId);
     if (category && isProtectedCategoryTitle(category.title)) {
       toast.error('This category is managed automatically.');
-      return;
-    }
-    if (!confirm('Are you sure you want to delete this category?')) {
-      return;
+      return false;
     }
 
     setIsLoading(true);
@@ -882,14 +879,16 @@ export default function Home() {
         setSelectedCategoryId(null);
         await reloadCurrentEntries();
       }
+      return true;
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to delete category');
+      return false;
     } finally {
       setIsLoading(false);
     }
   }
 
-  async function deleteFeed(feedId: number) {
+  async function deleteFeed(feedId: number): Promise<boolean> {
     setIsLoading(true);
     setError(null);
 
@@ -901,8 +900,10 @@ export default function Home() {
       // Success: refresh feeds/categories so global visibility and unread totals stay in sync.
       await Promise.all([loadFeeds(), loadCategories(), refreshAllCount()]);
       await reloadCurrentEntries();
+      return true;
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to delete feed');
+      return false;
     } finally {
       setIsLoading(false);
     }
@@ -1541,7 +1542,6 @@ export default function Home() {
               hasNext={hasNext}
               isTogglingStar={isTogglingStar}
               isUpdatingStatus={isUpdatingStatus}
-              showReadingTime={readerPreferences.show_reading_time}
             />
           </div>
         )}

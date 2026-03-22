@@ -27,17 +27,15 @@
     flex-direction: column
     gap: var(--space-titlemeta-gap)
     padding: 0 var(--space-sides-general-wide)
-    
     // position: sticky
     // top: calc(32px + 16px)
   &_Meta
     display: flex
     color: var(--color-text-secondary)
     gap: 8px
-    padding-left: 0 var(--space-sides-general-wide)
-    
+    padding-left: var(--space-sides-general)
     @include font-meta
-    p, i
+    p, i, span
       @include font-meta
   // All story markdown is in here
   &_Content
