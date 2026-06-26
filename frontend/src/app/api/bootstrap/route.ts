@@ -2,6 +2,7 @@ import 'server-only';
 
 import { NextResponse } from 'next/server';
 import { auth, clerkClient } from '@clerk/nextjs/server';
+import { randomBytes, randomInt } from 'node:crypto';
 import { mfFetchAdmin, mfFetchUserBasicAuth } from '@/lib/miniflux';
 
 export const runtime = 'nodejs';
@@ -53,7 +54,7 @@ function generateRandomPassword(): string {
     'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
   let password = '';
   for (let i = 0; i < 24; i++) {
-    password += chars.charAt(Math.floor(Math.random() * chars.length));
+    password += chars.charAt(randomInt(chars.length));
   }
   return password;
 }
@@ -113,7 +114,7 @@ export async function POST() {
     } catch (err) {
       // If username already exists, try with random suffix
       if (err instanceof Error && err.message.includes('already exists')) {
-        const randomSuffix = Math.random().toString(36).slice(2, 6);
+        const randomSuffix = randomBytes(2).toString('hex');
         username = `${username}-${randomSuffix}`;
 
         try {

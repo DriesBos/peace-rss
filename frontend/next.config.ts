@@ -2,23 +2,15 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactCompiler: true,
-  turbopack: {},
   images: {
     formats: ["image/avif", "image/webp"],
+    // ponytail: wildcard hosts — RSS entries embed images from arbitrary
+    // domains, so the optimizer must accept any host. Tighten only if you
+    // proxy/allowlist feed images upstream.
     remotePatterns: [
       { protocol: "https", hostname: "**", pathname: "**" },
       { protocol: "http", hostname: "**", pathname: "**" },
     ],
-  },
-  webpack: (config) => {
-    // Add rule for .glsl files
-    config.module.rules.push({
-      test: /\.(glsl|vs|fs|vert|frag)$/,
-      exclude: /node_modules/,
-      use: ['raw-loader'],
-    });
-
-    return config;
   },
 };
 
