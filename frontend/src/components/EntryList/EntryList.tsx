@@ -1,6 +1,6 @@
 'use client';
 
-import { useInView } from 'react-intersection-observer';
+import { useEffect, useRef, useState } from 'react';
 import styles from './EntryList.module.sass';
 import { EntryItem } from '@/components/EntryItem/EntryItem';
 import { Button } from '@/components/Button/Button';
@@ -30,10 +30,31 @@ function LazyEntryItem({
   feedsById,
   onEntryClick,
 }: LazyEntryItemProps) {
-  const { ref, inView } = useInView({
-    threshold: 0.5,
-    triggerOnce: true,
-  });
+  const ref = useRef<HTMLDivElement>(null);
+  const [inView, setInView] = useState(false);
+
+  useEffect(() => {
+    if (inView) return;
+    const node = ref.current;
+    if (!node) return;
+
+    if (typeof IntersectionObserver === 'undefined') {
+      setInView(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry?.isIntersecting) return;
+        setInView(true);
+        observer.disconnect();
+      },
+      { threshold: 0.5 },
+    );
+
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [inView]);
 
   const isActive = entry.id === selectedEntryId;
   const feedTitle =
@@ -41,8 +62,6 @@ function LazyEntryItem({
     entry.feed?.title ??
     feedsById.get(entry.feed_id)?.title;
   const published = formatDate(entry.published_at);
-
-
 
   return (
     <div ref={ref} className={styles.lazyEntryWrapper}>

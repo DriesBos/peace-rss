@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { SignedIn, SignedOut, RedirectToSignIn } from '@clerk/nextjs';
+import { Show, RedirectToSignIn } from '@clerk/nextjs';
 import { toast } from 'sonner';
 import styles from './page.module.sass';
 import { AddModal } from '@/components/AddModal/AddModal';
@@ -1376,7 +1376,7 @@ export default function Home() {
 
   return (
     <>
-      <SignedIn>
+      <Show when="signed-in">
         {/* Show provisioning error with retry button */}
         {provisionError && !isProvisioned ? (
           <div className={styles.app}>
@@ -1545,11 +1545,11 @@ export default function Home() {
             />
           </div>
         )}
-      </SignedIn>
+      </Show>
 
-      <SignedOut>
+      <Show when="signed-out">
         <RedirectToSignIn />
-      </SignedOut>
+      </Show>
     </>
   );
 }

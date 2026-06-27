@@ -38,17 +38,18 @@ function ThemeStateBridge() {
 
     applyEffectiveTheme();
 
-    const intervalId = window.setInterval(applyEffectiveTheme, 60_000);
+    const systemTheme = window.matchMedia('(prefers-color-scheme: dark)');
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         applyEffectiveTheme();
       }
     };
 
+    systemTheme.addEventListener('change', applyEffectiveTheme);
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
-      window.clearInterval(intervalId);
+      systemTheme.removeEventListener('change', applyEffectiveTheme);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [resolvedTheme, theme]);

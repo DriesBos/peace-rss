@@ -199,10 +199,14 @@ export function MenuModal({
   useEffect(() => {
     if (!isOpen) return;
 
-    const interval = window.setInterval(() => {
+    const tick = () => {
       setNowMs(Date.now());
-    }, 1_000);
-    return () => window.clearInterval(interval);
+      const msUntilNextMinute = 60_000 - (Date.now() % 60_000);
+      timeout = window.setTimeout(tick, msUntilNextMinute);
+    };
+
+    let timeout = window.setTimeout(tick, 60_000 - (Date.now() % 60_000));
+    return () => window.clearTimeout(timeout);
   }, [isOpen]);
 
   useEffect(() => {

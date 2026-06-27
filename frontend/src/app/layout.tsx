@@ -2,8 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import localFont from 'next/font/local';
 import {
   ClerkProvider,
-  SignedIn,
-  SignedOut,
+  Show,
 } from '@clerk/nextjs';
 import '@/styles/vars.sass';
 import '@/styles/reset.css';
@@ -157,16 +156,16 @@ export default function RootLayout({
                 <LandingPage />
               ) : (
                 <>
-                  <SignedOut>
+                  <Show when="signed-out">
                     <LandingPage />
-                  </SignedOut>
-                  <SignedIn>
+                  </Show>
+                  <Show when="signed-in">
                     <MainKomorebiLayer />
                     <div className="mainContentLayer">
                       <GlobalKeybindings />
                       {children}
                     </div>
-                  </SignedIn>
+                  </Show>
                 </>
               )}
             </main>
