@@ -3,7 +3,7 @@ import 'server-only';
 import { NextRequest, NextResponse } from 'next/server';
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { apiErrorResponse } from '@/lib/apiErrors';
-import { mfFetchUser } from '@/lib/miniflux';
+import { mfFetchUser, MinifluxApiError } from '@/lib/miniflux';
 import { getEntryListMeta } from '@/lib/entryListMeta';
 
 export const runtime = 'nodejs';
@@ -65,6 +65,18 @@ export async function POST(_request: NextRequest, context: Ctx) {
       reading_time: entry.reading_time,
     });
   } catch (err) {
+    if (err instanceof MinifluxApiError && err.publicStatus === 500) {
+      console.warn('Miniflux could not fetch entry content', {
+        path: err.path,
+        statusText: err.statusText,
+        body: err.body,
+      });
+      return NextResponse.json({
+        ok: false,
+        error: 'Could not fetch original content.',
+      });
+    }
+
     return apiErrorResponse(err, 'Failed to fetch entry content');
   }
 }

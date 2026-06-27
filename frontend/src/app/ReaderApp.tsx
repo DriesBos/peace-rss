@@ -39,6 +39,7 @@ import {
 } from '@/lib/protectedCategories';
 import { normalizeReaderPreferences } from '@/lib/readerPrefs';
 import { readerQueryKeys } from '@/lib/readerQueryKeys';
+import { resolveSelectedEntry } from '@/lib/selectedEntry';
 
 type ActiveModal = 'none' | 'menu' | 'add' | 'edit';
 
@@ -273,11 +274,15 @@ export function ReaderApp({
     return visibleCategoryUnreadCount + uncategorizedUnreadCount;
   }, [categories, feeds]);
 
+  const selectedEntryRef = useRef<Entry | null>(null);
   const selectedEntry = useMemo(() => {
-    return entries.find((e) => e.id === selectedEntryId) ?? null;
+    return resolveSelectedEntry(
+      entries,
+      selectedEntryId,
+      selectedEntryRef.current,
+    );
   }, [entries, selectedEntryId]);
 
-  const selectedEntryRef = useRef<Entry | null>(null);
   useEffect(() => {
     selectedEntryRef.current = selectedEntry;
   }, [selectedEntry]);
@@ -808,7 +813,7 @@ export function ReaderApp({
       try {
         const result = await fetchJson<{
           ok: boolean;
-          content: string;
+          content?: string;
           preview?: string;
           thumbnail_url?: string;
           reading_time?: number;
