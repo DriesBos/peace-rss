@@ -30,6 +30,8 @@ export type Entry = {
   title: string;
   url: string;
   content?: string;
+  preview?: string;
+  thumbnail_url?: string;
   reading_time?: number;
   author?: string;
   feed_id: number;

@@ -1107,6 +1107,8 @@ export default function Home() {
         const result = await fetchJson<{
           ok: boolean;
           content: string;
+          preview?: string;
+          thumbnail_url?: string;
           reading_time?: number;
         }>(`/api/entries/${targetEntry.id}/fetch-content`, { method: 'POST' });
 
@@ -1118,6 +1120,8 @@ export default function Home() {
                 ? {
                     ...e,
                     content: result.content,
+                    preview: result.preview,
+                    thumbnail_url: result.thumbnail_url,
                     reading_time: result.reading_time ?? e.reading_time,
                   }
                 : e,

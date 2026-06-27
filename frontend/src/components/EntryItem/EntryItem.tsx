@@ -1,101 +1,34 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import styles from './EntryItem.module.sass';
 import { FormattedDate } from '../FormattedDate';
-import {
-  extractThumbnailFromHtml,
-  resolveAbsoluteUrl,
-} from '@/lib/entryThumbnail';
 
 type EntryItemProps = {
   title?: string;
   feedTitle?: string;
   author?: string;
   publishedAt?: string;
-  content?: string;
-  url?: string;
+  preview?: string;
+  thumbnailUrl?: string;
   active?: boolean;
   marked: boolean;
   starred?: boolean;
   onClick?: () => void;
 };
 
-/**
- * Creates a plain text preview from HTML content
- * @param htmlContent - HTML string to convert
- * @param maxLength - Maximum character length (default: 200)
- * @returns Plain text preview with ellipsis if truncated, or empty string if less than 6 words
- */
-function createPreview(
-  htmlContent: string | undefined,
-  maxLength = 200,
-): string {
-  if (!htmlContent) return '';
-
-  // Strip HTML tags
-  let textOnly = htmlContent
-    .replace(/<[^>]*>/g, ' ')
-    // Replace multiple spaces/newlines with single space
-    .replace(/\s+/g, ' ')
-    // Decode common named HTML entities
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .trim();
-
-  // Decode numeric HTML entities (decimal: &#34; and hex: &#x22;)
-  textOnly = textOnly.replace(/&#(\d+);/g, (_, dec) => {
-    return String.fromCharCode(parseInt(dec, 10));
-  });
-  textOnly = textOnly.replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => {
-    return String.fromCharCode(parseInt(hex, 16));
-  });
-
-  // Count words (split by whitespace and filter empty strings)
-  const words = textOnly.split(/\s+/).filter((word) => word.length > 0);
-
-  // Only show preview if there are at least a few words
-  if (words.length < 3) return '';
-
-  const fullText = words.join(' ');
-
-  if (fullText.length <= maxLength) return fullText;
-
-  // Truncate at word boundary to avoid cutting words
-  const truncated = fullText.slice(0, maxLength);
-  const lastSpace = truncated.lastIndexOf(' ');
-
-  return (lastSpace > 0 ? truncated.slice(0, lastSpace) : truncated) + '…';
-}
-
 export function EntryItem({
   title,
   feedTitle,
   author,
   publishedAt,
-  content,
-  url,
+  preview,
+  thumbnailUrl,
   active,
   marked,
   starred,
   onClick,
 }: EntryItemProps) {
-  const preview = useMemo(() => {
-    return createPreview(content, 200);
-  }, [content]);
-
-  const thumbnailUrl = useMemo(() => {
-    return extractThumbnailFromHtml(content);
-  }, [content]);
-
-  const absoluteThumbnailUrl = useMemo(() => {
-    return resolveAbsoluteUrl(thumbnailUrl, url);
-  }, [thumbnailUrl, url]);
-
   const [isThumbnailErrored, setIsThumbnailErrored] = useState(false);
   const hasMetaPrefix = Boolean(publishedAt);
   const hasSourceMeta = Boolean(author || feedTitle);
@@ -134,12 +67,12 @@ export function EntryItem({
         </div>
         {preview && <p className={styles.entryItem_Preview}>{preview}</p>}
       </div>
-      {absoluteThumbnailUrl && !isThumbnailErrored && (
+      {thumbnailUrl && !isThumbnailErrored && (
         <div className={styles.entryItem_Thumbnail}>
           {/* ponytail: RSS thumbnails use arbitrary hosts; keep plain img. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={absoluteThumbnailUrl}
+            src={thumbnailUrl}
             alt={title || 'Entry thumbnail'}
             loading="lazy"
             referrerPolicy="no-referrer"

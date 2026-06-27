@@ -5,10 +5,18 @@ import { auth, clerkClient } from '@clerk/nextjs/server';
 import { apiErrorResponse } from '@/lib/apiErrors';
 import { mfFetchUser } from '@/lib/miniflux';
 import { DEFAULT_ENTRIES_PAGE_SIZE } from '@/lib/entriesQuery';
+import { withEntryListMeta } from '@/lib/entryListMeta';
 
 export const runtime = 'nodejs';
 
 const MAX_ENTRIES_LIMIT = 500;
+
+type EntriesData = {
+  entries?: Array<{
+    content?: string;
+    url?: string;
+  }>;
+};
 
 function getStringParam(url: URL, key: string, defaultValue: string): string {
   const value = url.searchParams.get(key);
@@ -168,11 +176,16 @@ export async function GET(request: Request) {
     }
 
     // 4. Fetch entries using per-user token
-    const data = await mfFetchUser<unknown>(
+    const data = await mfFetchUser<EntriesData>(
       token,
       `/v1/entries?${qs.toString()}`
     );
-    return NextResponse.json(data);
+    return NextResponse.json({
+      ...data,
+      entries: Array.isArray(data.entries)
+        ? data.entries.map(withEntryListMeta)
+        : data.entries,
+    });
   } catch (err) {
     return apiErrorResponse(err, 'Failed to fetch entries');
   }

@@ -1,10 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useWindowVirtualizer } from '@tanstack/react-virtual';
 import styles from './EntryList.module.sass';
 import { EntryItem } from '@/components/EntryItem/EntryItem';
 import { Button } from '@/components/Button/Button';
 import type { Entry, Feed } from '@/app/_lib/types';
+
+const ROW_GAP = 24;
 
 function formatDate(value?: string): string {
   if (!value) return '';
@@ -17,70 +20,20 @@ function formatDate(value?: string): string {
   });
 }
 
-type LazyEntryItemProps = {
-  entry: Entry;
-  selectedEntryId: number | null;
-  feedsById: Map<number, Feed>;
-  onEntryClick: (id: number) => void;
-};
+function getColumnCount(width: number): number {
+  if (width >= 2000) return 5;
+  if (width >= 1600) return 4;
+  if (width >= 1200) return 3;
+  if (width >= 800) return 2;
+  return 1;
+}
 
-function LazyEntryItem({
-  entry,
-  selectedEntryId,
-  feedsById,
-  onEntryClick,
-}: LazyEntryItemProps) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [inView, setInView] = useState(false);
-
-  useEffect(() => {
-    if (inView) return;
-    const node = ref.current;
-    if (!node) return;
-
-    if (typeof IntersectionObserver === 'undefined') {
-      setInView(true);
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry?.isIntersecting) return;
-        setInView(true);
-        observer.disconnect();
-      },
-      { threshold: 0.5 },
-    );
-
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [inView]);
-
-  const isActive = entry.id === selectedEntryId;
-  const feedTitle =
-    entry.feed_title ??
-    entry.feed?.title ??
-    feedsById.get(entry.feed_id)?.title;
-  const published = formatDate(entry.published_at);
-
-  return (
-    <div ref={ref} className={styles.lazyEntryWrapper}>
-      {inView && (
-        <EntryItem
-          title={entry.title}
-          author={entry.author}
-          feedTitle={feedTitle}
-          publishedAt={published}
-          active={isActive}
-          marked={entry.status === 'read'}
-          starred={entry.starred}
-          content={entry.content}
-          url={entry.url}
-          onClick={() => onEntryClick(entry.id)}
-        />
-      )}
-    </div>
-  );
+function chunkEntries(entries: Entry[], columnCount: number): Entry[][] {
+  const rows: Entry[][] = [];
+  for (let i = 0; i < entries.length; i += columnCount) {
+    rows.push(entries.slice(i, i + columnCount));
+  }
+  return rows;
 }
 
 export type EntryListProps = {
@@ -108,6 +61,32 @@ export function EntryList({
   isAllEntriesView,
   isStarredView,
 }: EntryListProps) {
+  const listRef = useRef<HTMLDivElement>(null);
+  const [columnCount, setColumnCount] = useState(1);
+  const [scrollMargin, setScrollMargin] = useState(0);
+  const rows = useMemo(
+    () => chunkEntries(entries, columnCount),
+    [entries, columnCount],
+  );
+  const rowVirtualizer = useWindowVirtualizer({
+    count: rows.length,
+    estimateSize: () => 180,
+    gap: ROW_GAP,
+    overscan: 6,
+    scrollMargin,
+  });
+
+  useEffect(() => {
+    const updateLayout = () => {
+      setColumnCount(getColumnCount(window.innerWidth));
+      setScrollMargin(listRef.current?.offsetTop ?? 0);
+    };
+
+    updateLayout();
+    window.addEventListener('resize', updateLayout);
+    return () => window.removeEventListener('resize', updateLayout);
+  }, []);
+
   const emptyMessage = isLoading
     ? 'loading...'
     : searchMode
@@ -123,16 +102,50 @@ export function EntryList({
       {entries.length === 0 ? (
         <div className={styles.muted}>{emptyMessage}</div>
       ) : (
-        <div className={styles.entryList_Items}>
-          {entries.map((entry) => (
-            <LazyEntryItem
-              key={entry.id}
-              entry={entry}
-              selectedEntryId={selectedEntryId}
-              feedsById={feedsById}
-              onEntryClick={onEntrySelect}
-            />
-          ))}
+        <div
+          ref={listRef}
+          className={styles.entryList_Items}
+          style={{ height: `${rowVirtualizer.getTotalSize()}px` }}
+        >
+          {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+            const row = rows[virtualRow.index] ?? [];
+            return (
+              <div
+                key={virtualRow.key}
+                data-index={virtualRow.index}
+                ref={rowVirtualizer.measureElement}
+                className={styles.entryList_Row}
+                style={{
+                  gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))`,
+                  transform: `translateY(${
+                    virtualRow.start - rowVirtualizer.options.scrollMargin
+                  }px)`,
+                }}
+              >
+                {row.map((entry) => {
+                  const feedTitle =
+                    entry.feed_title ??
+                    entry.feed?.title ??
+                    feedsById.get(entry.feed_id)?.title;
+                  return (
+                    <EntryItem
+                      key={entry.id}
+                      title={entry.title}
+                      author={entry.author}
+                      feedTitle={feedTitle}
+                      publishedAt={formatDate(entry.published_at)}
+                      active={entry.id === selectedEntryId}
+                      marked={entry.status === 'read'}
+                      starred={entry.starred}
+                      preview={entry.preview}
+                      thumbnailUrl={entry.thumbnail_url}
+                      onClick={() => onEntrySelect(entry.id)}
+                    />
+                  );
+                })}
+              </div>
+            );
+          })}
         </div>
       )}
       <div className={styles.entryList_Footer}>

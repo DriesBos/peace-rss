@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { apiErrorResponse } from '@/lib/apiErrors';
 import { mfFetchUser } from '@/lib/miniflux';
+import { getEntryListMeta } from '@/lib/entryListMeta';
 
 export const runtime = 'nodejs';
 
@@ -60,6 +61,7 @@ export async function POST(_request: NextRequest, context: Ctx) {
     return NextResponse.json({
       ok: true,
       content: entry.content,
+      ...getEntryListMeta(entry),
       reading_time: entry.reading_time,
     });
   } catch (err) {
