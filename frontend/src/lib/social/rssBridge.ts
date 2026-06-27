@@ -25,6 +25,8 @@ const discoverCacheBySource = new Map<
 >();
 const discoverInFlightBySource = new Map<string, Promise<string>>();
 let discoveryReadsSinceCleanup = 0;
+// ponytail: process-local discovery cache for one self-hosted instance; Redis only if this runs on multiple app replicas.
+const MAX_DISCOVERY_CACHE_ITEMS = 500;
 
 function assertRssBridgeBaseUrl() {
   if (!rssBridgeBaseUrl) {
@@ -46,6 +48,19 @@ function cleanupDiscoveryCache(now: number) {
   }
 }
 
+function setCachedDiscoveryFeed(
+  sourceKey: string,
+  value: { feedUrl: string; expiresAt: number }
+) {
+  discoverCacheBySource.delete(sourceKey);
+  discoverCacheBySource.set(sourceKey, value);
+  while (discoverCacheBySource.size > MAX_DISCOVERY_CACHE_ITEMS) {
+    const oldestKey = discoverCacheBySource.keys().next().value;
+    if (oldestKey === undefined) break;
+    discoverCacheBySource.delete(oldestKey);
+  }
+}
+
 function getCachedDiscoveryFeed(sourceKey: string): string | null {
   const now = Date.now();
   discoveryReadsSinceCleanup += 1;
@@ -60,6 +75,7 @@ function getCachedDiscoveryFeed(sourceKey: string): string | null {
     discoverCacheBySource.delete(sourceKey);
     return null;
   }
+  setCachedDiscoveryFeed(sourceKey, cached);
   return cached.feedUrl;
 }
 
@@ -284,7 +300,7 @@ export async function discoverBridgeFeedUrl(
           authHeader
         );
         if (!probeError) {
-          discoverCacheBySource.set(sourceKey, {
+          setCachedDiscoveryFeed(sourceKey, {
             feedUrl: bridgeFeedUrl,
             expiresAt: Date.now() + discoverCacheTtlMs,
           });

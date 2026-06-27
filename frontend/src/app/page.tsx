@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Show, RedirectToSignIn } from '@clerk/nextjs';
+import { useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import styles from './page.module.sass';
 import { AddModal } from '@/components/AddModal/AddModal';
@@ -33,6 +34,7 @@ import { NOTIFICATION_COPY } from '@/lib/notificationCopy';
 import {
   isProtectedCategoryTitle,
 } from '@/lib/protectedCategories';
+import { readerQueryKeys } from '@/lib/readerQueryKeys';
 
 type ActiveModal = 'none' | 'menu' | 'add' | 'edit';
 
@@ -75,6 +77,19 @@ function isAddFeedSelectionResponse(
   );
 }
 
+function normalizeReaderPreferences(
+  data: ReaderPreferences | undefined,
+): ReaderPreferences {
+  return {
+    ...DEFAULT_READER_PREFERENCES,
+    ...(data ?? {}),
+    entries_per_page:
+      data && data.entries_per_page > 0
+        ? data.entries_per_page
+        : DEFAULT_ENTRIES_PAGE_SIZE,
+  };
+}
+
 export default function Home() {
   const [selectedEntryId, setSelectedEntryId] = useState<number | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
@@ -83,6 +98,7 @@ export default function Home() {
   const [statusFilter, setStatusFilter] = useState<'unread' | 'all'>('unread');
   const [isStarredView, setIsStarredView] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeSearchQuery, setActiveSearchQuery] = useState('');
   const [searchMode, setSearchMode] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isCategoriesOpen, setIsCategoriesOpen] = useState(false);
@@ -106,18 +122,11 @@ export default function Home() {
   const [fetchingOriginalEntryIds, setFetchingOriginalEntryIds] = useState<
     Set<number>
   >(new Set());
-  const [starredEntries, setStarredEntries] = useState<Entry[]>([]);
-  const [totalAllCount, setTotalAllCount] = useState(0);
-  const [totalStarredCount, setTotalStarredCount] = useState(0);
   const [originalFetchStatusById, setOriginalFetchStatusById] = useState<
     Record<number, 'success' | 'error'>
   >({});
-  const [readerPreferences, setReaderPreferences] = useState<ReaderPreferences>(
-    DEFAULT_READER_PREFERENCES,
-  );
   const [activeModal, setActiveModal] = useState<ActiveModal>('none');
   const [isOffline, setIsOffline] = useState(false);
-  const hasInitialLoadRef = useRef(false);
 
   // Edit modal form state
   const [editType, setEditType] = useState<'feed' | 'category' | null>(null);
@@ -130,17 +139,54 @@ export default function Home() {
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
 
+  const readerPreferencesQuery = useQuery({
+    queryKey: readerQueryKeys.preferences,
+    enabled: isProvisioned,
+    queryFn: ({ signal }) => fetchReaderPreferences({ signal }),
+  });
+  const readerPreferences = useMemo(
+    () => normalizeReaderPreferences(readerPreferencesQuery.data),
+    [readerPreferencesQuery.data],
+  );
+  const readerDataEnabled = isProvisioned && !readerPreferencesQuery.isPending;
+
+  useEffect(() => {
+    if (readerPreferencesQuery.error) {
+      console.error('Failed to load reader preferences', readerPreferencesQuery.error);
+    }
+  }, [readerPreferencesQuery.error]);
+
+  const allCountQuery = useQuery({
+    queryKey: readerQueryKeys.allCount,
+    enabled: readerDataEnabled,
+    queryFn: ({ signal }) => fetchAllCount({ signal }),
+  });
+  const starredCountQuery = useQuery({
+    queryKey: readerQueryKeys.starredCount,
+    enabled: readerDataEnabled,
+    queryFn: ({ signal }) => fetchStarredCount({ signal }),
+  });
+  const starredEntriesQuery = useQuery({
+    queryKey: readerQueryKeys.starredEntries(readerPreferences.entries_per_page),
+    enabled: readerDataEnabled && activeModal === 'menu',
+    queryFn: ({ signal }) =>
+      fetchStarredEntries(readerPreferences.entries_per_page, { signal }),
+  });
+  const totalAllCount = allCountQuery.data?.total ?? 0;
+  const totalStarredCount = starredCountQuery.data?.total ?? 0;
+  const starredEntries = starredEntriesQuery.data?.entries ?? [];
+
   const view = useMemo(
     () => ({
       searchMode,
-      searchQuery,
+      searchQuery: activeSearchQuery,
       isStarredView,
       selectedCategoryId,
       statusFilter,
     }),
     [
       searchMode,
-      searchQuery,
+      activeSearchQuery,
       isStarredView,
       selectedCategoryId,
       statusFilter,
@@ -156,17 +202,13 @@ export default function Home() {
     isRefreshingFeeds,
     error,
     setEntries,
-    setFeeds,
-    setCategories,
     setIsLoading,
     setError,
-    loadFeeds,
-    loadCategories,
-    loadEntries,
-    resetEntries,
+    loadMore,
     refreshAll,
+    invalidateReaderData,
   } = useReaderData({
-    isProvisioned,
+    isProvisioned: readerDataEnabled,
     view,
     pageSize: readerPreferences.entries_per_page,
   });
@@ -349,60 +391,6 @@ export default function Home() {
     };
   }, [entries, selectedEntryId]);
 
-  const loadReaderPreferences = useCallback(async () => {
-    if (!isProvisioned) return DEFAULT_READER_PREFERENCES;
-    try {
-      const data = await fetchReaderPreferences();
-      setReaderPreferences({
-        ...DEFAULT_READER_PREFERENCES,
-        ...data,
-        entries_per_page:
-          data.entries_per_page > 0
-            ? data.entries_per_page
-            : DEFAULT_ENTRIES_PAGE_SIZE,
-      });
-      return data;
-    } catch (err) {
-      console.error('Failed to load reader preferences', err);
-      return DEFAULT_READER_PREFERENCES;
-    }
-  }, [isProvisioned]);
-
-  const refreshStarredCount = useCallback(async () => {
-    if (!isProvisioned) return null;
-    try {
-      const data = await fetchStarredCount();
-      setTotalStarredCount(data.total ?? 0);
-      return data.total ?? 0;
-    } catch (err) {
-      console.error('Failed to load starred count', err);
-      return null;
-    }
-  }, [isProvisioned]);
-
-  const refreshAllCount = useCallback(async () => {
-    if (!isProvisioned) return null;
-    try {
-      const data = await fetchAllCount();
-      setTotalAllCount(data.total ?? 0);
-      return data.total ?? 0;
-    } catch (err) {
-      console.error('Failed to load all count', err);
-      return null;
-    }
-  }, [isProvisioned]);
-
-  // Load starred entries for the menu
-  const loadStarredEntries = useCallback(async () => {
-    if (!isProvisioned) return;
-    try {
-      const data = await fetchStarredEntries(readerPreferences.entries_per_page);
-      setStarredEntries(data.entries);
-    } catch (err) {
-      console.error('Failed to load starred entries', err);
-    }
-  }, [isProvisioned, readerPreferences.entries_per_page]);
-
   const syncSelection = useCallback((nextEntries: Entry[]) => {
     setSelectedEntryId((prev) =>
       prev && nextEntries.some((entry) => entry.id === prev) ? prev : null,
@@ -410,17 +398,12 @@ export default function Home() {
   }, []);
 
   const refreshAllData = useCallback(async (): Promise<boolean> => {
-    const data = await refreshAll(() => [refreshStarredCount(), refreshAllCount()]);
+    const data = await refreshAll();
     if (data?.entries) {
       syncSelection(data.entries);
     }
     return data !== null;
-  }, [
-    refreshAll,
-    refreshAllCount,
-    refreshStarredCount,
-    syncSelection,
-  ]);
+  }, [refreshAll, syncSelection]);
 
   const refreshAllDataWithToast = useCallback(async () => {
     const didSucceed = await refreshAllData();
@@ -432,39 +415,17 @@ export default function Home() {
     return didSucceed;
   }, [refreshAllData]);
 
-  const reloadCurrentEntries = useCallback(async () => {
-    const current = entriesRef.current;
-    const limit = Math.max(current.length, readerPreferences.entries_per_page);
-    const data = await loadEntries({ append: false, offset: 0, limit });
-    syncSelection(data.entries);
-    return data;
-  }, [
-    loadEntries,
-    readerPreferences.entries_per_page,
-    syncSelection,
-  ]);
-
   const handleLoadMore = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      await loadEntries({
-        append: true,
-        offset: entries.length,
-        limit: readerPreferences.entries_per_page,
-      });
+      await loadMore();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load more');
     } finally {
       setIsLoading(false);
     }
-  }, [
-    entries,
-    loadEntries,
-    readerPreferences.entries_per_page,
-    setError,
-    setIsLoading,
-  ]);
+  }, [loadMore, setError, setIsLoading]);
 
   const markEntryStatus = useCallback(
     async (entryIds: number[], status: 'read' | 'unread') => {
@@ -494,87 +455,33 @@ export default function Home() {
     [],
   );
 
-  const updateEntryStatusLocally = useCallback(
-    (entryId: number, status: 'read' | 'unread') => {
-      const current = entriesRef.current.find((entry) => entry.id === entryId);
-      if (!current) return;
-
-      const previousStatus = current.status ?? 'unread';
-      if (previousStatus === status) return;
-
-      const delta =
-        previousStatus === 'unread' && status === 'read'
-          ? -1
-          : previousStatus === 'read' && status === 'unread'
-            ? 1
-            : 0;
-
-      setEntries((prev) =>
-        prev.map((entry) =>
-          entry.id === entryId ? { ...entry, status } : entry,
-        ),
-      );
-
-      if (delta === 0) return;
-
-      setFeeds((prev) =>
-        prev.map((feed) =>
-          feed.id === current.feed_id
-            ? {
-                ...feed,
-                unread_count: Math.max(0, (feed.unread_count ?? 0) + delta),
-              }
-            : feed,
-        ),
-      );
-
-      const categoryId = feedsById.get(current.feed_id)?.category?.id;
-
-      if (categoryId) {
-        setCategories((prev) =>
-          prev.map((category) =>
-            category.id === categoryId
-              ? {
-                  ...category,
-                  total_unread: Math.max(
-                    0,
-                    (category.total_unread ?? 0) + delta,
-                  ),
-                }
-              : category,
-          ),
-        );
-      }
-    },
-    [feedsById, setCategories, setEntries, setFeeds],
-  );
-
   const markEntryReadOnOpen = useCallback(
     (entryId: number) => {
       const current = entriesRef.current.find((entry) => entry.id === entryId);
       if (!current || (current.status ?? 'unread') !== 'unread') return;
 
-      updateEntryStatusLocally(entryId, 'read');
-
-      void markEntryStatus([entryId], 'read').catch((e) => {
-        updateEntryStatusLocally(entryId, 'unread');
-        console.error('Failed to mark entry as read on open', e);
-      });
+      void markEntryStatus([entryId], 'read')
+        .then(() => invalidateReaderData())
+        .catch((e) => {
+          console.error('Failed to mark entry as read on open', e);
+        });
     },
-    [markEntryStatus, updateEntryStatusLocally],
+    [invalidateReaderData, markEntryStatus],
   );
 
   const markSelectedEntryReadForExternalLink = useCallback(() => {
     const current = selectedEntryRef.current;
     if (!current || (current.status ?? 'unread') !== 'unread') return;
 
-    updateEntryStatusLocally(current.id, 'read');
-
-    void markEntryStatusKeepalive([current.id], 'read').catch((e) => {
-      updateEntryStatusLocally(current.id, 'unread');
-      console.error('Failed to mark entry as read for external link', e);
-    });
-  }, [markEntryStatusKeepalive, updateEntryStatusLocally]);
+    void markEntryStatusKeepalive([current.id], 'read')
+      .then((response) => {
+        if (!response.ok) throw new Error(`Request failed (${response.status})`);
+        return invalidateReaderData();
+      })
+      .catch((e) => {
+        console.error('Failed to mark entry as read for external link', e);
+      });
+  }, [invalidateReaderData, markEntryStatusKeepalive]);
 
   const markCurrentScopeAsRead = useCallback(async () => {
     if (searchMode || isStarredView) {
@@ -614,11 +521,7 @@ export default function Home() {
       setError(null);
       try {
         await markEntryStatus([entryId], status);
-        await Promise.all([
-          reloadCurrentEntries(),
-          loadFeeds(),
-          loadCategories(),
-        ]);
+        await invalidateReaderData();
         return true;
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Failed to update status');
@@ -628,7 +531,7 @@ export default function Home() {
         setIsUpdatingStatus(false);
       }
     },
-    [loadCategories, loadFeeds, markEntryStatus, reloadCurrentEntries, setError],
+    [invalidateReaderData, markEntryStatus, setError],
   );
 
   const markCurrentPageAsRead = useCallback(async (): Promise<boolean> => {
@@ -640,68 +543,31 @@ export default function Home() {
 
     try {
       await markCurrentScopeAsRead();
-      await Promise.all([
-        reloadCurrentEntries(),
-        loadFeeds(),
-        loadCategories(),
-      ]);
+      await invalidateReaderData();
       return true;
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to mark page as read');
       return false;
     } finally {
-        isUpdatingStatusRef.current = false;
-        setIsUpdatingStatus(false);
-      }
-  }, [
-    loadCategories,
-    loadFeeds,
-    markCurrentScopeAsRead,
-    reloadCurrentEntries,
-    setError,
-  ]);
+      isUpdatingStatusRef.current = false;
+      setIsUpdatingStatus(false);
+    }
+  }, [invalidateReaderData, markCurrentScopeAsRead, setError]);
 
   async function toggleSelectedStar() {
     const current = selectedEntryRef.current;
     if (!current) return;
     if (isTogglingStar) return;
 
-    const entryId = current.id;
-    const previousStarred = Boolean(current.starred);
-    const optimisticStarred = !previousStarred;
-
     setIsTogglingStar(true);
     setError(null);
 
-    // Optimistic UI update so EntryPanel button text flips immediately.
-    setEntries((prev) =>
-      prev.map((entry) =>
-        entry.id === entryId ? { ...entry, starred: optimisticStarred } : entry,
-      ),
-    );
-
-    let didToggleOnServer = false;
     try {
-      await fetchJson<{ ok: true }>(`/api/entries/${entryId}/star`, {
+      await fetchJson<{ ok: true }>(`/api/entries/${current.id}/star`, {
         method: 'POST',
       });
-      didToggleOnServer = true;
-      // Refresh list + star metadata
-      await Promise.all([reloadCurrentEntries(), refreshStarredCount()]);
-      if (activeModal === 'menu' || isStarredView) {
-        await loadStarredEntries();
-      }
+      await invalidateReaderData();
     } catch (e) {
-      if (!didToggleOnServer) {
-        // Revert only when the toggle request itself failed.
-        setEntries((prev) =>
-          prev.map((entry) =>
-            entry.id === entryId
-              ? { ...entry, starred: previousStarred }
-              : entry,
-          ),
-        );
-      }
       setError(e instanceof Error ? e.message : 'Failed to toggle star');
     } finally {
       setIsTogglingStar(false);
@@ -714,24 +580,12 @@ export default function Home() {
         await fetchJson<{ ok: true }>(`/api/entries/${entryId}/star`, {
           method: 'POST',
         });
-        await refreshStarredCount();
-        if (activeModal === 'menu' || isStarredView) {
-          await loadStarredEntries();
-        }
-        if (isStarredView) {
-          await reloadCurrentEntries();
-        }
+        await invalidateReaderData();
       } catch (e) {
         console.error('Failed to toggle entry star', e);
       }
     },
-    [
-      activeModal,
-      loadStarredEntries,
-      refreshStarredCount,
-      isStarredView,
-      reloadCurrentEntries,
-    ],
+    [invalidateReaderData],
   );
 
   async function setSelectedStatus(status: 'read' | 'unread') {
@@ -814,12 +668,11 @@ export default function Home() {
         return false;
       }
 
-      // Success: clear input and refresh feeds
       setNewFeedUrl('');
       setNewFeedCategoryId(defaultAddFeedCategoryId);
       setDiscoveredFeeds([]);
       setSelectedDiscoveredFeedUrl('');
-      await Promise.all([loadFeeds(), loadCategories(), refreshAllCount()]);
+      await invalidateReaderData();
       return true;
     } catch (e) {
       setAddFeedError(e instanceof Error ? e.message : 'Failed to add feed');
@@ -845,9 +698,8 @@ export default function Home() {
         body: JSON.stringify({ title: trimmedTitle }),
       });
 
-      // Success: clear input and refresh categories
       setNewCategoryTitle('');
-      await Promise.all([loadCategories(), refreshAllCount()]);
+      await invalidateReaderData();
       return true;
     } catch (e) {
       setAddCategoryError(
@@ -874,12 +726,10 @@ export default function Home() {
         method: 'DELETE',
       });
 
-      // Success: refresh categories and feeds
-      await Promise.all([loadCategories(), loadFeeds(), refreshAllCount()]);
       if (selectedCategoryId === categoryId) {
         setSelectedCategoryId(null);
-        await reloadCurrentEntries();
       }
+      await invalidateReaderData();
       return true;
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to delete category');
@@ -898,9 +748,7 @@ export default function Home() {
         method: 'DELETE',
       });
 
-      // Success: refresh feeds/categories so global visibility and unread totals stay in sync.
-      await Promise.all([loadFeeds(), loadCategories(), refreshAllCount()]);
-      await reloadCurrentEntries();
+      await invalidateReaderData();
       return true;
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to delete feed');
@@ -932,8 +780,7 @@ export default function Home() {
         body: JSON.stringify({ title: trimmedTitle }),
       });
 
-      // Success: refresh categories
-      await Promise.all([loadCategories(), refreshAllCount()]);
+      await invalidateReaderData();
       return true;
     } catch (e) {
       setEditError(
@@ -977,8 +824,7 @@ export default function Home() {
         body: JSON.stringify(requestBody),
       });
 
-      // Success: refresh feeds/categories (category may be created/forced server-side)
-      await Promise.all([loadFeeds(), loadCategories(), refreshAllCount()]);
+      await invalidateReaderData();
       return true;
     } catch (e) {
       setEditError(e instanceof Error ? e.message : 'Failed to update feed');
@@ -993,6 +839,7 @@ export default function Home() {
       const next = !prev;
       if (!next) {
         setSearchQuery('');
+        setActiveSearchQuery('');
         setSearchMode(false);
       }
       return next;
@@ -1006,6 +853,7 @@ export default function Home() {
   const handleSelectUnread = useCallback(() => {
     setIsSearchOpen(false);
     setSearchQuery('');
+    setActiveSearchQuery('');
     setSearchMode(false);
     setSelectedCategoryId(null);
     setIsStarredView(false);
@@ -1015,6 +863,7 @@ export default function Home() {
   const handleSelectAll = useCallback(() => {
     setIsSearchOpen(false);
     setSearchQuery('');
+    setActiveSearchQuery('');
     setSearchMode(false);
     setSelectedCategoryId(null);
     setIsStarredView(false);
@@ -1025,6 +874,7 @@ export default function Home() {
     // Starred view is exclusive from search/category filters.
     setIsSearchOpen(false);
     setSearchQuery('');
+    setActiveSearchQuery('');
     setSearchMode(false);
     setSelectedCategoryId(null);
     setIsStarredView(true);
@@ -1033,58 +883,36 @@ export default function Home() {
   const handleSelectCategory = useCallback((categoryId: number) => {
     setIsSearchOpen(false);
     setSearchQuery('');
+    setActiveSearchQuery('');
     setSearchMode(false);
     setIsStarredView(false);
     setSelectedCategoryId(categoryId);
   }, []);
 
   useEffect(() => {
-    if (!isProvisioned || !isSearchOpen) return;
+    if (!readerDataEnabled || !isSearchOpen) return;
 
     const trimmedQuery = searchQuery.trim();
     if (!trimmedQuery) {
-      if (searchMode) {
-        setSearchMode(false);
-      }
-      return;
-    }
-
-    if (!searchMode) {
-      setSearchMode(true);
-      setIsStarredView(false);
-      setSelectedCategoryId(null);
+      setActiveSearchQuery('');
+      setSearchMode(false);
       return;
     }
 
     const win = getBrowserWindow();
     if (!win) return;
     const timeoutId = win.setTimeout(() => {
-      setIsLoading(true);
-      setError(null);
+      setSearchMode(true);
+      setIsStarredView(false);
+      setSelectedCategoryId(null);
       setSelectedEntryId(null);
-      loadEntries({
-        append: false,
-        offset: 0,
-        limit: readerPreferences.entries_per_page,
-      })
-        .catch((e) =>
-          setError(e instanceof Error ? e.message : 'Failed to search'),
-        )
-        .finally(() => setIsLoading(false));
+      setActiveSearchQuery(trimmedQuery);
     }, 250);
 
     return () => {
       win.clearTimeout(timeoutId);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    loadEntries,
-    readerPreferences.entries_per_page,
-    searchQuery,
-    isSearchOpen,
-    isProvisioned,
-    searchMode,
-  ]);
+  }, [isSearchOpen, readerDataEnabled, searchQuery]);
 
   const fetchOriginalArticle = useCallback(
     async (entryId?: number, options?: { force?: boolean }) => {
@@ -1212,41 +1040,18 @@ export default function Home() {
     void bootstrap();
   }, []);
 
-  // Initial load after provisioning
+  // Query keys reload entries; selection only needs clearing.
   useEffect(() => {
-    if (!isProvisioned || hasInitialLoadRef.current) return;
-    void (async () => {
-      await loadReaderPreferences();
-      await refreshAllData();
-      hasInitialLoadRef.current = true;
-    })();
-  }, [isProvisioned, loadReaderPreferences, refreshAllData]);
-
-  useEffect(() => {
-    if (activeModal !== 'menu' || !isProvisioned) return;
-    void loadStarredEntries();
-  }, [activeModal, isProvisioned, loadStarredEntries]);
-
-  // Reset entries when switching views or page-size preferences change.
-  useEffect(() => {
-    if (!isProvisioned || !hasInitialLoadRef.current) return;
-    if (searchMode) return;
-    setIsLoading(true);
-    setError(null);
+    if (!readerDataEnabled) return;
     setSelectedEntryId(null);
-    resetEntries()
-      .catch((e) => setError(e instanceof Error ? e.message : 'Failed to load'))
-      .finally(() => setIsLoading(false));
   }, [
+    activeSearchQuery,
     selectedCategoryId,
     statusFilter,
     isStarredView,
     searchMode,
-    isProvisioned,
+    readerDataEnabled,
     readerPreferences.entries_per_page,
-    resetEntries,
-    setIsLoading,
-    setError,
   ]);
 
   const isEditableTarget = useCallback((target: EventTarget | null) => {

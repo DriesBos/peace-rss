@@ -18,12 +18,24 @@ export type RateLimitResult = {
 
 const buckets = new Map<string, BucketState>();
 let checksSinceCleanup = 0;
+// ponytail: process-local limiter for one self-hosted instance; Redis only if this runs on multiple app replicas.
+const MAX_BUCKETS = 5000;
 
 function cleanupExpiredBuckets(now: number) {
   for (const [key, bucket] of buckets.entries()) {
     if (bucket.resetAt <= now) {
       buckets.delete(key);
     }
+  }
+}
+
+function setBucket(key: string, bucket: BucketState) {
+  buckets.delete(key);
+  buckets.set(key, bucket);
+  while (buckets.size > MAX_BUCKETS) {
+    const oldestKey = buckets.keys().next().value;
+    if (oldestKey === undefined) break;
+    buckets.delete(oldestKey);
   }
 }
 
@@ -44,7 +56,7 @@ export function checkRateLimit(
       count: 1,
       resetAt: now + options.windowMs,
     };
-    buckets.set(key, fresh);
+    setBucket(key, fresh);
     return {
       allowed: true,
       remaining: Math.max(0, options.max - fresh.count),
@@ -53,6 +65,7 @@ export function checkRateLimit(
   }
 
   if (existing.count >= options.max) {
+    setBucket(key, existing);
     const retryAfterSeconds = Math.max(
       1,
       Math.ceil((existing.resetAt - now) / 1000)
@@ -65,7 +78,7 @@ export function checkRateLimit(
   }
 
   existing.count += 1;
-  buckets.set(key, existing);
+  setBucket(key, existing);
   return {
     allowed: true,
     remaining: Math.max(0, options.max - existing.count),

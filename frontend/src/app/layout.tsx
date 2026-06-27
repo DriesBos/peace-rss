@@ -14,6 +14,7 @@ import { GlobalKeybindings } from '@/components/GlobalKeybindings/GlobalKeybindi
 import { KomorebiMainController } from '@/components/KomorebiMainController/KomorebiMainController';
 import { LandingPage } from '@/components/LandingPage/LandingPage';
 import { MainKomorebiLayer } from '@/components/MainKomorebiLayer/MainKomorebiLayer';
+import { QueryProvider } from '@/components/QueryProvider/QueryProvider';
 import { SpacingWideController } from '@/components/SpacingWideController/SpacingWideController';
 import { TypeSizeController } from '@/components/TypeSizeController/TypeSizeController';
 import { DEFAULT_FONT_FAMILY } from '@/lib/fontFamily';
@@ -149,24 +150,26 @@ export default function RootLayout({
             <TypeSizeController />
             <KomorebiMainController />
             <Notifications />
-            <main>
-              {showLandingPageInDevelopment ? (
-                <LandingPage />
-              ) : (
-                <>
-                  <Show when="signed-out">
-                    <LandingPage />
-                  </Show>
-                  <Show when="signed-in">
-                    <MainKomorebiLayer />
-                    <div className="mainContentLayer">
-                      <GlobalKeybindings />
-                      {children}
-                    </div>
-                  </Show>
-                </>
-              )}
-            </main>
+            <QueryProvider>
+              <main>
+                {showLandingPageInDevelopment ? (
+                  <LandingPage />
+                ) : (
+                  <>
+                    <Show when="signed-out">
+                      <LandingPage />
+                    </Show>
+                    <Show when="signed-in">
+                      <MainKomorebiLayer />
+                      <div className="mainContentLayer">
+                        <GlobalKeybindings />
+                        {children}
+                      </div>
+                    </Show>
+                  </>
+                )}
+              </main>
+            </QueryProvider>
             <div id="modal-root" />
           </ThemeProvider>
         </body>
