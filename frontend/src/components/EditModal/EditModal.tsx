@@ -1,62 +1,80 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import styles from './EditModal.module.sass';
 import { ModalContainer } from '@/components/ModalContainer/ModalContainer';
 import { LabeledSelect } from '@/components/LabeledSelect/LabeledSelect';
 import { LabeledInput } from '@/components/LabeledInput/LabeledInput';
-import type { Category } from '@/app/_lib/types';
+import type { Category, Feed } from '@/app/_lib/types';
 import { Button } from '@/components/Button/Button';
 import { toast } from 'sonner';
 import { NOTIFICATION_COPY } from '@/lib/notificationCopy';
 import { useKeydown } from '@/hooks/useKeydown';
 import { isProtectedCategoryTitle } from '@/lib/protectedCategories';
 
+export type EditTarget =
+  | { type: 'feed'; item: Feed }
+  | { type: 'category'; item: Category }
+  | null;
+
+export type UpdateFeedPayload = {
+  id: number;
+  title: string;
+  feedUrl: string;
+  categoryId: number | null;
+};
+
+export type UpdateCategoryPayload = {
+  id: number;
+  title: string;
+};
+
 export type EditModalProps = {
   isOpen: boolean;
-  editType: 'feed' | 'category' | null;
-  editItemId: number | null;
+  target: EditTarget;
   categories: Category[];
-  editTitle: string;
-  editFeedUrl: string;
-  editCategoryId: number | null;
-  isEditingProtectedCategory: boolean;
-  editLoading: boolean;
-  editError: string | null;
   onClose: () => void;
   onDeleteCategory: (categoryId: number) => Promise<boolean>;
   onDeleteFeed: (feedId: number) => Promise<boolean>;
-  onUpdateCategory: (e: React.FormEvent) => Promise<boolean>;
-  onUpdateFeed: (e: React.FormEvent) => Promise<boolean>;
-  onChangeTitle: (value: string) => void;
-  onChangeFeedUrl: (value: string) => void;
-  onChangeCategoryId: (value: number | null) => void;
+  onUpdateCategory: (payload: UpdateCategoryPayload) => Promise<boolean>;
+  onUpdateFeed: (payload: UpdateFeedPayload) => Promise<boolean>;
 };
 
 export function EditModal({
   isOpen,
-  editType,
-  editItemId,
+  target,
   categories,
-  editTitle,
-  editFeedUrl,
-  editCategoryId,
-  isEditingProtectedCategory,
-  editLoading,
-  editError,
   onClose,
   onDeleteCategory,
   onDeleteFeed,
   onUpdateCategory,
   onUpdateFeed,
-  onChangeTitle,
-  onChangeFeedUrl,
-  onChangeCategoryId,
 }: EditModalProps) {
+  const [editTitle, setEditTitle] = useState('');
+  const [editFeedUrl, setEditFeedUrl] = useState('');
+  const [editCategoryId, setEditCategoryId] = useState<number | null>(null);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isOpen || !target) return;
+    setEditTitle(target.item.title);
+    setEditError(null);
+
+    if (target.type === 'feed') {
+      setEditFeedUrl(target.item.feed_url || '');
+      setEditCategoryId(target.item.category?.id || null);
+    } else {
+      setEditFeedUrl('');
+      setEditCategoryId(null);
+    }
+  }, [isOpen, target]);
+
   const handleDeleteCategory = async () => {
-    if (!editItemId) return;
+    if (!target) return;
     if (!confirm('Are you sure you want to delete this category?')) return;
 
-    const didSucceed = await onDeleteCategory(editItemId);
+    const didSucceed = await onDeleteCategory(target.item.id);
     if (didSucceed) {
       toast.success(NOTIFICATION_COPY.app.categoryDeleted);
       onClose();
@@ -64,10 +82,10 @@ export function EditModal({
   };
 
   const handleDeleteFeed = async () => {
-    if (!editItemId) return;
+    if (!target) return;
     if (!confirm('Are you sure you want to delete this feed?')) return;
 
-    const didSucceed = await onDeleteFeed(editItemId);
+    const didSucceed = await onDeleteFeed(target.item.id);
     if (didSucceed) {
       toast.success(NOTIFICATION_COPY.app.feedDeleted);
       onClose();
@@ -75,18 +93,55 @@ export function EditModal({
   };
 
   const handleSubmitCategory = async (event: React.FormEvent) => {
-    const didSucceed = await onUpdateCategory(event);
-    if (didSucceed) {
-      toast.success(NOTIFICATION_COPY.app.categoryUpdated);
-      onClose();
+    event.preventDefault();
+    if (!target) return;
+
+    const trimmedTitle = editTitle.trim();
+    if (!trimmedTitle) return;
+
+    setEditLoading(true);
+    setEditError(null);
+    try {
+      const didSucceed = await onUpdateCategory({
+        id: target.item.id,
+        title: trimmedTitle,
+      });
+      if (didSucceed) {
+        toast.success(NOTIFICATION_COPY.app.categoryUpdated);
+        onClose();
+      } else {
+        setEditError('Failed to update category');
+      }
+    } finally {
+      setEditLoading(false);
     }
   };
 
   const handleSubmitFeed = async (event: React.FormEvent) => {
-    const didSucceed = await onUpdateFeed(event);
-    if (didSucceed) {
-      toast.success(NOTIFICATION_COPY.app.feedUpdated);
-      onClose();
+    event.preventDefault();
+    if (!target) return;
+
+    const trimmedTitle = editTitle.trim();
+    const trimmedUrl = editFeedUrl.trim();
+    if (!trimmedTitle || !trimmedUrl) return;
+
+    setEditLoading(true);
+    setEditError(null);
+    try {
+      const didSucceed = await onUpdateFeed({
+        id: target.item.id,
+        title: trimmedTitle,
+        feedUrl: trimmedUrl,
+        categoryId: editCategoryId,
+      });
+      if (didSucceed) {
+        toast.success(NOTIFICATION_COPY.app.feedUpdated);
+        onClose();
+      } else {
+        setEditError('Failed to update feed');
+      }
+    } finally {
+      setEditLoading(false);
     }
   };
 
@@ -103,6 +158,8 @@ export function EditModal({
     },
   );
 
+  const editType = target?.type ?? null;
+
   return (
     <ModalContainer
       isOpen={isOpen}
@@ -112,67 +169,44 @@ export function EditModal({
       <div className={styles.editModal}>
         {editType === 'category' ? (
           <form onSubmit={handleSubmitCategory} className={styles.editForm}>
-            {isEditingProtectedCategory ? (
-              <>
-                <div className={styles.formField}>
-                  <div className={styles.help}>
-                    This category is managed automatically and can’t be edited
-                    or deleted.
-                  </div>
-                </div>
-                <div className={styles.formActions}>
-                  <Button
-                    variant="primary"
-                    type="button"
-                    onClick={onClose}
-                    disabled={editLoading}
-                  >
-                    Close
-                  </Button>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className={styles.formField}>
-                  <LabeledInput
-                    id="edit-category-title"
-                    label="Category name"
-                    value={editTitle}
-                    onChange={onChangeTitle as (value: string) => void}
-                    placeholder="Category name"
-                    disabled={editLoading}
-                  />
-                </div>
+            <div className={styles.formField}>
+              <LabeledInput
+                id="edit-category-title"
+                label="Category name"
+                value={editTitle}
+                onChange={setEditTitle}
+                placeholder="Category name"
+                disabled={editLoading}
+              />
+            </div>
 
-                <div className={styles.formActions}>
-                  <Button
-                    variant="primary"
-                    type="submit"
-                    disabled={editLoading || !editTitle.trim()}
-                  >
-                    {editLoading ? 'Saving...' : 'Save changes'}
-                  </Button>
-                  <Button
-                    variant="primary"
-                    type="button"
-                    onClick={() => void handleDeleteCategory()}
-                    disabled={editLoading}
-                  >
-                    Delete
-                  </Button>
-                  <Button
-                    variant="primary"
-                    type="button"
-                    onClick={onClose}
-                    disabled={editLoading}
-                  >
-                    Cancel
-                  </Button>
-                </div>
+            <div className={styles.formActions}>
+              <Button
+                variant="primary"
+                type="submit"
+                disabled={editLoading || !editTitle.trim()}
+              >
+                {editLoading ? 'Saving...' : 'Save changes'}
+              </Button>
+              <Button
+                variant="primary"
+                type="button"
+                onClick={() => void handleDeleteCategory()}
+                disabled={editLoading}
+              >
+                Delete
+              </Button>
+              <Button
+                variant="primary"
+                type="button"
+                onClick={onClose}
+                disabled={editLoading}
+              >
+                Cancel
+              </Button>
+            </div>
 
-                {editError && <div className={styles.error}>{editError}</div>}
-              </>
-            )}
+            {editError && <div className={styles.error}>{editError}</div>}
           </form>
         ) : (
           <form onSubmit={handleSubmitFeed} className={styles.editForm}>
@@ -181,7 +215,7 @@ export function EditModal({
                 id="edit-feed-title"
                 label="Feed name"
                 value={editTitle}
-                onChange={onChangeTitle as (value: string) => void}
+                onChange={setEditTitle}
                 placeholder="Feed name"
                 disabled={editLoading}
               />
@@ -192,7 +226,7 @@ export function EditModal({
                 id="edit-feed-url"
                 label="Feed web address"
                 value={editFeedUrl}
-                onChange={onChangeFeedUrl as (value: string) => void}
+                onChange={setEditFeedUrl}
                 placeholder="Feed web address"
                 disabled={editLoading}
               />
@@ -203,7 +237,7 @@ export function EditModal({
               label="Category"
               value={editCategoryId ? String(editCategoryId) : ''}
               onChange={(value) =>
-                onChangeCategoryId(value ? Number(value) : null)
+                setEditCategoryId(value ? Number(value) : null)
               }
               placeholder="Select category"
               options={categories

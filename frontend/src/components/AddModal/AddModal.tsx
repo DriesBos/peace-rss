@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import styles from './AddModal.module.sass';
 import { ModalContainer } from '@/components/ModalContainer/ModalContainer';
 import { LabeledInput } from '@/components/LabeledInput/LabeledInput';
@@ -12,25 +12,27 @@ import { useKeydown } from '@/hooks/useKeydown';
 import { Button } from '@/components/Button/Button';
 import { isProtectedCategoryTitle } from '@/lib/protectedCategories';
 
+export type AddFeedPayload = {
+  feedUrl: string;
+  categoryId: number;
+  selectedFeedUrl: string;
+};
+
 export type AddModalProps = {
   isOpen: boolean;
   onClose: () => void;
   categories: Category[];
-  newCategoryTitle: string;
-  setNewCategoryTitle: (value: string) => void;
-  addCategoryLoading: boolean;
-  addCategoryError: string | null;
-  addCategory: (e: React.FormEvent) => Promise<boolean>;
-  newFeedUrl: string;
-  setNewFeedUrl: (value: string) => void;
-  newFeedCategoryId: number | null;
-  setNewFeedCategoryId: (value: number | null) => void;
-  discoveredFeeds: DiscoveredFeed[];
-  selectedDiscoveredFeedUrl: string;
-  setSelectedDiscoveredFeedUrl: (value: string) => void;
-  addFeedLoading: boolean;
-  addFeedError: string | null;
-  addFeed: (e: React.FormEvent) => Promise<boolean>;
+  defaultFeedCategoryId: number | null;
+  onAddCategory: (title: string) => Promise<boolean>;
+  onAddFeed: (payload: AddFeedPayload) => Promise<
+    | { ok: true }
+    | {
+        ok: false;
+        error: string;
+        discoveredFeeds?: DiscoveredFeed[];
+        selectedDiscoveredFeedUrl?: string;
+      }
+  >;
   isLoading: boolean;
 };
 
@@ -38,44 +40,117 @@ export function AddModal({
   isOpen,
   onClose,
   categories,
-  newCategoryTitle,
-  setNewCategoryTitle,
-  addCategoryLoading,
-  addCategoryError,
-  addCategory,
-  newFeedUrl,
-  setNewFeedUrl,
-  newFeedCategoryId,
-  setNewFeedCategoryId,
-  discoveredFeeds,
-  selectedDiscoveredFeedUrl,
-  setSelectedDiscoveredFeedUrl,
-  addFeedLoading,
-  addFeedError,
-  addFeed,
+  defaultFeedCategoryId,
+  onAddCategory,
+  onAddFeed,
   isLoading,
 }: AddModalProps) {
+  const [newCategoryTitle, setNewCategoryTitle] = useState('');
+  const [addCategoryLoading, setAddCategoryLoading] = useState(false);
+  const [addCategoryError, setAddCategoryError] = useState<string | null>(null);
+  const [newFeedUrl, setNewFeedUrl] = useState('');
+  const [newFeedCategoryId, setNewFeedCategoryId] = useState<number | null>(
+    defaultFeedCategoryId,
+  );
+  const [discoveredFeeds, setDiscoveredFeeds] = useState<DiscoveredFeed[]>([]);
+  const [selectedDiscoveredFeedUrl, setSelectedDiscoveredFeedUrl] =
+    useState('');
+  const [addFeedLoading, setAddFeedLoading] = useState(false);
+  const [addFeedError, setAddFeedError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setNewCategoryTitle('');
+    setAddCategoryError(null);
+    setNewFeedUrl('');
+    setNewFeedCategoryId(defaultFeedCategoryId);
+    setDiscoveredFeeds([]);
+    setSelectedDiscoveredFeedUrl('');
+    setAddFeedError(null);
+  }, [defaultFeedCategoryId, isOpen]);
+
+  // Re-validate the selected category against the live, non-protected set while
+  // the modal is open (a category renamed/deleted mid-session falls back to the
+  // default).
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const allowedCategoryIds = new Set(
+      categories
+        .filter((category) => !isProtectedCategoryTitle(category.title))
+        .map((category) => category.id),
+    );
+
+    setNewFeedCategoryId((previous) => {
+      if (previous !== null && allowedCategoryIds.has(previous)) {
+        return previous;
+      }
+      return defaultFeedCategoryId;
+    });
+  }, [categories, defaultFeedCategoryId, isOpen]);
+
+  function handleSetNewFeedUrl(value: string) {
+    setNewFeedUrl(value);
+    setDiscoveredFeeds([]);
+    setSelectedDiscoveredFeedUrl('');
+    setAddFeedError(null);
+  }
+
   const isChoosingDiscoveredFeed = discoveredFeeds.length > 0;
   const hasCategoryChoice = newFeedCategoryId !== null;
   const canSubmitFeed = isChoosingDiscoveredFeed
     ? Boolean(selectedDiscoveredFeedUrl) && hasCategoryChoice
     : Boolean(newFeedUrl.trim()) && hasCategoryChoice;
 
-  const handleAddCategory = async (event: React.FormEvent) => {
-    const didSucceed = await addCategory(event);
-    if (didSucceed) {
-      toast.success(NOTIFICATION_COPY.app.categoryAdded);
-      onClose();
-    }
-  };
+  async function handleAddCategory(event: React.FormEvent) {
+    event.preventDefault();
 
-  const handleAddFeed = async (event: React.FormEvent) => {
-    const didSucceed = await addFeed(event);
-    if (didSucceed) {
-      toast.success(NOTIFICATION_COPY.app.feedAdded);
-      onClose();
+    const trimmedTitle = newCategoryTitle.trim();
+    if (!trimmedTitle) return;
+
+    setAddCategoryLoading(true);
+    setAddCategoryError(null);
+    try {
+      const didSucceed = await onAddCategory(trimmedTitle);
+      if (didSucceed) {
+        toast.success(NOTIFICATION_COPY.app.categoryAdded);
+        onClose();
+      } else {
+        setAddCategoryError('Failed to add category');
+      }
+    } finally {
+      setAddCategoryLoading(false);
     }
-  };
+  }
+
+  async function handleAddFeed(event: React.FormEvent) {
+    event.preventDefault();
+    setAddFeedLoading(true);
+    setAddFeedError(null);
+    try {
+      const result = await onAddFeed({
+        feedUrl: newFeedUrl.trim(),
+        categoryId: newFeedCategoryId ?? 0,
+        selectedFeedUrl: selectedDiscoveredFeedUrl.trim(),
+      });
+      if (result.ok) {
+        toast.success(NOTIFICATION_COPY.app.feedAdded);
+        onClose();
+        return;
+      }
+      setAddFeedError(result.error);
+      if (result.discoveredFeeds) {
+        setDiscoveredFeeds(result.discoveredFeeds);
+        setSelectedDiscoveredFeedUrl(
+          result.selectedDiscoveredFeedUrl ??
+            result.discoveredFeeds[0]?.url ??
+            '',
+        );
+      }
+    } finally {
+      setAddFeedLoading(false);
+    }
+  }
 
   useKeydown(
     (event) => {
@@ -137,7 +212,7 @@ export function AddModal({
             id="add-feed-url"
             label="Add content"
             value={newFeedUrl}
-            onChange={setNewFeedUrl}
+            onChange={handleSetNewFeedUrl}
             placeholder="Add web address..."
             disabled={addFeedLoading || isLoading}
           />
