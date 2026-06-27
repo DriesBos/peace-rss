@@ -5,6 +5,8 @@
 - Next.js
 - React
 - TypeScript
+- TanStack Query
+- TanStack Virtual
 - Sass modules (one `.module.sass` per component)
 
 ## Auth
@@ -23,6 +25,4 @@
 
 ## UX / Extras
 
-- Serwist for PWA/service worker
-- React Intersection Observer + IntersectionImage for lazy entry rendering
-- React Three Fiber + Three for the background shader
+- Docker Compose runs the frontend as a production build locally.
