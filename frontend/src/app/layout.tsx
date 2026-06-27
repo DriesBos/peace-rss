@@ -25,42 +25,22 @@ import { DEFAULT_TYPE_SIZE } from '@/lib/typeSize';
 const untitledSans = localFont({
   src: [
     {
-      path: '../fonts/untitled/test-untitled-sans-light.woff2',
-      weight: '300',
-      style: 'normal',
-    },
-    {
-      path: '../fonts/untitled/test-untitled-sans-light-italic.woff2',
-      weight: '300',
-      style: 'italic',
-    },
-    {
-      path: '../fonts/untitled/test-untitled-sans-regular.woff2',
+      path: '../fonts/untitled/untitled-sans-regular.woff2',
       weight: '400',
       style: 'normal',
     },
     {
-      path: '../fonts/untitled/test-untitled-sans-regular-italic.woff2',
+      path: '../fonts/untitled/untitled-sans-regular-italic.woff2',
       weight: '400',
       style: 'italic',
     },
     {
-      path: '../fonts/untitled/test-untitled-sans-medium.woff2',
-      weight: '500',
-      style: 'normal',
-    },
-    {
-      path: '../fonts/untitled/test-untitled-sans-medium-italic.woff2',
-      weight: '500',
-      style: 'italic',
-    },
-    {
-      path: '../fonts/untitled/test-untitled-sans-bold.woff2',
+      path: '../fonts/untitled/untitled-sans-bold.woff2',
       weight: '700',
       style: 'normal',
     },
     {
-      path: '../fonts/untitled/test-untitled-sans-bold-italic.woff2',
+      path: '../fonts/untitled/untitled-sans-bold-italic.woff2',
       weight: '700',
       style: 'italic',
     },
@@ -75,32 +55,12 @@ const soulSister = localFont({
       weight: '400',
       style: 'normal',
     },
-    {
-      path: '../fonts/soulsister/soulsister.ttf',
-      weight: '400',
-      style: 'normal',
-    },
   ],
   variable: '--font-soul-sister',
 });
 
 const cheltenham = localFont({
   src: [
-    {
-      path: '../fonts/celtenham/cheltenham-normal-300.woff2',
-      weight: '300',
-      style: 'normal',
-    },
-    {
-      path: '../fonts/celtenham/cheltenham-normal-400.woff2',
-      weight: '400',
-      style: 'normal',
-    },
-    {
-      path: '../fonts/celtenham/cheltenham-small-italic-400.woff2',
-      weight: '400',
-      style: 'italic',
-    },
     {
       path: '../fonts/celtenham/cheltenham-normal-700.woff2',
       weight: '700',
