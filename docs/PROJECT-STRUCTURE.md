@@ -2,7 +2,7 @@
 
 ## Top Level
 - `docker-compose.yml` and `docker-compose.prod.yml`: services
-- `ENV-TEMPLATE.md`: environment variables template
+- `.env.example`: environment variables template
 - `infra/`: Caddy reverse proxy config
 - `frontend/`: Next.js app
 

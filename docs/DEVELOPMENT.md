@@ -1,7 +1,7 @@
 # Development
 
 ## Environment
-- Copy `ENV-TEMPLATE.md` to `.env` and fill values.
+- Copy `.env.example` to `.env` and fill values.
 - Required variables include Clerk keys, Miniflux config, and Postgres credentials.
 
 ## Docker (Recommended)

@@ -15,4 +15,4 @@
 - UI components live in `frontend/src/components` with co-located `.module.sass` styles.
 - Miniflux runs as a separate container in Docker Compose.
 - Postgres is used only by Miniflux.
-- Service worker (Serwist) provides offline/PWA behavior.
+- The app does not use a service worker or PWA caching layer.

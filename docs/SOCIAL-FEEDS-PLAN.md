@@ -32,7 +32,7 @@ Add support for X/Twitter and Instagram sources in the app while keeping Miniflu
    - `RSS_BRIDGE_BASE_URL`
    - `RSS_BRIDGE_INSTAGRAM_SESSION_ID` (or equivalent bridge auth input)
    - `RSS_BRIDGE_TWITTER_TOKEN` (if using TwitterV2 bridge)
-4. Document setup in `README.md` and `ENV-TEMPLATE.md`.
+4. Document setup in `README.md` and `.env.example`.
 
 ### Phase 2: Backend Mapping
 1. Create a helper in `frontend/src/lib/` to detect and normalize:

@@ -12,7 +12,7 @@ A minimalist RSS reader built on Miniflux, wrapped in a modern Next.js UI with C
 
 ## Quickstart (Local)
 
-1. Create a `.env` in the project root based on `ENV-TEMPLATE.md`.
+1. Create a `.env` in the project root based on `.env.example`.
 2. Build and run services:
 
 ```bash
