@@ -18,6 +18,7 @@ import { useDisableScroll } from '@/hooks/useDisableScroll';
 import { IconWrapper } from '@/components/icons/IconWrapper/IconWrapper';
 import { useKeydown } from '@/hooks/useKeydown';
 import { MainKomorebiLayer } from '@/components/MainKomorebiLayer/MainKomorebiLayer';
+import { trapTabFocus } from '@/lib/focusTrap';
 
 gsap.registerPlugin(useGSAP);
 
@@ -316,6 +317,7 @@ export function SlidePanel({
             aria-label={ariaLabel}
             aria-hidden={ariaHidden}
             data-open={isOpen}
+            onKeyDown={(event) => trapTabFocus(event, panelRef.current)}
           >
             <div className={styles.slidePanel_Background} aria-hidden="true">
               <MainKomorebiLayer />

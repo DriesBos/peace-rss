@@ -107,6 +107,11 @@ export function EntryItem({
       data-marked={marked ? 'true' : 'false'}
       data-starred={starred ? 'true' : 'false'}
       onClick={onClick}
+      onKeyDown={(event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        onClick?.();
+      }}
       role="button"
       tabIndex={0}
     >

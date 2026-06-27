@@ -12,6 +12,7 @@ import { gsap } from 'gsap';
 import { useGSAP } from '@gsap/react';
 import styles from './ModalContainer.module.sass';
 import { useDisableScroll } from '@/hooks/useDisableScroll';
+import { trapTabFocus } from '@/lib/focusTrap';
 
 gsap.registerPlugin(useGSAP);
 
@@ -362,6 +363,7 @@ export function ModalContainer({
         aria-label={ariaLabel}
         tabIndex={-1}
         onClick={(event) => event.stopPropagation()}
+        onKeyDown={(event) => trapTabFocus(event, dialogRef.current)}
       >
         <button
           type="button"
