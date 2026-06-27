@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import { createElement, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
 import styles from './EntryPanel.module.sass';
@@ -746,18 +745,13 @@ export function EntryPanel({
                   : undefined
               }
             >
-              <Image
+              <img
                 className={styles.entry_LeadImage}
                 src={pinnedLeadImage.url}
                 alt=""
-                fill
-                sizes="(max-width: 745px) 100vw, 800px"
-                quality={75}
-                unoptimized
                 loading="eager"
                 fetchPriority="high"
                 referrerPolicy="no-referrer"
-                style={{ objectFit: 'contain' }}
                 onError={() => setIsPinnedLeadImageErrored(true)}
               />
             </div>

@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import { useMemo, useState } from 'react';
 import styles from './EntryItem.module.sass';
 import { FormattedDate } from '../FormattedDate';
@@ -132,16 +131,11 @@ export function EntryItem({
       </div>
       {absoluteThumbnailUrl && !isThumbnailErrored && (
         <div className={styles.entryItem_Thumbnail}>
-          <Image
+          <img
             src={absoluteThumbnailUrl}
             alt={title || 'Entry thumbnail'}
-            fill
-            sizes="(max-width: 745px) 23vw, 90px"
-            quality={60}
-            unoptimized
             loading="lazy"
             referrerPolicy="no-referrer"
-            style={{ objectFit: 'cover' }}
             onError={() => setIsThumbnailErrored(true)}
           />
         </div>
