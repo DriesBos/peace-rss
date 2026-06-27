@@ -1,8 +1,8 @@
 import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth, clerkClient } from '@clerk/nextjs/server';
 import { apiErrorResponse } from '@/lib/apiErrors';
+import { getMinifluxToken } from '@/lib/minifluxAuth';
 import { mfFetchUser } from '@/lib/miniflux';
 import {
   isProtectedCategoryTitle,
@@ -43,28 +43,11 @@ export async function PUT(
   context: RouteContext
 ): Promise<NextResponse> {
   try {
-    // 1. Require Clerk authentication
-    const { userId } = await auth();
-    if (!userId) {
+    const identity = await getMinifluxToken();
+    if (!identity) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // 2. Get user's Miniflux token from Clerk metadata
-    const client = await clerkClient();
-    const user = await client.users.getUser(userId);
-    const metadata = user.privateMetadata as
-      | { minifluxToken?: string }
-      | undefined;
-    const token = metadata?.minifluxToken;
-
-    if (!token) {
-      return NextResponse.json(
-        { error: 'Not provisioned. Call /api/bootstrap first.' },
-        { status: 401 }
-      );
-    }
-
-    // 3. Get feed ID from params
     const { id } = await context.params;
     const feedId = parseInt(id, 10);
 
@@ -72,7 +55,6 @@ export async function PUT(
       return NextResponse.json({ error: 'Invalid feed ID' }, { status: 400 });
     }
 
-    // 4. Parse request body
     const body = await request.json().catch(() => null);
     if (!body || typeof body !== 'object') {
       return NextResponse.json(
@@ -85,7 +67,10 @@ export async function PUT(
       body as UpdateFeedRequest;
 
     let forcedKind: ProtectedCategoryKind | null = null;
-    const existingFeed = await mfFetchUser<MinifluxFeed>(token, `/v1/feeds/${feedId}`);
+    const existingFeed = await mfFetchUser<MinifluxFeed>(
+      identity.token,
+      `/v1/feeds/${feedId}`,
+    );
     const existingCategoryKind = existingFeed.category?.title
       ? normalizeCategoryTitle(existingFeed.category.title)
       : null;
@@ -106,7 +91,7 @@ export async function PUT(
 
     if (forcedKind) {
       const categories = await mfFetchUser<MinifluxCategory[]>(
-        token,
+        identity.token,
         '/v1/categories',
       );
       const existing = categories.find(
@@ -115,15 +100,23 @@ export async function PUT(
       const protectedCategoryId = existing
         ? existing.id
         : (
-            await mfFetchUser<MinifluxCategory>(token, '/v1/categories', {
-              method: 'POST',
-              body: JSON.stringify({ title: protectedCategoryTitleForKind(forcedKind) }),
-            })
+            await mfFetchUser<MinifluxCategory>(
+              identity.token,
+              '/v1/categories',
+              {
+                method: 'POST',
+                body: JSON.stringify({
+                  title: protectedCategoryTitleForKind(forcedKind),
+                }),
+              },
+            )
           ).id;
 
       updatePayload.hide_globally = true;
       updatePayload.category_id = protectedCategoryId;
-    } else if (category_id !== undefined && category_id !== null) {
+    } else if (category_id === null) {
+      updatePayload.category_id = null;
+    } else if (category_id !== undefined) {
       if (!Number.isInteger(category_id) || category_id <= 0) {
         return NextResponse.json(
           { error: 'Invalid category ID' },
@@ -132,7 +125,7 @@ export async function PUT(
       }
       // Disallow moving feeds into protected categories.
       const categories = await mfFetchUser<MinifluxCategory[]>(
-        token,
+        identity.token,
         '/v1/categories',
       );
       const target = categories.find((cat) => cat.id === category_id);
@@ -145,8 +138,7 @@ export async function PUT(
       updatePayload.category_id = category_id;
     }
 
-    // 5. Update feed using Miniflux API
-    await mfFetchUser(token, `/v1/feeds/${feedId}`, {
+    await mfFetchUser(identity.token, `/v1/feeds/${feedId}`, {
       method: 'PUT',
       body: JSON.stringify(updatePayload),
     });
@@ -158,32 +150,15 @@ export async function PUT(
 }
 
 export async function DELETE(
-  request: Request,
+  _request: Request,
   context: RouteContext
 ): Promise<NextResponse> {
   try {
-    // 1. Require Clerk authentication
-    const { userId } = await auth();
-    if (!userId) {
+    const identity = await getMinifluxToken();
+    if (!identity) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // 2. Get user's Miniflux token from Clerk metadata
-    const client = await clerkClient();
-    const user = await client.users.getUser(userId);
-    const metadata = user.privateMetadata as
-      | { minifluxToken?: string }
-      | undefined;
-    const token = metadata?.minifluxToken;
-
-    if (!token) {
-      return NextResponse.json(
-        { error: 'Not provisioned. Call /api/bootstrap first.' },
-        { status: 401 }
-      );
-    }
-
-    // 3. Get feed ID from params
     const { id } = await context.params;
     const feedId = parseInt(id, 10);
 
@@ -191,8 +166,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Invalid feed ID' }, { status: 400 });
     }
 
-    // 4. Delete feed using Miniflux API
-    await mfFetchUser(token, `/v1/feeds/${feedId}`, {
+    await mfFetchUser(identity.token, `/v1/feeds/${feedId}`, {
       method: 'DELETE',
     });
 
