@@ -1,7 +1,6 @@
 'use client';
 
 import {
-  type ChangeEvent,
   type CSSProperties,
   useCallback,
   useEffect,
@@ -114,11 +113,6 @@ export function MenuModal({
   const categoriesListRef = useRef<HTMLDivElement | null>(null);
   const [feedsMaxHeight, setFeedsMaxHeight] = useState(0);
   const themeToastTimeoutRef = useRef<number | null>(null);
-  const opmlFileInputRef = useRef<HTMLInputElement | null>(null);
-  const [selectedOpmlFile, setSelectedOpmlFile] = useState<File | null>(null);
-  const [opmlImportLoading, setOpmlImportLoading] = useState(false);
-  const [opmlExportLoading, setOpmlExportLoading] = useState(false);
-
   const [collapsedCategories, setCollapsedCategories] = useState<
     Set<number | string>
   >(() => buildInitialCollapsedCategories(categories));
@@ -130,10 +124,6 @@ export function MenuModal({
 
   const resetMenuState = useCallback(() => {
     setActiveView('feeds');
-    setSelectedOpmlFile(null);
-    if (opmlFileInputRef.current) {
-      opmlFileInputRef.current.value = '';
-    }
     resetCollapsedCategories();
   }, [resetCollapsedCategories]);
 
@@ -381,70 +371,6 @@ export function MenuModal({
     setKomorebiMain(nextKomorebiMain);
   }, []);
 
-  const handleOpmlFileChange = useCallback(
-    (event: ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0] ?? null;
-      setSelectedOpmlFile(file);
-    },
-    [],
-  );
-
-  const handleExportOpml = useCallback(async () => {
-    if (opmlExportLoading) return;
-    setOpmlExportLoading(true);
-    try {
-      const response = await fetch('/api/opml/export', {
-        method: 'GET',
-        cache: 'no-store',
-      });
-
-      if (!response.ok) {
-        const message = await response.text().catch(() => '');
-        throw new Error(message || 'Failed to export OPML');
-      }
-
-      const blob = await response.blob();
-      const objectUrl = window.URL.createObjectURL(blob);
-      const anchor = document.createElement('a');
-      anchor.href = objectUrl;
-      anchor.download = 'feeds.opml';
-      document.body.appendChild(anchor);
-      anchor.click();
-      document.body.removeChild(anchor);
-      window.URL.revokeObjectURL(objectUrl);
-      toast('OPML export downloaded.');
-    } catch (error) {
-      toast.error('Could not export OPML.');
-    } finally {
-      setOpmlExportLoading(false);
-    }
-  }, [opmlExportLoading]);
-
-  const handleImportOpml = useCallback(async () => {
-    if (!selectedOpmlFile || opmlImportLoading) return;
-    setOpmlImportLoading(true);
-    try {
-      const formData = new FormData();
-      formData.set('file', selectedOpmlFile);
-      const response = await fetch('/api/opml/import', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const message = await response.text().catch(() => '');
-        throw new Error(message || 'Failed to import OPML');
-      }
-
-      toast('OPML imported. Refreshing feeds now.');
-      window.location.reload();
-    } catch (error) {
-      toast.error('Could not import OPML.');
-    } finally {
-      setOpmlImportLoading(false);
-    }
-  }, [opmlImportLoading, selectedOpmlFile]);
-
   return (
     <ModalContainer
       isOpen={isOpen}
@@ -545,7 +471,7 @@ export function MenuModal({
                             try {
                               await onToggleEntryStar(entry.id);
                               toast(NOTIFICATION_COPY.app.starRemoved);
-                            } catch (error) {
+                            } catch {
                               toast.error(
                                 NOTIFICATION_COPY.app.starRemoveError,
                               );

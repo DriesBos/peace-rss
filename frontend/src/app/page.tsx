@@ -44,14 +44,14 @@ const DEFAULT_READER_PREFERENCES: ReaderPreferences = {
   entry_swipe: true,
 };
 
-const getBrowserWindow = (): any => {
-  if (typeof globalThis === 'undefined') return null;
-  return (globalThis as any).window ?? null;
+const getBrowserWindow = (): Window | null => {
+  if (typeof window === 'undefined') return null;
+  return window;
 };
 
-const getBrowserNavigator = (): any => {
-  if (typeof globalThis === 'undefined') return null;
-  return (globalThis as any).navigator ?? null;
+const getBrowserNavigator = (): Navigator | null => {
+  if (typeof navigator === 'undefined') return null;
+  return navigator;
 };
 
 type AddFeedSelectionResponse = {
@@ -628,7 +628,7 @@ export default function Home() {
         setIsUpdatingStatus(false);
       }
     },
-    [loadCategories, loadFeeds, markEntryStatus, reloadCurrentEntries],
+    [loadCategories, loadFeeds, markEntryStatus, reloadCurrentEntries, setError],
   );
 
   const markCurrentPageAsRead = useCallback(async (): Promise<boolean> => {
@@ -658,6 +658,7 @@ export default function Home() {
     loadFeeds,
     markCurrentScopeAsRead,
     reloadCurrentEntries,
+    setError,
   ]);
 
   async function toggleSelectedStar() {
@@ -1150,6 +1151,7 @@ export default function Home() {
     [
       isProvisioned,
       originalFetchStatusById,
+      setError,
       setEntries,
     ],
   );

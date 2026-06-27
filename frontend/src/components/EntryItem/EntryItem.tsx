@@ -131,6 +131,8 @@ export function EntryItem({
       </div>
       {absoluteThumbnailUrl && !isThumbnailErrored && (
         <div className={styles.entryItem_Thumbnail}>
+          {/* ponytail: RSS thumbnails use arbitrary hosts; keep plain img. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={absoluteThumbnailUrl}
             alt={title || 'Entry thumbnail'}

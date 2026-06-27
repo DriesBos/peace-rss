@@ -609,12 +609,7 @@ export function EntryPanel({
     }
 
     return null;
-  }, [
-    leadImage?.height,
-    leadImage?.url,
-    leadImage?.width,
-    fallbackThumbnailUrl,
-  ]);
+  }, [fallbackThumbnailUrl, leadImage]);
 
   useEffect(() => {
     const isEntryChanged = lastEntryIdRef.current !== entryId;
@@ -745,6 +740,8 @@ export function EntryPanel({
                   : undefined
               }
             >
+              {/* ponytail: RSS lead images use arbitrary hosts; keep plain img. */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 className={styles.entry_LeadImage}
                 src={pinnedLeadImage.url}

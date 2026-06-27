@@ -101,9 +101,8 @@ export async function POST() {
     const password = generateRandomPassword();
 
     // 5. Create Miniflux user (admin endpoint)
-    let minifluxUser: MinifluxUser;
     try {
-      minifluxUser = await mfFetchAdmin<MinifluxUser>('/v1/users', {
+      await mfFetchAdmin<MinifluxUser>('/v1/users', {
         method: 'POST',
         body: JSON.stringify({
           username,
@@ -118,7 +117,7 @@ export async function POST() {
         username = `${username}-${randomSuffix}`;
 
         try {
-          minifluxUser = await mfFetchAdmin<MinifluxUser>('/v1/users', {
+          await mfFetchAdmin<MinifluxUser>('/v1/users', {
             method: 'POST',
             body: JSON.stringify({
               username,

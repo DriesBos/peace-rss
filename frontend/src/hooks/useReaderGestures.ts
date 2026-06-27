@@ -9,19 +9,19 @@ const FETCH_INDICATOR_HEIGHT = 32;
 const SWIPE_THRESHOLD_PX = 60;
 const SWIPE_MAX_VERTICAL_PX = 50;
 
-const getBrowserWindow = (): any => {
-  if (typeof globalThis === 'undefined') return null;
-  return (globalThis as any).window ?? null;
+const getBrowserWindow = (): Window | null => {
+  if (typeof window === 'undefined') return null;
+  return window;
 };
 
-const getBrowserDocument = (): any => {
-  if (typeof globalThis === 'undefined') return null;
-  return (globalThis as any).document ?? null;
+const getBrowserDocument = (): Document | null => {
+  if (typeof document === 'undefined') return null;
+  return document;
 };
 
-const getBrowserNavigator = (): any => {
-  if (typeof globalThis === 'undefined') return null;
-  return (globalThis as any).navigator ?? null;
+const getBrowserNavigator = (): Navigator | null => {
+  if (typeof navigator === 'undefined') return null;
+  return navigator;
 };
 
 function getScrollTop(): number {
@@ -29,9 +29,9 @@ function getScrollTop(): number {
   const doc = getBrowserDocument();
   if (!win || !doc) return 0;
 
-  const winScrollY = (win as any).scrollY as unknown;
-  const docElScrollTop = (doc as any).documentElement?.scrollTop as unknown;
-  const docBodyScrollTop = (doc as any).body?.scrollTop as unknown;
+  const winScrollY = win.scrollY;
+  const docElScrollTop = doc.documentElement?.scrollTop;
+  const docBodyScrollTop = doc.body?.scrollTop;
   return (
     (typeof winScrollY === 'number' ? winScrollY : 0) ||
     (typeof docElScrollTop === 'number' ? docElScrollTop : 0) ||
@@ -45,7 +45,7 @@ function isTouchCapable(): boolean {
   const nav = getBrowserNavigator();
   if (!win || !nav) return false;
 
-  const maxTouchPoints = (nav as any).maxTouchPoints as unknown;
+  const maxTouchPoints = nav.maxTouchPoints;
   return (
     'ontouchstart' in win ||
     (typeof maxTouchPoints === 'number' && maxTouchPoints > 0)

@@ -47,10 +47,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
     }
 
-    const entryIds =
-      typeof body === 'object' && body !== null ? (body as any).entry_ids : null;
-    const status =
-      typeof body === 'object' && body !== null ? (body as any).status : null;
+    const bodyRecord =
+      typeof body === 'object' && body !== null
+        ? (body as { entry_ids?: unknown; status?: unknown })
+        : null;
+    const entryIds = bodyRecord?.entry_ids ?? null;
+    const status = bodyRecord?.status ?? null;
 
     if (!isNumberArray(entryIds) || entryIds.length === 0) {
       return NextResponse.json(
@@ -76,5 +78,4 @@ export async function POST(request: Request) {
     );
   }
 }
-
 

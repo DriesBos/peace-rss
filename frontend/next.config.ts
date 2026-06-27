@@ -2,7 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  reactCompiler: true,
+  // ponytail: compiler off until existing hook-rule violations are fixed.
+  reactCompiler: false,
 };
 
 export default nextConfig;
