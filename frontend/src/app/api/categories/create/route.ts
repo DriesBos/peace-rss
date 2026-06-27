@@ -2,6 +2,7 @@ import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { auth, clerkClient } from '@clerk/nextjs/server';
+import { apiErrorResponse } from '@/lib/apiErrors';
 import { mfFetchUser } from '@/lib/miniflux';
 import { isProtectedCategoryTitle } from '@/lib/protectedCategories';
 
@@ -74,10 +75,6 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(createdCategory);
   } catch (err) {
-    console.error('Failed to create category:', err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Unknown error' },
-      { status: 500 }
-    );
+    return apiErrorResponse(err, 'Failed to create category');
   }
 }

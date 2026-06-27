@@ -2,6 +2,7 @@ import 'server-only';
 
 import { NextResponse } from 'next/server';
 import { auth, clerkClient } from '@clerk/nextjs/server';
+import { apiErrorResponse } from '@/lib/apiErrors';
 import { mfFetchUser } from '@/lib/miniflux';
 
 export const runtime = 'nodejs';
@@ -45,9 +46,6 @@ export async function GET(request: Request) {
     const data = await mfFetchUser<Category[]>(token, path);
     return NextResponse.json(data);
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Unknown error' },
-      { status: 500 }
-    );
+    return apiErrorResponse(err, 'Failed to fetch categories');
   }
 }

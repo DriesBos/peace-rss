@@ -2,7 +2,8 @@ import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { auth, clerkClient } from '@clerk/nextjs/server';
-import { mfFetchUser } from '@/lib/miniflux';
+import { apiErrorStatus } from '@/lib/apiErrors';
+import { MinifluxApiError, mfFetchUser } from '@/lib/miniflux';
 import { normalizeSocialInput } from '@/lib/social/normalize';
 import {
   buildSocialProxyFeedUrl,
@@ -874,17 +875,24 @@ export async function POST(request: NextRequest) {
       recordSocialEvent('social_create_failure', {
         platform: socialSourceContext.platform,
         source_key: socialSourceContext.sourceKey,
-        message: err instanceof Error ? err.message : 'Unknown social create error',
+        message: 'Social feed creation failed',
       });
     }
 
     console.error('Failed to create feed:', err);
 
-    // Provide more helpful error messages
-    let errorMessage = err instanceof Error ? err.message : 'Unknown error';
-    let status = 500;
+    const privateMessage =
+      err instanceof MinifluxApiError
+        ? err.body
+        : err instanceof Error
+          ? err.message
+          : 'Unknown error';
 
-    if (errorMessage.includes('unable to detect feed format')) {
+    // Provide more helpful error messages
+    let errorMessage = 'Failed to create feed';
+    let status = apiErrorStatus(err);
+
+    if (privateMessage.includes('unable to detect feed format')) {
       errorMessage =
         'Unable to find or parse a feed at this URL. Please check that:\n' +
         '• The URL is accessible\n' +
@@ -893,11 +901,11 @@ export async function POST(request: NextRequest) {
     }
 
     const isSocialProxyTimeout =
-      errorMessage.includes('/api/social/rss/') &&
-      (errorMessage.includes('context deadline exceeded') ||
-        errorMessage.includes('gateway timeout (504 status code)') ||
-        errorMessage.includes('Upstream RSS-Bridge timed out') ||
-        errorMessage.includes('Failed to reach RSS-Bridge upstream'));
+      privateMessage.includes('/api/social/rss/') &&
+      (privateMessage.includes('context deadline exceeded') ||
+        privateMessage.includes('gateway timeout (504 status code)') ||
+        privateMessage.includes('Upstream RSS-Bridge timed out') ||
+        privateMessage.includes('Failed to reach RSS-Bridge upstream'));
 
     if (isSocialProxyTimeout) {
       status = 504;

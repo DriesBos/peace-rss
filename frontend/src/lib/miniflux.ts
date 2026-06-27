@@ -1,5 +1,7 @@
 import 'server-only';
 
+import { PublicApiError } from '@/lib/apiErrors';
+
 /**
  * Minimal server-only Miniflux API client.
  * - mfFetchUser: Uses per-user X-Auth-Token header
@@ -11,6 +13,20 @@ import 'server-only';
 const baseUrl = (process.env.MINIFLUX_BASE_URL || '').replace(/\/+$/, '');
 const adminUsername = process.env.MINIFLUX_ADMIN_USERNAME || '';
 const adminPassword = process.env.MINIFLUX_ADMIN_PASSWORD || '';
+
+export class MinifluxApiError extends PublicApiError {
+  path: string;
+  statusText: string;
+  body: string;
+
+  constructor(status: number, statusText: string, path: string, body: string) {
+    super('Miniflux request failed', status);
+    this.name = 'MinifluxApiError';
+    this.path = path;
+    this.statusText = statusText;
+    this.body = body;
+  }
+}
 
 function assertBaseUrl() {
   if (!baseUrl) {
@@ -62,9 +78,7 @@ export async function mfFetchUser<T>(
 
   if (!res.ok) {
     const text = await res.text().catch(() => '');
-    throw new Error(
-      `Miniflux API error ${res.status} ${res.statusText} (${urlPath}) ${text}`
-    );
+    throw new MinifluxApiError(res.status, res.statusText, urlPath, text);
   }
 
   // For endpoints that return no JSON body
@@ -112,9 +126,7 @@ export async function mfFetchAdmin<T>(
 
   if (!res.ok) {
     const text = await res.text().catch(() => '');
-    throw new Error(
-      `Miniflux API error ${res.status} ${res.statusText} (${urlPath}) ${text}`
-    );
+    throw new MinifluxApiError(res.status, res.statusText, urlPath, text);
   }
 
   // For endpoints that return no JSON body
@@ -163,9 +175,7 @@ export async function mfFetchUserBasicAuth<T>(
 
   if (!res.ok) {
     const text = await res.text().catch(() => '');
-    throw new Error(
-      `Miniflux API error ${res.status} ${res.statusText} (${urlPath}) ${text}`
-    );
+    throw new MinifluxApiError(res.status, res.statusText, urlPath, text);
   }
 
   // For endpoints that return no JSON body

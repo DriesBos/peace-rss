@@ -257,10 +257,11 @@ export async function GET(
       });
       recordSocialEvent('social_proxy_upstream_error', {
         status: 504,
-        message: err.message,
+        message: 'Upstream RSS-Bridge timed out',
       });
+      console.error('Social proxy upstream timeout:', err);
 
-      return new Response(err.message, {
+      return new Response('Upstream RSS-Bridge timed out', {
         status: 504,
         headers: {
           'Content-Type': 'text/plain; charset=utf-8',
@@ -274,7 +275,7 @@ export async function GET(
       });
       recordSocialEvent('social_proxy_upstream_error', {
         status: err.status,
-        message: err.message,
+        message: 'Upstream RSS-Bridge request failed',
       });
 
       const status = err.status === 429 ? 429 : 502;
@@ -284,8 +285,9 @@ export async function GET(
       if (err.retryAfterSeconds) {
         headers.set('Retry-After', String(err.retryAfterSeconds));
       }
+      console.error('Social proxy upstream error:', err);
 
-      return new Response(err.message, {
+      return new Response('Upstream RSS-Bridge request failed', {
         status,
         headers,
       });
@@ -293,11 +295,13 @@ export async function GET(
 
     incrementSocialMetric('social_proxy_internal_errors_total');
     recordSocialEvent('social_proxy_internal_error', {
-      message: err instanceof Error ? err.message : 'Unknown proxy error',
+      message: 'Unexpected social feed proxy error',
     });
+    console.error('Social proxy internal error:', err);
 
-    const message =
-      err instanceof Error ? err.message : 'Unexpected social feed proxy error';
-    return NextResponse.json({ error: message }, { status: 400 });
+    return NextResponse.json(
+      { error: 'Unexpected social feed proxy error' },
+      { status: 500 }
+    );
   }
 }

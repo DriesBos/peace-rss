@@ -3,7 +3,12 @@ import 'server-only';
 import { NextResponse } from 'next/server';
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { randomBytes, randomInt } from 'node:crypto';
-import { mfFetchAdmin, mfFetchUserBasicAuth } from '@/lib/miniflux';
+import { apiErrorResponse } from '@/lib/apiErrors';
+import {
+  MinifluxApiError,
+  mfFetchAdmin,
+  mfFetchUserBasicAuth,
+} from '@/lib/miniflux';
 
 export const runtime = 'nodejs';
 
@@ -113,7 +118,7 @@ export async function POST() {
       });
     } catch (err) {
       // If username already exists, try with random suffix
-      if (err instanceof Error && err.message.includes('already exists')) {
+      if (err instanceof MinifluxApiError && err.body.includes('already exists')) {
         const randomSuffix = randomBytes(2).toString('hex');
         username = `${username}-${randomSuffix}`;
 
@@ -200,10 +205,6 @@ export async function POST() {
       provisioned: true,
     });
   } catch (err) {
-    console.error('Bootstrap error:', err);
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Unknown error' },
-      { status: 500 }
-    );
+    return apiErrorResponse(err, 'Bootstrap error');
   }
 }

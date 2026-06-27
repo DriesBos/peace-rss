@@ -2,6 +2,7 @@ import 'server-only';
 
 import { NextResponse } from 'next/server';
 import { auth, clerkClient } from '@clerk/nextjs/server';
+import { apiErrorResponse } from '@/lib/apiErrors';
 import { mfFetchUser } from '@/lib/miniflux';
 
 export const runtime = 'nodejs';
@@ -67,9 +68,6 @@ export async function POST(request: Request) {
       message: response?.message ?? 'Feeds imported successfully.',
     });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Failed to import OPML' },
-      { status: 500 },
-    );
+    return apiErrorResponse(err, 'Failed to import OPML', 'Failed to import OPML');
   }
 }

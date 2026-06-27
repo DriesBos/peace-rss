@@ -2,6 +2,7 @@ import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { auth, clerkClient } from '@clerk/nextjs/server';
+import { apiErrorResponse } from '@/lib/apiErrors';
 import { mfFetchUser } from '@/lib/miniflux';
 
 export const runtime = 'nodejs';
@@ -62,9 +63,6 @@ export async function POST(_request: NextRequest, context: Ctx) {
       reading_time: entry.reading_time,
     });
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Failed to fetch content' },
-      { status: 500 }
-    );
+    return apiErrorResponse(err, 'Failed to fetch entry content');
   }
 }

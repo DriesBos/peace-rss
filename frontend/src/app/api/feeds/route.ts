@@ -2,6 +2,7 @@ import 'server-only';
 
 import { NextResponse } from 'next/server';
 import { auth, clerkClient } from '@clerk/nextjs/server';
+import { apiErrorResponse } from '@/lib/apiErrors';
 import { mfFetchUser } from '@/lib/miniflux';
 
 export const runtime = 'nodejs';
@@ -34,11 +35,7 @@ export async function GET() {
     const data = await mfFetchUser<unknown>(token, '/v1/feeds');
     return NextResponse.json(data);
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Unknown error' },
-      { status: 500 }
-    );
+    return apiErrorResponse(err, 'Failed to fetch feeds');
   }
 }
-
 

@@ -2,6 +2,7 @@ import 'server-only';
 
 import { NextResponse } from 'next/server';
 import { auth, clerkClient } from '@clerk/nextjs/server';
+import { apiErrorResponse } from '@/lib/apiErrors';
 import { mfFetchUser } from '@/lib/miniflux';
 import { DEFAULT_ENTRIES_PAGE_SIZE } from '@/lib/entriesQuery';
 
@@ -173,9 +174,6 @@ export async function GET(request: Request) {
     );
     return NextResponse.json(data);
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Unknown error' },
-      { status: 500 }
-    );
+    return apiErrorResponse(err, 'Failed to fetch entries');
   }
 }

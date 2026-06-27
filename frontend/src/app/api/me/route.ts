@@ -2,6 +2,7 @@ import 'server-only';
 
 import { NextResponse } from 'next/server';
 import { auth, clerkClient } from '@clerk/nextjs/server';
+import { apiErrorResponse } from '@/lib/apiErrors';
 import { mfFetchUser } from '@/lib/miniflux';
 import type { ReaderPreferences } from '@/app/_lib/types';
 
@@ -31,9 +32,6 @@ export async function GET() {
     const data = await mfFetchUser<ReaderPreferences>(token, '/v1/me');
     return NextResponse.json(data);
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Unknown error' },
-      { status: 500 },
-    );
+    return apiErrorResponse(err, 'Failed to fetch current user');
   }
 }
