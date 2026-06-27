@@ -865,26 +865,6 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    if (forcedKind && forcedCategoryId) {
-      try {
-        await mfFetchUser(token, `/v1/feeds/${createdFeed.id}`, {
-          method: 'PUT',
-          body: JSON.stringify({
-            hide_globally: true,
-            category_id: forcedCategoryId,
-          }),
-        });
-        createdFeed.hide_globally = true;
-        createdFeed.category =
-          createdFeed.category ??
-          (forcedCategoryTitle
-            ? { id: forcedCategoryId, title: forcedCategoryTitle }
-            : createdFeed.category);
-      } catch (updateErr) {
-        console.warn('Failed to mark protected feed as hidden globally:', updateErr);
-      }
-    }
-
     return NextResponse.json(createdFeed);
   } catch (err) {
     if (socialSourceContext) {

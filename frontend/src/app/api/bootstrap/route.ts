@@ -101,8 +101,9 @@ export async function POST() {
     const password = generateRandomPassword();
 
     // 5. Create Miniflux user (admin endpoint)
+    let minifluxUser: MinifluxUser | null = null;
     try {
-      await mfFetchAdmin<MinifluxUser>('/v1/users', {
+      minifluxUser = await mfFetchAdmin<MinifluxUser>('/v1/users', {
         method: 'POST',
         body: JSON.stringify({
           username,
@@ -117,7 +118,7 @@ export async function POST() {
         username = `${username}-${randomSuffix}`;
 
         try {
-          await mfFetchAdmin<MinifluxUser>('/v1/users', {
+          minifluxUser = await mfFetchAdmin<MinifluxUser>('/v1/users', {
             method: 'POST',
             body: JSON.stringify({
               username,
@@ -160,7 +161,15 @@ export async function POST() {
       );
     } catch (err) {
       console.error('Failed to create API key:', err);
-      // TODO: Consider cleaning up the created user here
+      if (minifluxUser) {
+        try {
+          await mfFetchAdmin(`/v1/users/${minifluxUser.id}`, {
+            method: 'DELETE',
+          });
+        } catch (cleanupErr) {
+          console.error('Failed to clean up Miniflux user:', cleanupErr);
+        }
+      }
       return NextResponse.json(
         { error: 'Failed to create API key' },
         { status: 500 }

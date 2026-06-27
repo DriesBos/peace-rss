@@ -7,6 +7,8 @@ import { DEFAULT_ENTRIES_PAGE_SIZE } from '@/lib/entriesQuery';
 
 export const runtime = 'nodejs';
 
+const MAX_ENTRIES_LIMIT = 500;
+
 function getStringParam(url: URL, key: string, defaultValue: string): string {
   const value = url.searchParams.get(key);
   return value && value.trim().length > 0 ? value : defaultValue;
@@ -60,7 +62,10 @@ export async function GET(request: Request) {
     // 3. Parse query parameters
     const url = new URL(request.url);
 
-    const limit = getNumberParam(url, 'limit', DEFAULT_ENTRIES_PAGE_SIZE);
+    const limit = Math.min(
+      getNumberParam(url, 'limit', DEFAULT_ENTRIES_PAGE_SIZE),
+      MAX_ENTRIES_LIMIT
+    );
     const offset = getNumberParam(url, 'offset', 0);
     const direction = getStringParam(url, 'direction', 'desc');
     const order = getStringParam(url, 'order', 'published_at');
