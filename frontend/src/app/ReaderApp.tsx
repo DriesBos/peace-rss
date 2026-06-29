@@ -39,7 +39,10 @@ import {
 } from '@/lib/protectedCategories';
 import { normalizeReaderPreferences } from '@/lib/readerPrefs';
 import { readerQueryKeys } from '@/lib/readerQueryKeys';
-import { resolveSelectedEntry } from '@/lib/selectedEntry';
+import {
+  resolveSelectedEntry,
+  resolveSelectedEntryNav,
+} from '@/lib/selectedEntry';
 
 type ActiveModal = 'none' | 'menu' | 'add' | 'edit';
 
@@ -275,6 +278,7 @@ export function ReaderApp({
   }, [categories, feeds]);
 
   const selectedEntryRef = useRef<Entry | null>(null);
+  const selectedEntryIndexRef = useRef<number | null>(null);
   const selectedEntry = useMemo(() => {
     return resolveSelectedEntry(
       entries,
@@ -287,6 +291,13 @@ export function ReaderApp({
     selectedEntryRef.current = selectedEntry;
   }, [selectedEntry]);
 
+  useEffect(() => {
+    const index = entries.findIndex((entry) => entry.id === selectedEntryId);
+    if (index >= 0) {
+      selectedEntryIndexRef.current = index;
+    }
+  }, [entries, selectedEntryId]);
+
   const isUpdatingStatusRef = useRef(false);
   useEffect(() => {
     isUpdatingStatusRef.current = isUpdatingStatus;
@@ -297,12 +308,18 @@ export function ReaderApp({
     return originalFetchStatusById[selectedEntry.id];
   }, [selectedEntry, originalFetchStatusById]);
 
-  const { selectedIndex, hasPrev, hasNext } = useMemo(() => {
-    const index = entries.findIndex((e) => e.id === selectedEntryId);
+  const { prevEntryId, nextEntryId, hasPrev, hasNext } = useMemo(() => {
+    const nav = resolveSelectedEntryNav(
+      entries,
+      selectedEntryId,
+      selectedEntryRef.current,
+      selectedEntryIndexRef.current,
+    );
     return {
-      selectedIndex: index,
-      hasPrev: index > 0,
-      hasNext: index >= 0 && index < entries.length - 1,
+      prevEntryId: nav.prevId,
+      nextEntryId: nav.nextId,
+      hasPrev: nav.prevId !== null,
+      hasNext: nav.nextId !== null,
     };
   }, [entries, selectedEntryId]);
 
@@ -885,16 +902,16 @@ export function ReaderApp({
   );
 
   const navigateToPrev = useCallback(() => {
-    if (hasPrev && selectedIndex > 0) {
-      handleEntrySelect(entries[selectedIndex - 1].id);
+    if (prevEntryId !== null) {
+      handleEntrySelect(prevEntryId);
     }
-  }, [hasPrev, selectedIndex, entries, handleEntrySelect]);
+  }, [prevEntryId, handleEntrySelect]);
 
   const navigateToNext = useCallback(() => {
-    if (hasNext && selectedIndex < entries.length - 1) {
-      handleEntrySelect(entries[selectedIndex + 1].id);
+    if (nextEntryId !== null) {
+      handleEntrySelect(nextEntryId);
     }
-  }, [hasNext, selectedIndex, entries, handleEntrySelect]);
+  }, [nextEntryId, handleEntrySelect]);
 
   const canSwipe =
     readerPreferences.entry_swipe &&

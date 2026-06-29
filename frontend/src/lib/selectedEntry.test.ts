@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 
-import { resolveSelectedEntry } from './selectedEntry.ts';
+import { resolveSelectedEntry, resolveSelectedEntryNav } from './selectedEntry.ts';
 
 type EntryLike = { id: number; title: string };
 
@@ -13,4 +13,19 @@ assert.equal(resolveSelectedEntry(nextEntries, 3, previous), null);
 assert.deepEqual(
   resolveSelectedEntry(nextEntries, 1, previous),
   nextEntries[0],
+);
+
+assert.deepEqual(
+  resolveSelectedEntryNav(nextEntries, 2, previous, 1),
+  {
+    prevId: 1,
+    nextId: null,
+  },
+);
+assert.deepEqual(
+  resolveSelectedEntryNav(nextEntries, 2, previous, 0),
+  {
+    prevId: null,
+    nextId: 1,
+  },
 );
