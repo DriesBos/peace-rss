@@ -1,20 +1,21 @@
-FROM node:24.18.0-bookworm AS deps
+FROM node:24.22.2-bookworm AS deps
 WORKDIR /app
-COPY package*.json ./
-RUN npm ci --legacy-peer-deps
+RUN corepack enable
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN pnpm install --frozen-lockfile
 
-FROM node:24.18.0-bookworm AS builder
+FROM node:24.22.2-bookworm AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ARG NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-RUN npm run build
+RUN corepack enable && pnpm build
 
 
 
-FROM node:24.18.0-bookworm-slim AS runner
+FROM node:24.22.2-bookworm-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1

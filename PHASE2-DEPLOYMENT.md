@@ -131,7 +131,7 @@ Ensure all required variables are set (see above)
 
 ```bash
 cd frontend
-npm run dev
+pnpm dev
 ```
 
 - Visit http://localhost:3000
