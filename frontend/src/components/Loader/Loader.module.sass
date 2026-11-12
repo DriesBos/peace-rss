@@ -1,8 +1,5 @@
 @use '@/styles/vars' as *
 
-$duration: 1.6s
-$ease: cubic-bezier(0.65, 0, 0.35, 1)
-
 // Always centered, horizontally and vertically.
 .loader
   display: flex
@@ -15,25 +12,23 @@ $ease: cubic-bezier(0.65, 0, 0.35, 1)
     min-height: 0
     height: 100%
 
+// Sweep: the underline draws in from the left, then leaves to the right.
 .label
   @include font-body
   position: relative
   display: inline-block
   padding-bottom: 2px
   color: var(--color-text)
-  &::before, &::after
+  &::after
     content: ''
     position: absolute
     left: 0
     bottom: -2px
     width: 100%
     height: 1px
-
-// 1. Sweep: line draws in from the left, then leaves to the right.
-.label[data-variant="sweep"]::after
-  background: var(--color-text)
-  transform-origin: left center
-  animation: sweep $duration $ease infinite
+    background: var(--color-text)
+    transform-origin: left center
+    animation: sweep 1.6s cubic-bezier(0.65, 0, 0.35, 1) infinite
 
 @keyframes sweep
   0%
@@ -49,78 +44,7 @@ $ease: cubic-bezier(0.65, 0, 0.35, 1)
     transform: scaleX(0)
     transform-origin: right center
 
-// 2. Glide: a short segment travels left to right over a faint track.
-.label[data-variant="glide"]
-  overflow: hidden
-  padding-bottom: 4px
-  &::before, &::after
-    bottom: 0
-  &::before
-    background: var(--color-text-inactive)
-  &::after
-    width: 35%
-    background: var(--color-text)
-    animation: glide $duration $ease infinite
-
-@keyframes glide
-  0%
-    transform: translateX(-100%)
-  100%
-    transform: translateX(290%)
-
-// 3. Draw: line fills in three steps in time with the dots, then resets.
-.label[data-variant="draw"]::after
-  background: var(--color-text)
-  transform-origin: left center
-  animation: draw ($duration * 1.25) steps(1, end) infinite
-
-@keyframes draw
-  0%
-    transform: scaleX(0)
-  25%
-    transform: scaleX(0.4)
-  50%
-    transform: scaleX(0.7)
-  75%
-    transform: scaleX(1)
-
-.dots
-  display: inline-flex
-  span
-    opacity: 0
-    animation-duration: ($duration * 1.25)
-    animation-timing-function: steps(1, end)
-    animation-iteration-count: infinite
-  span:nth-child(1)
-    animation-name: dot1
-  span:nth-child(2)
-    animation-name: dot2
-  span:nth-child(3)
-    animation-name: dot3
-
-@keyframes dot1
-  0%
-    opacity: 0
-  25%
-    opacity: 1
-
-@keyframes dot2
-  0%
-    opacity: 0
-  50%
-    opacity: 1
-
-@keyframes dot3
-  0%
-    opacity: 0
-  75%
-    opacity: 1
-
 @media (prefers-reduced-motion: reduce)
-  .label::after, .dots span
-    animation: none !important
   .label::after
-    transform: none !important
+    animation: none
     opacity: 0.5
-  .dots span
-    opacity: 1

@@ -19,7 +19,7 @@ import { IconMenu } from '@/components/icons/IconMenu';
 import { IconPlus } from '@/components/icons/IconPlus';
 import { IconSearch } from '@/components/icons/IconSearch';
 import { IconStar } from '@/components/icons/IconStar';
-import { Loader, DEFAULT_LOADER_VARIANT } from '@/components/Loader/Loader';
+import { Loader } from '@/components/Loader/Loader';
 import styles from '../dev.module.sass';
 
 const ICONS = [
@@ -240,25 +240,16 @@ export function PrimitivePreviews() {
           marked
         />
       </Row>
-      {(
-        [
-          ['sweep', 'Sweep: line draws in from the left, leaves to the right'],
-          ['glide', 'Glide: short segment travels over a faint track'],
-          ['draw', 'Draw: line fills in three steps with the dots'],
-        ] as const
-      ).map(([variant, description]) => (
-        <Row
-          key={variant}
-          name={`Loader · ${variant}${variant === DEFAULT_LOADER_VARIANT ? ' (in use)' : ''}`}
-          path="components/Loader"
-          props={description}
-          stack
-        >
-          <div style={{ height: 160 }}>
-            <Loader variant={variant} fill />
-          </div>
-        </Row>
-      ))}
+      <Row
+        name="Loader"
+        path="components/Loader"
+        props="label, fill · sweep underline, always centered"
+        stack
+      >
+        <div style={{ height: 160 }}>
+          <Loader fill />
+        </div>
+      </Row>
       <Row name="FormattedDate" path="components/FormattedDate" props="date">
         <span>
           <FormattedDate date={SAMPLE_DATE} />
