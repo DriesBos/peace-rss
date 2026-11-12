@@ -13,14 +13,13 @@ From the repo root:
 ```bash
 pnpm dev
 ```
-This starts `postgres`, `miniflux` and `rss-bridge` in Docker (via
+This starts `postgres` and `miniflux` in Docker (via
 `docker-compose.dev.yml`), then runs `next dev` on the host at
 `http://localhost:3000` with hot reload. The script swaps the Docker hostnames in
 `.env` for host URLs, so no extra env file is needed.
 
 - `pnpm dev:https`: same, but `https://localhost:3000` with a self-signed cert
-  (browsers warn). Social feeds won't load in this mode: Miniflux fetches them
-  back from the host (`host.docker.internal:3000`) over plain HTTP.
+  (browsers warn).
 - `pnpm dev:services`: start only the Docker services.
 - `pnpm dev:down`: stop the Docker services (data stays in the volume).
 - `pnpm dev:logs`: tail service logs.

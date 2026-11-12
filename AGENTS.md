@@ -12,7 +12,7 @@ Guidance for AI coding agents (Claude, Codex, etc.) working in this repo. Keep i
 
 ## Running locally
 
-- `pnpm dev` from the repo root: Postgres, Miniflux and RSS-Bridge in Docker, `next dev` on the host at `http://localhost:3000` with hot reload. See `docs/DEVELOPMENT.md`.
+- `pnpm dev` from the repo root: Postgres and Miniflux in Docker, `next dev` on the host at `http://localhost:3000` with hot reload. See `docs/DEVELOPMENT.md`.
 - `docker compose up -d --build` runs the full production build. Host edits do not hot-reload into that container; rebuild (`docker compose up -d --build frontend`) to see changes.
 - Local env lives in `.env.local` (Clerk dev keys), kept separate from production values. Never commit env files or secrets.
 - `NEXT_PUBLIC_ENABLE_DEV_TOOLS=true` shows the Dev menu tab and `/dev` system pages outside development. Never set it in production.

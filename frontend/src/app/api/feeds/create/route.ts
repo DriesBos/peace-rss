@@ -4,38 +4,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { apiErrorStatus } from '@/lib/apiErrors';
 import { MinifluxApiError, mfFetchUser } from '@/lib/miniflux';
-import { normalizeSocialInput } from '@/lib/social/normalize';
-import {
-  buildSocialProxyFeedUrl,
-  discoverBridgeFeedUrl,
-  discoverMediumBridgeFeedUrl,
-} from '@/lib/social/rssBridge';
-import { checkRateLimit } from '@/lib/social/rateLimit';
-import { encodeSocialFeedToken } from '@/lib/social/token';
-import { buildSocialSourceKeyFromInput } from '@/lib/social/source';
-import {
-  incrementSocialMetric,
-  recordSocialEvent,
-} from '@/lib/social/metrics';
 import { isYouTubeFeedUrl } from '@/lib/youtube';
-import {
-  isProtectedCategoryTitle,
-  normalizeCategoryTitle,
-  protectedCategoryTitleForKind,
-  type ProtectedCategoryKind,
-} from '@/lib/protectedCategories';
-import type {
-  NormalizedSocialFeedInput,
-  SocialFeedRequestInput,
-} from '@/lib/social/types';
 
 export const runtime = 'nodejs';
 
-const socialCreateLimitPerMinute = (() => {
-  const value = Number(process.env.SOCIAL_CREATE_RATE_LIMIT_PER_MINUTE || '20');
-  if (!Number.isFinite(value) || value <= 0) return 20;
-  return Math.floor(value);
-})();
 const youtubeResolveTimeoutMs = (() => {
   const value = Number(process.env.YOUTUBE_RESOLVE_TIMEOUT_MS || '6000');
   if (!Number.isFinite(value) || value <= 0) return 6000;
@@ -46,13 +18,6 @@ type CreateFeedRequest = {
   feed_url?: string;
   category_id?: number;
   selected_feed_url?: string;
-  social?: SocialFeedRequestInput;
-};
-
-type MinifluxCategory = {
-  id: number;
-  user_id: number;
-  title: string;
 };
 
 type DiscoveredFeed = {
@@ -419,40 +384,14 @@ async function tryDiscoverFeedsForUrl(
   }
 }
 
-async function tryDiscoverMediumFeedViaBridge(
-  inputUrl: string
-): Promise<string | null> {
-  try {
-    console.log('Attempting RSS-Bridge fallback for Medium URL...');
-    return await discoverMediumBridgeFeedUrl(inputUrl);
-  } catch (bridgeErr) {
-    console.log('RSS-Bridge Medium fallback failed:', bridgeErr);
-    return null;
-  }
-}
-
-function isMinifluxForbiddenFetcherError(err: unknown): boolean {
-  if (!(err instanceof Error)) return false;
-  const message = err.message.toLowerCase();
-  return (
-    message.includes('(/v1/feeds)') &&
-    (message.includes('access forbidden (403') ||
-      message.includes('403 status code') ||
-      message.includes('status code 403'))
-  );
-}
-
 export async function POST(request: NextRequest) {
-  let socialSourceContext: { platform: string; sourceKey: string } | null =
-    null;
-  let nonSocialSelectionDebug:
+  let selectionDebug:
     | {
         strategy:
           | 'medium_url_rewrite'
           | 'input_slug_or_path_match'
           | 'input_discovery_first_result'
           | 'base_discovery_fallback'
-          | 'medium_rss_bridge_fallback'
           | 'base_url_direct_fallback'
           | 'youtube_input_resolved'
           | 'input_direct_fallback';
@@ -496,20 +435,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { feed_url, category_id, selected_feed_url, social } =
+    const { feed_url, category_id, selected_feed_url } =
       body as CreateFeedRequest;
     const trimmedUrl = typeof feed_url === 'string' ? feed_url.trim() : '';
     const trimmedSelectedFeedUrl =
       typeof selected_feed_url === 'string' ? selected_feed_url.trim() : '';
-    const hasSocialPayload = Boolean(
-      social &&
-        typeof social === 'object' &&
-        (typeof social.platform === 'string' || typeof social.handle === 'string')
-    );
 
-    if (!trimmedUrl && !trimmedSelectedFeedUrl && !hasSocialPayload) {
+    if (!trimmedUrl && !trimmedSelectedFeedUrl) {
       return NextResponse.json(
-        { error: 'feed_url, selected_feed_url, or social payload is required' },
+        { error: 'feed_url or selected_feed_url is required' },
         { status: 400 }
       );
     }
@@ -517,82 +451,15 @@ export async function POST(request: NextRequest) {
     let feedUrlToCreate = trimmedSelectedFeedUrl || trimmedUrl;
     console.log('Creating feed with input:', {
       hasUrl: Boolean(trimmedUrl),
-      hasSocialPayload: Boolean(hasSocialPayload),
       category_id,
     });
 
-    // 4. Social source path (Instagram / Twitter via RSS-Bridge)
-    if (hasSocialPayload) {
-      const createRate = checkRateLimit(`social-create:user:${userId}`, {
-        max: socialCreateLimitPerMinute,
-        windowMs: 60_000,
-      });
-      if (!createRate.allowed) {
-        incrementSocialMetric('social_create_rate_limited_total');
-        recordSocialEvent('social_create_rate_limited', {
-          retry_after_seconds: createRate.retryAfterSeconds,
-        });
-        return NextResponse.json(
-          {
-            error: `Too many social feed requests. Retry in ${createRate.retryAfterSeconds}s.`,
-          },
-          {
-            status: 429,
-            headers: {
-              'Retry-After': String(createRate.retryAfterSeconds),
-            },
-          }
-        );
-      }
-
-      let normalizedSocialInput: NormalizedSocialFeedInput;
-      try {
-        normalizedSocialInput = normalizeSocialInput(
-          social as SocialFeedRequestInput
-        );
-      } catch (socialErr) {
-        incrementSocialMetric('social_create_invalid_input_total');
-        return NextResponse.json(
-          {
-            error:
-              socialErr instanceof Error
-                ? socialErr.message
-                : 'Invalid social payload',
-          },
-          { status: 400 }
-        );
-      }
-
-      const sourceKey = buildSocialSourceKeyFromInput(normalizedSocialInput);
-      socialSourceContext = {
-        platform: normalizedSocialInput.platform,
-        sourceKey,
-      };
-      incrementSocialMetric('social_create_attempts_total', {
-        platform: normalizedSocialInput.platform,
-      });
-      recordSocialEvent('social_create_attempt', {
-        platform: normalizedSocialInput.platform,
-        source_key: sourceKey,
-      });
-
-      const bridgeFeedUrl = await discoverBridgeFeedUrl(normalizedSocialInput);
-      const tokenPayload = {
-        version: 1 as const,
-        platform: normalizedSocialInput.platform,
-        handle: normalizedSocialInput.handle,
-        bridgeFeedUrl,
-        bridgeLoginUsername: normalizedSocialInput.loginUsername,
-        bridgeLoginPassword: normalizedSocialInput.loginPassword,
-      };
-
-      const socialToken = encodeSocialFeedToken(tokenPayload);
-      feedUrlToCreate = buildSocialProxyFeedUrl(socialToken);
-    } else if (!trimmedSelectedFeedUrl) {
+    // 4. Resolve the input URL to a feed URL
+    if (!trimmedSelectedFeedUrl) {
       const resolvedYouTubeFeedUrl = await resolveYouTubeFeedUrlFromInput(trimmedUrl);
       if (resolvedYouTubeFeedUrl) {
         feedUrlToCreate = resolvedYouTubeFeedUrl;
-        nonSocialSelectionDebug = {
+        selectionDebug = {
           strategy: 'youtube_input_resolved',
           inputUrl: trimmedUrl,
           resolvedUrl: feedUrlToCreate,
@@ -603,15 +470,15 @@ export async function POST(request: NextRequest) {
         };
         console.log(
           'Resolved YouTube input to feed URL:',
-          nonSocialSelectionDebug,
+          selectionDebug,
         );
       } else {
-        // 5. Standard URL path: prefer slug-aware discovery, then fallback to base URL
+        // Standard URL path: prefer slug-aware discovery, then fallback to base URL
         const parsedInputUrl = parseHttpUrl(trimmedUrl);
         const resolvedMediumFeedUrl = resolveMediumFeedUrlFromInput(trimmedUrl);
         if (resolvedMediumFeedUrl) {
           feedUrlToCreate = resolvedMediumFeedUrl;
-          nonSocialSelectionDebug = {
+          selectionDebug = {
             strategy: 'medium_url_rewrite',
             inputUrl: trimmedUrl,
             resolvedUrl: feedUrlToCreate,
@@ -622,7 +489,7 @@ export async function POST(request: NextRequest) {
           };
           console.log(
             'Resolved Medium input to canonical feed URL:',
-            nonSocialSelectionDebug,
+            selectionDebug,
           );
         } else {
           const inputHasSlugPath = parsedInputUrl ? hasSlugPath(parsedInputUrl) : false;
@@ -631,7 +498,6 @@ export async function POST(request: NextRequest) {
             | 'input_slug_or_path_match'
             | 'input_discovery_first_result'
             | 'base_discovery_fallback'
-            | 'medium_rss_bridge_fallback'
             | 'base_url_direct_fallback'
             | 'input_direct_fallback' = 'input_direct_fallback';
           let inputDiscoveryCount: number | null = null;
@@ -711,23 +577,7 @@ export async function POST(request: NextRequest) {
             }
           }
 
-          const canTryMediumBridgeFallback = Boolean(
-            parsedInputUrl &&
-              isMediumHostname(parsedInputUrl.hostname) &&
-              (strategy === 'input_direct_fallback' ||
-                strategy === 'base_url_direct_fallback')
-          );
-
-          if (canTryMediumBridgeFallback) {
-            const mediumBridgeFeedUrl = await tryDiscoverMediumFeedViaBridge(trimmedUrl);
-            if (mediumBridgeFeedUrl) {
-              feedUrlToCreate = mediumBridgeFeedUrl;
-              strategy = 'medium_rss_bridge_fallback';
-              console.log('Using RSS-Bridge Medium feed URL:', mediumBridgeFeedUrl);
-            }
-          }
-
-          nonSocialSelectionDebug = {
+          selectionDebug = {
             strategy,
             inputUrl: trimmedUrl,
             resolvedUrl: feedUrlToCreate,
@@ -736,149 +586,35 @@ export async function POST(request: NextRequest) {
             inputDiscoveryCount,
             baseDiscoveryCount,
           };
-          console.log('Non-social feed selection debug:', nonSocialSelectionDebug);
+          console.log('Feed selection debug:', selectionDebug);
         }
       }
     }
 
-    // 6. Create feed using the discovered or resolved URL
+    // 5. Create feed using the discovered or resolved URL
     const requestBody: {
       feed_url: string;
       category_id?: number;
-      hide_globally?: boolean;
       blocklist_rules?: string;
     } = {
       feed_url: feedUrlToCreate,
     };
 
-    const forcedKind: ProtectedCategoryKind | null =
-      socialSourceContext?.platform === 'instagram'
-        ? 'instagram'
-        : socialSourceContext?.platform === 'twitter'
-          ? 'twitter'
-          : null;
-
-    let forcedCategoryId: number | null = null;
-    let forcedCategoryTitle: string | null = null;
-
-    if (forcedKind) {
-      forcedCategoryTitle = protectedCategoryTitleForKind(forcedKind);
-      requestBody.hide_globally = true;
-      try {
-        const categories = await mfFetchUser<MinifluxCategory[]>(
-          token,
-          '/v1/categories',
-        );
-        const existing = categories.find(
-          (cat) => normalizeCategoryTitle(cat.title) === forcedKind,
-        );
-        if (existing) {
-          forcedCategoryId = existing.id;
-        } else {
-          const created = await mfFetchUser<MinifluxCategory>(
-            token,
-            '/v1/categories',
-            {
-              method: 'POST',
-              body: JSON.stringify({ title: forcedCategoryTitle }),
-            },
-          );
-          forcedCategoryId = created.id;
-        }
-        requestBody.category_id = forcedCategoryId;
-      } catch (categoryErr) {
-        console.warn('Failed to ensure protected category:', categoryErr);
-        return NextResponse.json(
-          { error: `Failed to ensure ${forcedCategoryTitle} category.` },
-          { status: 500 },
-        );
-      }
-    } else if (category_id && typeof category_id === 'number') {
-      // Disallow assigning feeds into protected categories directly.
-      const categories = await mfFetchUser<MinifluxCategory[]>(
-        token,
-        '/v1/categories',
-      );
-      const target = categories.find((cat) => cat.id === category_id);
-      if (target && isProtectedCategoryTitle(target.title)) {
-        return NextResponse.json(
-          { error: `${target.title.trim()} category is managed automatically.` },
-          { status: 400 },
-        );
-      }
+    if (category_id && typeof category_id === 'number') {
       requestBody.category_id = category_id;
     }
 
-    let createdFeed: CreateFeedResponse;
-    try {
-      createdFeed = await mfFetchUser<CreateFeedResponse>(
-        token,
-        '/v1/feeds',
-        {
-          method: 'POST',
-          body: JSON.stringify(requestBody),
-        }
-      );
-    } catch (createErr) {
-      const parsedInputForRetry = parseHttpUrl(trimmedUrl);
-      const isMediumInput = Boolean(
-        parsedInputForRetry && isMediumHostname(parsedInputForRetry.hostname)
-      );
-      const alreadyUsingMediumBridge =
-        nonSocialSelectionDebug?.strategy === 'medium_rss_bridge_fallback';
-      const canRetryWithMediumBridge =
-        !hasSocialPayload &&
-        isMediumInput &&
-        !alreadyUsingMediumBridge &&
-        isMinifluxForbiddenFetcherError(createErr);
-
-      if (!canRetryWithMediumBridge) {
-        throw createErr;
-      }
-
-      console.log(
-        'Miniflux rejected Medium feed URL; retrying via RSS-Bridge fallback...'
-      );
-      const mediumBridgeFeedUrl = await tryDiscoverMediumFeedViaBridge(trimmedUrl);
-      if (!mediumBridgeFeedUrl) {
-        throw createErr;
-      }
-
-      requestBody.feed_url = mediumBridgeFeedUrl;
-      if (nonSocialSelectionDebug) {
-        nonSocialSelectionDebug.strategy = 'medium_rss_bridge_fallback';
-        nonSocialSelectionDebug.resolvedUrl = mediumBridgeFeedUrl;
-      }
-
-      createdFeed = await mfFetchUser<CreateFeedResponse>(token, '/v1/feeds', {
+    const createdFeed = await mfFetchUser<CreateFeedResponse>(
+      token,
+      '/v1/feeds',
+      {
         method: 'POST',
         body: JSON.stringify(requestBody),
-      });
-    }
-
-    if (socialSourceContext) {
-      incrementSocialMetric('social_create_success_total', {
-        platform: socialSourceContext.platform,
-      });
-      recordSocialEvent('social_create_success', {
-        platform: socialSourceContext.platform,
-        source_key: socialSourceContext.sourceKey,
-      });
-    }
+      }
+    );
 
     return NextResponse.json(createdFeed);
   } catch (err) {
-    if (socialSourceContext) {
-      incrementSocialMetric('social_create_failures_total', {
-        platform: socialSourceContext.platform,
-      });
-      recordSocialEvent('social_create_failure', {
-        platform: socialSourceContext.platform,
-        source_key: socialSourceContext.sourceKey,
-        message: 'Social feed creation failed',
-      });
-    }
-
     console.error('Failed to create feed:', err);
 
     const privateMessage =
@@ -890,7 +626,7 @@ export async function POST(request: NextRequest) {
 
     // Provide more helpful error messages
     let errorMessage = 'Failed to create feed';
-    let status = apiErrorStatus(err);
+    const status = apiErrorStatus(err);
 
     if (privateMessage.includes('unable to detect feed format')) {
       errorMessage =
@@ -898,20 +634,6 @@ export async function POST(request: NextRequest) {
         '• The URL is accessible\n' +
         '• The URL includes http:// or https://\n' +
         '• The page contains an RSS/Atom feed or links to one';
-    }
-
-    const isSocialProxyTimeout =
-      privateMessage.includes('/api/social/rss/') &&
-      (privateMessage.includes('context deadline exceeded') ||
-        privateMessage.includes('gateway timeout (504 status code)') ||
-        privateMessage.includes('Upstream RSS-Bridge timed out') ||
-        privateMessage.includes('Failed to reach RSS-Bridge upstream'));
-
-    if (isSocialProxyTimeout) {
-      status = 504;
-      errorMessage =
-        'The social feed source is taking too long to respond. ' +
-        'Please try again in a moment. If this keeps happening, check RSS-Bridge availability.';
     }
 
     return NextResponse.json({ error: errorMessage }, { status });
