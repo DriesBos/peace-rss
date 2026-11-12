@@ -895,7 +895,7 @@ export default function Home() {
                     ...e,
                     content: result.content,
                     preview: result.preview,
-                    thumbnail_url: result.thumbnail_url,
+                    thumbnail_url: result.thumbnail_url ?? e.thumbnail_url,
                     reading_time: result.reading_time ?? e.reading_time,
                     tag_ids: result.tag_ids ?? e.tag_ids,
                   }

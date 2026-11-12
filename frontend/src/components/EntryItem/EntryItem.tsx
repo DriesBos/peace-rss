@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useImageLoadState } from '@/hooks/useImageLoadState';
 import styles from './EntryItem.module.sass';
 import { FormattedDate } from '../FormattedDate';
 
@@ -29,7 +29,13 @@ export function EntryItem({
   starred,
   onClick,
 }: EntryItemProps) {
-  const [isThumbnailErrored, setIsThumbnailErrored] = useState(false);
+  const {
+    state: thumbnailState,
+    dataLoading: thumbnailLoading,
+    attachImage: attachThumbnail,
+    onLoad: onThumbnailLoad,
+    onError: onThumbnailError,
+  } = useImageLoadState(thumbnailUrl);
   const hasMetaPrefix = Boolean(publishedAt);
   const hasSourceMeta = Boolean(author || feedTitle);
 
@@ -67,8 +73,11 @@ export function EntryItem({
         </div>
         {preview && <p className={styles.entryItem_Preview}>{preview}</p>}
       </div>
-      {thumbnailUrl && !isThumbnailErrored && (
-        <div className={styles.entryItem_Thumbnail}>
+      {thumbnailUrl && thumbnailState !== 'error' && (
+        <div
+          className={styles.entryItem_Thumbnail}
+          data-loading={thumbnailLoading}
+        >
           {/* ponytail: RSS thumbnails use arbitrary hosts; keep plain img. */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -76,7 +85,9 @@ export function EntryItem({
             alt={title || 'Entry thumbnail'}
             loading="lazy"
             referrerPolicy="no-referrer"
-            onError={() => setIsThumbnailErrored(true)}
+            ref={attachThumbnail}
+            onLoad={onThumbnailLoad}
+            onError={onThumbnailError}
           />
         </div>
       )}
