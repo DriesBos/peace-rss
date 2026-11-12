@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Start backing services in Docker, then run Next.js on the host with hot reload.
-#   pnpm dev        -> https://localhost:3000 (self-signed cert)
-#   pnpm dev:http   -> http://localhost:3000  (needed for social feeds, see docs)
+#   pnpm dev        -> http://localhost:3000
+#   pnpm dev:https  -> https://localhost:3000 (self-signed cert; social feeds won't load)
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -40,8 +40,8 @@ export RSS_BRIDGE_BASE_URL="http://localhost:8081"
 export SOCIAL_FEEDS_BASE_URL="http://host.docker.internal:3000"
 
 echo "Miniflux: http://localhost:8080/miniflux/"
-if [ "${1:-}" = "--http" ]; then
-  exec pnpm --dir frontend exec next dev --port 3000
+if [ "${1:-}" = "--https" ]; then
+  exec pnpm --dir frontend exec next dev --experimental-https --port 3000
 else
-  exec pnpm --dir frontend dev --port 3000
+  exec pnpm --dir frontend exec next dev --port 3000
 fi
