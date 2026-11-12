@@ -1,7 +1,7 @@
 import 'server-only';
 
 import { NextResponse } from 'next/server';
-import { auth, clerkClient } from '@clerk/nextjs/server';
+import { requireMinifluxToken } from '@/lib/minifluxAuth';
 import { apiErrorResponse } from '@/lib/apiErrors';
 import { mfFetchUser } from '@/lib/miniflux';
 
@@ -32,24 +32,9 @@ function isValidBody(value: unknown): value is MarkAllReadBody {
 
 export async function POST(request: Request) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const client = await clerkClient();
-    const user = await client.users.getUser(userId);
-    const metadata = user.privateMetadata as
-      | { minifluxToken?: string }
-      | undefined;
-    const token = metadata?.minifluxToken;
-
-    if (!token) {
-      return NextResponse.json(
-        { error: 'Not provisioned. Call /api/bootstrap first.' },
-        { status: 401 }
-      );
-    }
+    const authResult = await requireMinifluxToken();
+    if (!authResult.ok) return authResult.response;
+    const { token } = authResult;
 
     let body: unknown;
     try {

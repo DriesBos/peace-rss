@@ -1,7 +1,7 @@
 import 'server-only';
 
 import { NextResponse } from 'next/server';
-import { auth, clerkClient } from '@clerk/nextjs/server';
+import { requireMinifluxToken } from '@/lib/minifluxAuth';
 import { apiErrorResponse } from '@/lib/apiErrors';
 import { mfFetchUser } from '@/lib/miniflux';
 import { DEFAULT_ENTRIES_PAGE_SIZE } from '@/lib/entriesQuery';
@@ -47,26 +47,9 @@ function getOptionalBooleanParam(url: URL, key: string): boolean | null {
 
 export async function GET(request: Request) {
   try {
-    // 1. Require Clerk authentication
-    const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // 2. Get user's Miniflux token from Clerk metadata
-    const client = await clerkClient();
-    const user = await client.users.getUser(userId);
-    const metadata = user.privateMetadata as
-      | { minifluxToken?: string }
-      | undefined;
-    const token = metadata?.minifluxToken;
-
-    if (!token) {
-      return NextResponse.json(
-        { error: 'Not provisioned. Call /api/bootstrap first.' },
-        { status: 401 }
-      );
-    }
+    const authResult = await requireMinifluxToken();
+    if (!authResult.ok) return authResult.response;
+    const { token } = authResult;
 
     // 3. Parse query parameters
     const url = new URL(request.url);

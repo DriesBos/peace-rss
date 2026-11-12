@@ -1,7 +1,7 @@
 import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth, clerkClient } from '@clerk/nextjs/server';
+import { requireMinifluxToken } from '@/lib/minifluxAuth';
 import { apiErrorResponse } from '@/lib/apiErrors';
 import { mfFetchUser } from '@/lib/miniflux';
 import { isProtectedCategoryTitle } from '@/lib/protectedCategories';
@@ -27,26 +27,9 @@ export async function PUT(
   context: RouteContext
 ): Promise<NextResponse> {
   try {
-    // 1. Require Clerk authentication
-    const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // 2. Get user's Miniflux token from Clerk metadata
-    const client = await clerkClient();
-    const user = await client.users.getUser(userId);
-    const metadata = user.privateMetadata as
-      | { minifluxToken?: string }
-      | undefined;
-    const token = metadata?.minifluxToken;
-
-    if (!token) {
-      return NextResponse.json(
-        { error: 'Not provisioned. Call /api/bootstrap first.' },
-        { status: 401 }
-      );
-    }
+    const authResult = await requireMinifluxToken();
+    if (!authResult.ok) return authResult.response;
+    const { token } = authResult;
 
     // 3. Get category ID from params
     const { id } = await context.params;
@@ -111,26 +94,9 @@ export async function DELETE(
   context: RouteContext
 ): Promise<NextResponse> {
   try {
-    // 1. Require Clerk authentication
-    const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // 2. Get user's Miniflux token from Clerk metadata
-    const client = await clerkClient();
-    const user = await client.users.getUser(userId);
-    const metadata = user.privateMetadata as
-      | { minifluxToken?: string }
-      | undefined;
-    const token = metadata?.minifluxToken;
-
-    if (!token) {
-      return NextResponse.json(
-        { error: 'Not provisioned. Call /api/bootstrap first.' },
-        { status: 401 }
-      );
-    }
+    const authResult = await requireMinifluxToken();
+    if (!authResult.ok) return authResult.response;
+    const { token } = authResult;
 
     // 3. Get category ID from params
     const { id } = await context.params;
