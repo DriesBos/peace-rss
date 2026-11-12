@@ -15,15 +15,15 @@ export function LandingPage() {
           </div>
           <ul className={styles.buttons}>
             <li>
-              <Button variant="primary">
-                <SignInButton />
-              </Button>
+              <SignInButton>
+                <Button variant="primary">Sign in</Button>
+              </SignInButton>
             </li>
             <li>/</li>
             <li>
-              <Button variant="primary">
-                <SignUpButton />
-              </Button>
+              <SignUpButton>
+                <Button variant="primary">Sign up</Button>
+              </SignUpButton>
             </li>
           </ul>
         </div>
