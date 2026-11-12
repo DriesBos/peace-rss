@@ -37,6 +37,8 @@ function chunkEntries(entries: Entry[], columnCount: number): Entry[][] {
   return rows;
 }
 
+const SKELETON_CARD_COUNT = 6;
+
 export type EntryListProps = {
   entries: Entry[];
   selectedEntryId: number | null;
@@ -126,9 +128,7 @@ export function EntryList({
     onLoadMore,
   ]);
 
-  const emptyMessage = isLoading
-    ? 'loading...'
-    : searchMode
+  const emptyMessage = searchMode
     ? 'No results found.'
     : isAllEntriesView
     ? 'No entries.'
@@ -138,7 +138,24 @@ export function EntryList({
 
   return (
     <div className={styles.entryList}>
-      {entries.length === 0 ? (
+      {entries.length === 0 && isLoading ? (
+        <div
+          className={styles.entryList_Skeleton}
+          style={{
+            gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))`,
+          }}
+          role="status"
+          aria-label="Loading entries"
+        >
+          {Array.from({ length: SKELETON_CARD_COUNT }, (_, index) => (
+            <div
+              key={index}
+              className={styles.entryList_SkeletonCard}
+              data-loading="true"
+            />
+          ))}
+        </div>
+      ) : entries.length === 0 ? (
         <div className={styles.muted}>{emptyMessage}</div>
       ) : (
         <div

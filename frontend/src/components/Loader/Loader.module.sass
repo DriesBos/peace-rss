@@ -1,0 +1,50 @@
+@use '@/styles/vars' as *
+
+// Always centered, horizontally and vertically.
+.loader
+  display: flex
+  align-items: center
+  justify-content: center
+  width: 100%
+  min-height: 50svh
+  padding: 0 var(--space-sides-general-wide)
+  &[data-fill="true"]
+    min-height: 0
+    height: 100%
+
+// Sweep: the underline draws in from the left, then leaves to the right.
+.label
+  @include font-body
+  position: relative
+  display: inline-block
+  padding-bottom: 2px
+  color: var(--color-text)
+  &::after
+    content: ''
+    position: absolute
+    left: 0
+    bottom: -2px
+    width: 100%
+    height: 1px
+    background: var(--color-text)
+    transform-origin: left center
+    animation: sweep 1.6s cubic-bezier(0.65, 0, 0.35, 1) infinite
+
+@keyframes sweep
+  0%
+    transform: scaleX(0)
+    transform-origin: left center
+  45%
+    transform: scaleX(1)
+    transform-origin: left center
+  55%
+    transform: scaleX(1)
+    transform-origin: right center
+  100%
+    transform: scaleX(0)
+    transform-origin: right center
+
+@media (prefers-reduced-motion: reduce)
+  .label::after
+    animation: none
+    opacity: 0.5
