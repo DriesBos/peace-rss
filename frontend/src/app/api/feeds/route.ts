@@ -1,41 +1,18 @@
 import 'server-only';
 
 import { NextResponse } from 'next/server';
-import { auth, clerkClient } from '@clerk/nextjs/server';
 import { apiErrorResponse } from '@/lib/apiErrors';
-import { mfFetchUser } from '@/lib/miniflux';
+import { getReaderContext } from '@/lib/reader/account';
+import { listFeeds } from '@/lib/reader/queries';
 
 export const runtime = 'nodejs';
 
+/** GET /api/feeds: feeds with their tags, from our copy. */
 export async function GET() {
   try {
-    // 1. Require Clerk authentication
-    const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    // 2. Get user's Miniflux token from Clerk metadata
-    const client = await clerkClient();
-    const user = await client.users.getUser(userId);
-    const metadata = user.privateMetadata as { minifluxToken?: string } | undefined;
-    const token = metadata?.minifluxToken;
-
-    if (!token) {
-      return NextResponse.json(
-        { error: 'Not provisioned. Call /api/bootstrap first.' },
-        { status: 401 }
-      );
-    }
-
-    // 3. Fetch feeds using per-user token
-    const data = await mfFetchUser<unknown>(token, '/v1/feeds');
-    return NextResponse.json(data);
+    const { userId } = await getReaderContext();
+    return NextResponse.json(await listFeeds(userId));
   } catch (err) {
     return apiErrorResponse(err, 'Failed to fetch feeds');
   }
 }
-

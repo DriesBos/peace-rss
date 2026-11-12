@@ -10,6 +10,13 @@ import {
   protectedCategoryTitleForKind,
   type ProtectedCategoryKind,
 } from '@/lib/protectedCategories';
+import { ensureAccount } from '@/lib/reader/account';
+import {
+  addFeedTags,
+  deleteFeedRow,
+  setFeedTags,
+} from '@/lib/reader/queries';
+import { syncFeeds } from '@/lib/reader/sync';
 
 export const runtime = 'nodejs';
 
@@ -36,6 +43,8 @@ type UpdateFeedRequest = {
   category_id?: number | null;
   blocklist_rules?: string;
   rewrite_rules?: string;
+  /** Replaces the feed's tags (our own tags, see lib/reader). */
+  tag_ids?: number[];
 };
 
 export async function PUT(
@@ -81,8 +90,14 @@ export async function PUT(
       );
     }
 
-    const { title, feed_url, category_id, blocklist_rules, rewrite_rules } =
-      body as UpdateFeedRequest;
+    const {
+      title,
+      feed_url,
+      category_id,
+      blocklist_rules,
+      rewrite_rules,
+      tag_ids,
+    } = body as UpdateFeedRequest;
 
     let forcedKind: ProtectedCategoryKind | null = null;
     const existingFeed = await mfFetchUser<MinifluxFeed>(token, `/v1/feeds/${feedId}`);
@@ -146,10 +161,24 @@ export async function PUT(
     }
 
     // 5. Update feed using Miniflux API
-    await mfFetchUser(token, `/v1/feeds/${feedId}`, {
-      method: 'PUT',
-      body: JSON.stringify(updatePayload),
-    });
+    if (Object.keys(updatePayload).length > 0) {
+      await mfFetchUser(token, `/v1/feeds/${feedId}`, {
+        method: 'PUT',
+        body: JSON.stringify(updatePayload),
+      });
+    }
+
+    // 6. Update our copy and the feed's tags
+    await ensureAccount(userId, token);
+    await syncFeeds({ userId, token });
+    if (Array.isArray(tag_ids)) {
+      const tagIds = tag_ids.filter((id) => Number.isInteger(id) && id > 0);
+      if (forcedKind) {
+        await addFeedTags(userId, feedId, tagIds);
+      } else {
+        await setFeedTags(userId, feedId, tagIds);
+      }
+    }
 
     return NextResponse.json({ ok: true });
   } catch (err) {
@@ -195,6 +224,8 @@ export async function DELETE(
     await mfFetchUser(token, `/v1/feeds/${feedId}`, {
       method: 'DELETE',
     });
+    await ensureAccount(userId, token);
+    await deleteFeedRow(userId, feedId);
 
     return NextResponse.json({ ok: true });
   } catch (err) {

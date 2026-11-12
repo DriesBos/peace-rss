@@ -18,6 +18,9 @@ import {
   recordSocialEvent,
 } from '@/lib/social/metrics';
 import { isYouTubeFeedUrl } from '@/lib/youtube';
+import { ensureAccount } from '@/lib/reader/account';
+import { addFeedTags, setFeedTags } from '@/lib/reader/queries';
+import { syncUser } from '@/lib/reader/sync';
 import {
   isProtectedCategoryTitle,
   normalizeCategoryTitle,
@@ -47,6 +50,8 @@ type CreateFeedRequest = {
   category_id?: number;
   selected_feed_url?: string;
   social?: SocialFeedRequestInput;
+  /** Tags to put on the new feed (our own tags, see lib/reader). */
+  tag_ids?: number[];
 };
 
 type MinifluxCategory = {
@@ -496,8 +501,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { feed_url, category_id, selected_feed_url, social } =
+    const { feed_url, category_id, selected_feed_url, social, tag_ids } =
       body as CreateFeedRequest;
+    const tagIds = Array.isArray(tag_ids)
+      ? tag_ids.filter((id) => Number.isInteger(id) && id > 0)
+      : [];
     const trimmedUrl = typeof feed_url === 'string' ? feed_url.trim() : '';
     const trimmedSelectedFeedUrl =
       typeof selected_feed_url === 'string' ? selected_feed_url.trim() : '';
@@ -864,6 +872,26 @@ export async function POST(request: NextRequest) {
         platform: socialSourceContext.platform,
         source_key: socialSourceContext.sourceKey,
       });
+    }
+
+    // 7. Mirror the new feed and its first entries, then tag it.
+    try {
+      const ctx = { userId, token };
+      await ensureAccount(userId, token);
+      await syncUser(ctx);
+      const newFeedId =
+        (createdFeed as { feed_id?: number }).feed_id ?? createdFeed.id;
+      if (Number.isInteger(newFeedId)) {
+        if (forcedKind) {
+          // Social feeds keep the managed Instagram/Twitter tag.
+          await addFeedTags(userId, newFeedId, tagIds);
+        } else {
+          await setFeedTags(userId, newFeedId, tagIds);
+        }
+      }
+    } catch (mirrorErr) {
+      // The feed exists in Miniflux; the background sync will catch up.
+      console.error('Failed to mirror new feed:', mirrorErr);
     }
 
     return NextResponse.json(createdFeed);

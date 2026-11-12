@@ -25,6 +25,19 @@ MINIFLUX_BASE_URL=http://miniflux:8080/miniflux
 MINIFLUX_ADMIN_USERNAME=admin
 MINIFLUX_ADMIN_PASSWORD=your_secure_admin_password_here
 
+# ============================================
+# Reader database (mirrored posts + tags) - all optional
+# ============================================
+# Docker Compose defaults this to the Miniflux Postgres database, where the
+# app creates and migrates its own `reader` schema on start.
+# READER_DATABASE_URL=postgres://user:password@postgres:5432/miniflux?sslmode=disable
+# Key for encrypting stored Miniflux tokens (falls back to CLERK_SECRET_KEY).
+# READER_TOKEN_SECRET=
+# Posts older than this are dropped from the mirror unless starred or tagged by hand.
+# READER_RETENTION_DAYS=180
+# How often new posts are pulled from Miniflux.
+# READER_SYNC_INTERVAL_SECONDS=60
+
 # Public URL (used by Miniflux for links and BASE_URL config)
 MINIFLUX_PUBLIC_URL=https://komorebi-reader.com/miniflux
 

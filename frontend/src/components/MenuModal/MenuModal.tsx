@@ -21,7 +21,7 @@ import { IconStar } from '@/components/icons/IconStar';
 import { IconWrapper } from '@/components/icons/IconWrapper/IconWrapper';
 import { LabelWithCount } from '@/components/LabelWithCount/LabelWithCount';
 import { LabeledSelect } from '@/components/LabeledSelect/LabeledSelect';
-import type { Category, Entry, Feed } from '@/app/_lib/types';
+import type { Entry, Feed, Tag } from '@/app/_lib/types';
 import { toast } from 'sonner';
 import {
   DEFAULT_FONT_FAMILY,
@@ -64,9 +64,9 @@ type MenuView = 'feeds' | 'settings' | 'other';
 export type MenuModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  categories: Category[];
+  tags: Tag[];
   feeds: Feed[];
-  openEditModal: (type: 'feed' | 'category', item: Feed | Category) => void;
+  openEditModal: (type: 'feed' | 'tag', item: Feed | Tag) => void;
   openAddModal: () => void;
   isLoading: boolean;
   starredEntries: Entry[];
@@ -75,7 +75,7 @@ export type MenuModalProps = {
 
 const THEME_TOAST_DEBOUNCE_MS = 350;
 
-function buildInitialCollapsedCategories(categories: Category[]) {
+function buildInitialCollapsedCategories(categories: Tag[]) {
   const initialSet = new Set<number | string>();
   initialSet.add('starred');
   initialSet.add('uncategorized');
@@ -88,7 +88,7 @@ function buildInitialCollapsedCategories(categories: Category[]) {
 export function MenuModal({
   isOpen,
   onClose,
-  categories,
+  tags,
   feeds,
   openEditModal,
   openAddModal,
@@ -96,6 +96,13 @@ export function MenuModal({
   starredEntries,
   onToggleEntryStar,
 }: MenuModalProps) {
+  // Feeds are grouped by tag here; a feed with several tags shows up
+  // under each of them. Automatic tags belong to posts, not feeds.
+  const categories = useMemo(
+    () => tags.filter((tag) => tag.kind === 'manual'),
+    [tags],
+  );
+
   const [activeView, setActiveView] = useState<MenuView>('feeds');
   const [nowMs, setNowMs] = useState(() => Date.now());
   const [fontFamily, setFontFamilyChoice] = useState<FontFamilyPreference>(
@@ -239,7 +246,7 @@ export function MenuModal({
   }, [nowMs]);
 
   const uncategorizedFeeds = useMemo(
-    () => feeds.filter((feed) => !feed.category?.id),
+    () => feeds.filter((feed) => (feed.tag_ids ?? []).length === 0),
     [feeds],
   );
 
@@ -253,18 +260,14 @@ export function MenuModal({
 
   const nonProtectedFeeds = useMemo(() => {
     if (protectedCategoryIds.size === 0) return feeds;
-    return feeds.filter((feed) => {
-      if (!feed.category?.id) return true;
-      return !protectedCategoryIds.has(feed.category.id);
-    });
+    return feeds.filter(
+      (feed) => !(feed.tag_ids ?? []).some((id) => protectedCategoryIds.has(id)),
+    );
   }, [feeds, protectedCategoryIds]);
 
   const uncategorizedNonProtectedFeeds = useMemo(() => {
     if (protectedCategoryIds.size === 0) return uncategorizedFeeds;
-    return uncategorizedFeeds.filter((feed) => {
-      if (!feed.category?.id) return true;
-      return !protectedCategoryIds.has(feed.category.id);
-    });
+    return uncategorizedFeeds;
   }, [uncategorizedFeeds, protectedCategoryIds]);
 
   const regularCategories = useMemo(() => {
@@ -280,7 +283,7 @@ export function MenuModal({
   }, [onClose, openAddModal, resetCollapsedCategories]);
 
   const handleOpenEditModal = useCallback(
-    (type: 'feed' | 'category', item: Feed | Category) => {
+    (type: 'feed' | 'tag', item: Feed | Tag) => {
       setActiveView('feeds');
       resetCollapsedCategories();
       onClose();
@@ -492,8 +495,8 @@ export function MenuModal({
               )}
 
               {regularCategories.map((cat) => {
-                const categoryFeeds = nonProtectedFeeds.filter(
-                  (feed) => feed.category?.id === cat.id,
+                const categoryFeeds = nonProtectedFeeds.filter((feed) =>
+                  (feed.tag_ids ?? []).includes(cat.id),
                 );
                 const isCollapsed = collapsedCategories.has(cat.id);
 
@@ -517,9 +520,9 @@ export function MenuModal({
                       <Button
                         variant="icon"
                         type="button"
-                        onClick={() => handleOpenEditModal('category', cat)}
+                        onClick={() => handleOpenEditModal('tag', cat)}
                         disabled={isLoading}
-                        aria-label={`Edit category ${cat.title}`}
+                        aria-label={`Edit tag ${cat.title}`}
                       >
                         <IconWrapper>
                           <IconEdit />
@@ -571,7 +574,7 @@ export function MenuModal({
                     <IconWrapper>
                       <IconPlus />
                     </IconWrapper>
-                    <span>Uncategorised</span>
+                    <span>Untagged</span>
                   </Button>
                   <div
                     className={styles.feedsUnderCategory}

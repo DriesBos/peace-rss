@@ -10,7 +10,8 @@ import buttonStyles from '@/components/Button/Button.module.sass';
 import { IconArrowShortLeft } from '@/components/icons/IconArrowShortLeft';
 import { IconArrowShortRight } from '@/components/icons/IconArrowShortRight';
 import { ScrollToTop } from '@/components/ScrollToTop/ScrollToTop';
-import type { Entry, Feed } from '@/app/_lib/types';
+import type { Entry, Feed, Tag } from '@/app/_lib/types';
+import { TagPicker } from '@/components/TagPicker/TagPicker';
 import { extractYouTubeVideoId, getYouTubeEmbedUrl } from '@/lib/youtube';
 import { IconWrapper } from '../icons/IconWrapper/IconWrapper';
 import { IconStar } from '../icons/IconStar';
@@ -516,6 +517,8 @@ function mapAttributeName(name: string): string {
 export type EntryPanelProps = {
   entry: Entry | null;
   feedsById: Map<number, Feed>;
+  tags: Tag[];
+  onToggleTag: (tagId: number, on: boolean) => void;
   onClose: () => void;
   onToggleStar: () => void;
   onOpenExternalLink: () => void;
@@ -534,6 +537,8 @@ export type EntryPanelProps = {
 export function EntryPanel({
   entry,
   feedsById,
+  tags,
+  onToggleTag,
   onClose,
   onToggleStar,
   onOpenExternalLink,
@@ -797,6 +802,14 @@ export function EntryPanel({
             </div>
           )}
           <div className={styles.entry_Footer}>
+            {tags.length > 0 ? (
+              <TagPicker
+                label="Tags"
+                tags={tags}
+                selectedIds={currentEntry.tag_ids ?? []}
+                onToggle={onToggleTag}
+              />
+            ) : null}
             <div className={styles.actionsList}>
               <Button
                 variant="primary"

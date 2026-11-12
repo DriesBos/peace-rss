@@ -4,6 +4,8 @@ import { NextResponse } from 'next/server';
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { apiErrorResponse } from '@/lib/apiErrors';
 import { mfFetchUser } from '@/lib/miniflux';
+import { ensureAccount } from '@/lib/reader/account';
+import { syncUser } from '@/lib/reader/sync';
 
 export const runtime = 'nodejs';
 
@@ -62,6 +64,14 @@ export async function POST(request: Request) {
       },
       body: opmlXml,
     });
+
+    // Copy the imported feeds over; their OPML folders become tags.
+    try {
+      await ensureAccount(userId, token);
+      await syncUser({ userId, token });
+    } catch (syncErr) {
+      console.error('Failed to sync after OPML import:', syncErr);
+    }
 
     return NextResponse.json({
       ok: true,
