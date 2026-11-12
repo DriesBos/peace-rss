@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Show, RedirectToSignIn } from '@clerk/nextjs';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import styles from './page.module.sass';
@@ -1166,7 +1165,7 @@ export default function Home() {
 
   return (
     <>
-      <Show when="signed-in">
+      <>
         {/* Show provisioning error with retry button */}
         {provisionError && !isProvisioned ? (
           <div className={styles.app}>
@@ -1338,11 +1337,7 @@ export default function Home() {
             />
           </div>
         )}
-      </Show>
-
-      <Show when="signed-out">
-        <RedirectToSignIn />
-      </Show>
+      </>
     </>
   );
 }

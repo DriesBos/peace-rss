@@ -1,6 +1,7 @@
 import 'server-only';
 
-import { auth, clerkClient } from '@clerk/nextjs/server';
+import { getSession } from '@/lib/auth';
+import { getMinifluxAccount } from '@/lib/minifluxAccount';
 import { PublicApiError } from '@/lib/apiErrors';
 import { decryptToken, encryptToken } from '@/lib/reader/crypto';
 import { dbQuery } from '@/lib/reader/db';
@@ -53,15 +54,11 @@ export async function ensureAccount(
  * Throws a PublicApiError (401) that apiErrorResponse turns into JSON.
  */
 export async function getReaderContext(): Promise<ReaderContext> {
-  const { userId } = await auth();
-  if (!userId) throw new PublicApiError('Unauthorized', 401);
+  const session = await getSession();
+  if (!session) throw new PublicApiError('Unauthorized', 401);
 
-  const client = await clerkClient();
-  const user = await client.users.getUser(userId);
-  const metadata = user.privateMetadata as
-    | { minifluxToken?: string }
-    | undefined;
-  const token = metadata?.minifluxToken;
+  const userId = session.user.id;
+  const token = (await getMinifluxAccount(userId))?.token;
   if (!token) {
     throw new PublicApiError(
       'Not provisioned. Call /api/bootstrap first.',

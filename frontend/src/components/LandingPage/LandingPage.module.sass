@@ -47,3 +47,44 @@
 .soulSister
   font-family: var(--font-soul-sister), sans-serif
   letter-spacing: -0.02em
+
+.form
+  display: flex
+  flex-direction: column
+  align-items: center
+  gap: 1.5rem
+  width: min(320px, calc(100vw - 2rem))
+
+.links
+  display: flex
+  justify-content: center
+
+.secondary
+  display: flex
+  flex-direction: column
+  align-items: center
+  gap: 0.5rem
+
+  button
+    color: var(--color-text-secondary)
+    font: inherit
+    font-size: 14px
+    cursor: pointer
+    transition: color 0.165s ease
+
+    &:hover
+      color: var(--color-text)
+
+.message, .hint, .error
+  text-align: center
+  font-size: 14px
+
+.message
+  color: var(--color-text)
+
+.hint
+  color: var(--color-text-secondary)
+
+.error
+  color: var(--color-text)
+  opacity: 0.85

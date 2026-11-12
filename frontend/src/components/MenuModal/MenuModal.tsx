@@ -10,7 +10,7 @@ import {
   useState,
 } from 'react';
 import Link from 'next/link';
-import { UserButton } from '@clerk/nextjs';
+import { AccountMenu } from '@/components/AccountMenu/AccountMenu';
 import { useTheme } from 'next-themes';
 import { useQueryClient } from '@tanstack/react-query';
 import styles from './MenuModal.module.sass';
@@ -690,7 +690,7 @@ export function MenuModal({
             <div className={styles.viewLook_profileRow}>
               <div className={styles.viewLook_profileField}>
                 <span>Profile</span>
-                <UserButton />
+                <AccountMenu />
               </div>
             </div>
 

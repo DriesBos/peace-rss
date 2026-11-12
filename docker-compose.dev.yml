@@ -7,7 +7,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 12
-    # Next.js on the host reads the reader tables directly.
+    # Next.js on the host reads the reader and auth tables directly.
     ports:
       - '127.0.0.1:5433:5432'
 

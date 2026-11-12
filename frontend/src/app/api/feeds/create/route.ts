@@ -1,7 +1,7 @@
 import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth, clerkClient } from '@clerk/nextjs/server';
+import { requireMinifluxToken } from '@/lib/minifluxAuth';
 import { apiErrorStatus } from '@/lib/apiErrors';
 import { MinifluxApiError, mfFetchUser } from '@/lib/miniflux';
 import { isYouTubeFeedUrl } from '@/lib/youtube';
@@ -410,26 +410,9 @@ export async function POST(request: NextRequest) {
     | null = null;
 
   try {
-    // 1. Require Clerk authentication
-    const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // 2. Get user's Miniflux token from Clerk metadata
-    const client = await clerkClient();
-    const user = await client.users.getUser(userId);
-    const metadata = user.privateMetadata as
-      | { minifluxToken?: string }
-      | undefined;
-    const token = metadata?.minifluxToken;
-
-    if (!token) {
-      return NextResponse.json(
-        { error: 'User not provisioned' },
-        { status: 400 }
-      );
-    }
+    const authResult = await requireMinifluxToken();
+    if (!authResult.ok) return authResult.response;
+    const { token, userId } = authResult;
 
     // 3. Parse request body
     const body = await request.json().catch(() => null);

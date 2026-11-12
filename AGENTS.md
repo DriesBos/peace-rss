@@ -14,14 +14,14 @@ Guidance for AI coding agents (Claude, Codex, etc.) working in this repo. Keep i
 
 - `pnpm dev` from the repo root: Postgres and Miniflux in Docker, `next dev` on the host at `http://localhost:3000` with hot reload. See `docs/DEVELOPMENT.md`.
 - `docker compose up -d --build` runs the full production build. Host edits do not hot-reload into that container; rebuild (`docker compose up -d --build frontend`) to see changes.
-- Local env lives in `.env.local` (Clerk dev keys), kept separate from production values. Never commit env files or secrets.
+- Local env lives in `.env.local` (Better Auth secrets, optional Resend key), kept separate from production values. Never commit env files or secrets.
 - `NEXT_PUBLIC_ENABLE_DEV_TOOLS=true` shows the Dev menu tab and `/dev` system pages outside development. Never set it in production.
 
 ## Code conventions
 
 - Frontend: Next.js App Router in `frontend/`, pnpm, Node 24.
 - Each component lives in its own folder in `frontend/src/components/` with a co-located `.module.sass`. Shared variables are in `frontend/src/styles/vars.sass`.
-- API routes in `frontend/src/app/api/` proxy Miniflux. Auth is Clerk.
+- API routes in `frontend/src/app/api/` proxy Miniflux. Auth is self-hosted Better Auth (`frontend/src/lib/auth.ts`); routes get the user's Miniflux token through `requireMinifluxToken()`.
 - Run `pnpm lint` in `frontend/` before finishing.
 
 ## Docs

@@ -10,15 +10,15 @@ import {
 /**
  * The sync worker needs each user's Miniflux token without a browser
  * session, so the token is stored in reader.accounts, encrypted with
- * AES-256-GCM. Key: READER_TOKEN_SECRET, falling back to CLERK_SECRET_KEY.
+ * AES-256-GCM. Key: READER_TOKEN_SECRET, falling back to MINIFLUX_TOKEN_KEY.
  * If the key ever changes, the token is simply stored again on the
  * user's next request.
  */
 function getKey(): Buffer {
   const secret =
-    process.env.READER_TOKEN_SECRET || process.env.CLERK_SECRET_KEY || '';
+    process.env.READER_TOKEN_SECRET || process.env.MINIFLUX_TOKEN_KEY || '';
   if (!secret) {
-    throw new Error('READER_TOKEN_SECRET (or CLERK_SECRET_KEY) is not set');
+    throw new Error('READER_TOKEN_SECRET (or MINIFLUX_TOKEN_KEY) is not set');
   }
   return createHash('sha256').update(`reader-token:${secret}`).digest();
 }

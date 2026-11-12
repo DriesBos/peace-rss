@@ -1,7 +1,7 @@
 import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { auth, clerkClient } from '@clerk/nextjs/server';
+import { requireMinifluxToken } from '@/lib/minifluxAuth';
 import { apiErrorResponse } from '@/lib/apiErrors';
 import { mfFetchUser } from '@/lib/miniflux';
 import { isProtectedCategoryTitle } from '@/lib/protectedCategories';
@@ -20,26 +20,9 @@ type Category = {
 
 export async function POST(request: NextRequest) {
   try {
-    // 1. Require Clerk authentication
-    const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // 2. Get user's Miniflux token from Clerk metadata
-    const client = await clerkClient();
-    const user = await client.users.getUser(userId);
-    const metadata = user.privateMetadata as
-      | { minifluxToken?: string }
-      | undefined;
-    const token = metadata?.minifluxToken;
-
-    if (!token) {
-      return NextResponse.json(
-        { error: 'User not provisioned' },
-        { status: 400 }
-      );
-    }
+    const authResult = await requireMinifluxToken();
+    if (!authResult.ok) return authResult.response;
+    const { token } = authResult;
 
     // 3. Parse request body
     const body = await request.json().catch(() => null);
