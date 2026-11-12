@@ -2,9 +2,9 @@
 
 ## Branches
 
-- `preview`: day-to-day work. Pushes here do not deploy.
+- `preview`: day-to-day work. Work on the local `preview` branch and push to `origin/preview`. Pushes here do not deploy.
 - `main`: production. Every push deploys to the VPS.
-- To release, merge `preview` into `main`.
+- To release, merge `preview` into `main`, only when the owner explicitly asks.
 
 ## GitHub Actions Deploy
 

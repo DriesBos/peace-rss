@@ -4,17 +4,18 @@ Guidance for AI coding agents (Claude, Codex, etc.) working in this repo. Keep i
 
 ## Branches and releases
 
-- `preview` is the working branch. Branch off it, and open PRs into it.
-- `main` is production. Every push to `main` deploys to the VPS (`.github/workflows/deploy.yml`), so only merge `preview` into `main` to release.
-- Never push straight to `main`, and never merge into it without the owner asking.
+- Work on the local `preview` branch. Commit there and push to `origin/preview` (`git push origin preview`).
+- Pushes to `preview` do not deploy.
+- `main` is production. Every push to `main` deploys to the VPS (`.github/workflows/deploy.yml`).
+- Only merge `preview` into `main` when the owner explicitly asks. Never push straight to `main`.
 - There is no Netlify or Vercel. The VPS is the only deploy target.
 
 ## Running locally
 
-- The app runs through Docker Compose (`docker compose up -d --build`). The `frontend` service is a production Next.js build.
-- Host-side edits do not hot-reload into the container. Rebuild (`docker compose up -d --build frontend`) to see changes.
+- `pnpm dev` from the repo root: Postgres, Miniflux and RSS-Bridge in Docker, `next dev` on the host at `http://localhost:3000` with hot reload. See `docs/DEVELOPMENT.md`.
+- `docker compose up -d --build` runs the full production build. Host edits do not hot-reload into that container; rebuild (`docker compose up -d --build frontend`) to see changes.
 - Local env lives in `.env.local` (Clerk dev keys), kept separate from production values. Never commit env files or secrets.
-- `NEXT_PUBLIC_ENABLE_DEV_TOOLS=true` shows the Dev menu tab and `/dev` system pages. Never set it in production.
+- `NEXT_PUBLIC_ENABLE_DEV_TOOLS=true` shows the Dev menu tab and `/dev` system pages outside development. Never set it in production.
 
 ## Code conventions
 

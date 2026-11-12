@@ -1,5 +1,9 @@
 # Development
 
+## Branches
+- Work on the local `preview` branch and push to `origin/preview`.
+- `main` is release only (every push deploys). Merge `preview` into `main` only when the owner explicitly asks. See `docs/DEPLOYMENT.md`.
+
 ## Environment
 - Copy `ENV-TEMPLATE.md` to `.env` and fill values.
 - Required variables include Clerk keys, Miniflux config, and Postgres credentials.
