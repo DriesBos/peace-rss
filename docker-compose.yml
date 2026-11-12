@@ -35,7 +35,7 @@ services:
       context: ./frontend
     environment:
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
-      BETTER_AUTH_URL: ${BETTER_AUTH_URL}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost}
       AUTH_DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${AUTH_POSTGRES_DB:-komorebi_auth}?sslmode=disable
       MINIFLUX_TOKEN_KEY: ${MINIFLUX_TOKEN_KEY}
       RESEND_API_KEY: ${RESEND_API_KEY}
