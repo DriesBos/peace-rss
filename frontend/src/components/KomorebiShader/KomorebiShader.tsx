@@ -80,6 +80,10 @@ function subscribe() {
   return () => {};
 }
 
+// true on the client after hydration, false on the server and during hydration
+const getMountedClient = () => true;
+const getMountedServer = () => false;
+
 /**
  * KomorebiShader - Ambient leaf shadow effect
  * 
@@ -99,8 +103,11 @@ export default function KomorebiShader({
 
   // Detect platform on client using useSyncExternalStore for hydration safety
   const platform = useSyncExternalStore(subscribe, getPlatform, getServerSnapshot);
+  const mounted = useSyncExternalStore(subscribe, getMountedClient, getMountedServer);
 
-  if (theme === undefined && resolvedTheme === undefined) {
+  // Theme comes from localStorage, which the server can't see: render nothing
+  // until hydrated so server and client markup match.
+  if (!mounted || (theme === undefined && resolvedTheme === undefined)) {
     return null;
   }
 
