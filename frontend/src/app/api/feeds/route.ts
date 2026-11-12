@@ -1,23 +1,18 @@
 import 'server-only';
 
 import { NextResponse } from 'next/server';
-import { requireMinifluxToken } from '@/lib/minifluxAuth';
 import { apiErrorResponse } from '@/lib/apiErrors';
-import { mfFetchUser } from '@/lib/miniflux';
+import { getReaderContext } from '@/lib/reader/account';
+import { listFeeds } from '@/lib/reader/queries';
 
 export const runtime = 'nodejs';
 
+/** GET /api/feeds: feeds with their tags, from our copy. */
 export async function GET() {
   try {
-    const authResult = await requireMinifluxToken();
-    if (!authResult.ok) return authResult.response;
-    const { token } = authResult;
-
-    // 3. Fetch feeds using per-user token
-    const data = await mfFetchUser<unknown>(token, '/v1/feeds');
-    return NextResponse.json(data);
+    const { userId } = await getReaderContext();
+    return NextResponse.json(await listFeeds(userId));
   } catch (err) {
     return apiErrorResponse(err, 'Failed to fetch feeds');
   }
 }
-

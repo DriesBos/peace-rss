@@ -1,9 +1,11 @@
 import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { requireMinifluxToken } from '@/lib/minifluxAuth';
 import { apiErrorResponse } from '@/lib/apiErrors';
-import { mfFetchUser } from '@/lib/miniflux';
+import { MinifluxApiError, mfFetchUser } from '@/lib/miniflux';
+import { getReaderContext } from '@/lib/reader/account';
+import { parseId } from '@/lib/reader/http';
+import { toggleEntryStar } from '@/lib/reader/queries';
 
 export const runtime = 'nodejs';
 
@@ -12,22 +14,21 @@ type Ctx = { params: Promise<{ id: string }> };
 
 export async function POST(_request: NextRequest, context: Ctx) {
   try {
-    const authResult = await requireMinifluxToken();
-    if (!authResult.ok) return authResult.response;
-    const { token } = authResult;
+    const { userId, token } = await getReaderContext();
+    const entryId = parseId((await context.params).id, 'entry id');
 
-    // 3. Parse entry ID from route params
-    const { id } = await context.params;
-
-    const entryId = Number(id);
-    if (!Number.isFinite(entryId) || entryId <= 0) {
-      return NextResponse.json({ error: 'Invalid entry id' }, { status: 400 });
+    try {
+      await mfFetchUser<void>(token, `/v1/entries/${entryId}/bookmark`, {
+        method: 'PUT',
+      });
+    } catch (err) {
+      // We keep posts longer than Miniflux does; a post it has already
+      // cleaned up can still be starred in our copy.
+      if (!(err instanceof MinifluxApiError && err.publicStatus === 404)) {
+        throw err;
+      }
     }
-
-    // 4. Toggle star using per-user token
-    await mfFetchUser<void>(token, `/v1/entries/${entryId}/bookmark`, {
-      method: 'PUT',
-    });
+    await toggleEntryStar(userId, entryId);
 
     return NextResponse.json({ ok: true });
   } catch (err) {

@@ -1,10 +1,12 @@
 import 'server-only';
 
 import { NextRequest, NextResponse } from 'next/server';
-import { requireMinifluxToken } from '@/lib/minifluxAuth';
 import { apiErrorResponse } from '@/lib/apiErrors';
 import { mfFetchUser } from '@/lib/miniflux';
-import { getEntryListMeta } from '@/lib/entryListMeta';
+import { getReaderContext } from '@/lib/reader/account';
+import { parseId } from '@/lib/reader/http';
+import { getEntry } from '@/lib/reader/queries';
+import { type MinifluxEntry, upsertEntries } from '@/lib/reader/sync';
 
 export const runtime = 'nodejs';
 
@@ -17,34 +19,32 @@ type Ctx = { params: Promise<{ id: string }> };
  */
 export async function POST(_request: NextRequest, context: Ctx) {
   try {
-    const authResult = await requireMinifluxToken();
-    if (!authResult.ok) return authResult.response;
-    const { token } = authResult;
+    const { userId, token } = await getReaderContext();
+    const entryId = parseId((await context.params).id, 'entry id');
 
-    // 3. Parse entry ID from route params
-    const { id } = await context.params;
-    const entryId = Number(id);
-    if (!Number.isFinite(entryId) || entryId <= 0) {
-      return NextResponse.json({ error: 'Invalid entry id' }, { status: 400 });
-    }
+    // Miniflux downloads the original page and stores it on the entry.
+    await mfFetchUser<unknown>(
+      token,
+      `/v1/entries/${entryId}/fetch-content?update_content=true`,
+      { method: 'GET' },
+    );
 
-    // 4. Fetch original content from Miniflux
-    // This endpoint returns the entry with updated content
-    const entry = await mfFetchUser<{
-      id: number;
-      title: string;
-      content: string;
-      url: string;
-      reading_time?: number;
-    }>(token, `/v1/entries/${entryId}/fetch-content?update_content=true`, {
-      method: 'GET',
-    });
+    // Re-read the whole entry so our copy (and its automatic tags,
+    // thumbnail and preview) follow the new content.
+    const fresh = await mfFetchUser<MinifluxEntry>(
+      token,
+      `/v1/entries/${entryId}`,
+    );
+    await upsertEntries(userId, [fresh]);
+    const entry = await getEntry(userId, entryId);
 
     return NextResponse.json({
       ok: true,
-      content: entry.content,
-      ...getEntryListMeta(entry),
-      reading_time: entry.reading_time,
+      content: entry?.content ?? fresh.content ?? '',
+      preview: entry?.preview,
+      thumbnail_url: entry?.thumbnail_url,
+      reading_time: entry?.reading_time ?? fresh.reading_time,
+      tag_ids: entry?.tag_ids,
     });
   } catch (err) {
     return apiErrorResponse(err, 'Failed to fetch entry content');

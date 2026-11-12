@@ -7,7 +7,6 @@ A minimalist RSS reader built on Miniflux, wrapped in a modern Next.js UI with s
 - Next.js App Router frontend with API routes for Miniflux proxying
 - UI components in `frontend/src/components`, each with a co-located `.module.sass`
 - Miniflux + Postgres via Docker Compose
-- RSS-Bridge (private service) for Instagram/X feed bridging
 - Caddy reverse proxy for local routing
 
 ## Quickstart (Local)
@@ -34,10 +33,3 @@ Note: the `frontend` container runs a production Next.js build, so edits to file
 - Development workflows: `docs/DEVELOPMENT.md`
 - Deployment setup: `docs/DEPLOYMENT.md`
 - App behavior notes: `docs/APP-BEHAVIOR.md`
-
-## Social Feed Ops
-
-- RSS-Bridge is used only for social feeds (`instagram` / `twitter` / X) via app proxy routes.
-- Non-social feed URLs do not use RSS-Bridge; they go through Miniflux discovery (`/v1/discover`) and feed creation (`/v1/feeds`).
-- `/api/social/rss/[token]` includes in-memory cache, per-source/global rate limits, and request coalescing.
-- `/api/social/metrics` is available when `SOCIAL_METRICS_TOKEN` is set.

@@ -1,27 +1,15 @@
 import 'server-only';
 
 import { NextResponse } from 'next/server';
-import { requireMinifluxToken } from '@/lib/minifluxAuth';
-import { apiErrorResponse } from '@/lib/apiErrors';
-import { mfFetchUser } from '@/lib/miniflux';
+import { PublicApiError, apiErrorResponse } from '@/lib/apiErrors';
 import { DEFAULT_ENTRIES_PAGE_SIZE } from '@/lib/entriesQuery';
-import { withEntryListMeta } from '@/lib/entryListMeta';
+import { getReaderContext } from '@/lib/reader/account';
+import { parseIdCsv } from '@/lib/reader/http';
+import { filterOwnTagIds, listEntries } from '@/lib/reader/queries';
 
 export const runtime = 'nodejs';
 
 const MAX_ENTRIES_LIMIT = 500;
-
-type EntriesData = {
-  entries?: Array<{
-    content?: string;
-    url?: string;
-  }>;
-};
-
-function getStringParam(url: URL, key: string, defaultValue: string): string {
-  const value = url.searchParams.get(key);
-  return value && value.trim().length > 0 ? value : defaultValue;
-}
 
 function getNumberParam(url: URL, key: string, defaultValue: number): number {
   const value = url.searchParams.get(key);
@@ -30,145 +18,56 @@ function getNumberParam(url: URL, key: string, defaultValue: number): number {
   return Number.isFinite(n) && n >= 0 ? Math.floor(n) : defaultValue;
 }
 
-function getOptionalNumberParam(url: URL, key: string): number | null {
-  const value = url.searchParams.get(key);
-  if (!value) return null;
-  const n = Number(value);
-  return Number.isFinite(n) && n > 0 ? Math.floor(n) : null;
-}
-
-function getOptionalBooleanParam(url: URL, key: string): boolean | null {
-  const value = url.searchParams.get(key);
-  if (value === null) return null;
-  if (value === 'true') return true;
-  if (value === 'false') return false;
-  return null;
-}
-
+/**
+ * GET /api/entries
+ * Reads from our own copy of the entries (see lib/reader).
+ *
+ * Query: status=unread|read|all, starred=true, search=…, tags=1,2,3
+ * (posts that have all of them), globally_visible=true, limit, offset,
+ * direction=asc|desc.
+ */
 export async function GET(request: Request) {
   try {
-    const authResult = await requireMinifluxToken();
-    if (!authResult.ok) return authResult.response;
-    const { token } = authResult;
-
-    // 3. Parse query parameters
+    const { userId } = await getReaderContext();
     const url = new URL(request.url);
 
     const limit = Math.min(
       getNumberParam(url, 'limit', DEFAULT_ENTRIES_PAGE_SIZE),
-      MAX_ENTRIES_LIMIT
+      MAX_ENTRIES_LIMIT,
     );
     const offset = getNumberParam(url, 'offset', 0);
-    const direction = getStringParam(url, 'direction', 'desc');
-    const order = getStringParam(url, 'order', 'published_at');
+    const direction =
+      url.searchParams.get('direction') === 'asc' ? 'asc' : 'desc';
 
-    // Check if we're searching
-    const searchQuery = url.searchParams.get('search');
-    const isSearchQuery = searchQuery && searchQuery.trim().length > 0;
+    const search = url.searchParams.get('search')?.trim() || null;
+    const starred = url.searchParams.get('starred') === 'true';
 
-    // Check if we're fetching starred entries
-    const starred = url.searchParams.get('starred');
-    const isStarredQuery = starred === 'true';
-
-    // For non-starred/non-search queries, use status filter (default: unread)
-    let status: string | null =
-      !isStarredQuery && !isSearchQuery
-        ? getStringParam(url, 'status', 'unread')
-        : null;
-
-    if (status === 'all') {
-      status = null;
+    let status: 'unread' | 'read' | null = null;
+    if (!search && !starred) {
+      const raw = url.searchParams.get('status') || 'unread';
+      if (raw === 'unread' || raw === 'read') status = raw;
+      else if (raw !== 'all') throw new PublicApiError('Invalid status', 400);
     }
 
-    if (status && status !== 'read' && status !== 'unread') {
-      return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+    const requestedTagIds = parseIdCsv(url.searchParams.get('tags'));
+    const tagIds = await filterOwnTagIds(userId, requestedTagIds);
+    if (tagIds.length !== requestedTagIds.length) {
+      // An unknown tag can never match anything.
+      return NextResponse.json({ total: 0, entries: [] });
     }
 
-    // Optional feed filter (used by the UI); ignore when missing.
-    const feedIdRaw = url.searchParams.get('feed_id');
-    let feedId: number | null = null;
-    if (feedIdRaw !== null && feedIdRaw.trim() !== '') {
-      const parsed = Number(feedIdRaw);
-      if (!Number.isFinite(parsed) || parsed <= 0) {
-        return NextResponse.json({ error: 'Invalid feed_id' }, { status: 400 });
-      }
-      feedId = parsed;
-    }
-
-    // Optional category filter (used by the UI); ignore when missing.
-    const categoryIdRaw = url.searchParams.get('category_id');
-    let categoryId: number | null = null;
-    if (categoryIdRaw !== null && categoryIdRaw.trim() !== '') {
-      const parsed = Number(categoryIdRaw);
-      if (!Number.isFinite(parsed) || parsed <= 0) {
-        return NextResponse.json(
-          { error: 'Invalid category_id' },
-          { status: 400 }
-        );
-      }
-      categoryId = parsed;
-    }
-
-    const globallyVisible = getOptionalBooleanParam(url, 'globally_visible');
-    if (
-      url.searchParams.has('globally_visible') &&
-      globallyVisible === null
-    ) {
-      return NextResponse.json(
-        { error: 'Invalid globally_visible' },
-        { status: 400 }
-      );
-    }
-
-    const qs = new URLSearchParams({
-      limit: String(limit),
-      offset: String(offset),
-      order,
-      direction,
-    });
-
-    // Add search parameter if searching
-    if (isSearchQuery && searchQuery) {
-      qs.set('search', searchQuery.trim());
-    }
-
-    // Add status only for non-starred/non-search queries
-    if (status) {
-      qs.set('status', status);
-    }
-
-    // Add starred parameter if requesting starred entries
-    if (isStarredQuery) {
-      qs.set('starred', 'true');
-    }
-
-    if (feedId) qs.set('feed_id', String(feedId));
-    if (categoryId) qs.set('category_id', String(categoryId));
-    if (globallyVisible !== null) {
-      qs.set('globally_visible', globallyVisible ? 'true' : 'false');
-    }
-
-    const changedAfter = getOptionalNumberParam(url, 'changed_after');
-    if (changedAfter) {
-      qs.set('changed_after', String(changedAfter));
-    }
-
-    const publishedAfter = getOptionalNumberParam(url, 'published_after');
-    if (publishedAfter) {
-      qs.set('published_after', String(publishedAfter));
-    }
-
-    // 4. Fetch entries using per-user token
-    const data = await mfFetchUser<EntriesData>(
-      token,
-      `/v1/entries?${qs.toString()}`
+    const data = await listEntries(
+      userId,
+      {
+        status,
+        starred,
+        search,
+        tagIds,
+        visibleOnly: url.searchParams.get('globally_visible') === 'true',
+      },
+      { limit, offset, direction },
     );
-    return NextResponse.json({
-      ...data,
-      entries: Array.isArray(data.entries)
-        ? data.entries.map(withEntryListMeta)
-        : data.entries,
-    });
+    return NextResponse.json(data);
   } catch (err) {
     return apiErrorResponse(err, 'Failed to fetch entries');
   }

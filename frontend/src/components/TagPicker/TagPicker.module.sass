@@ -1,0 +1,27 @@
+@use '@/styles/vars' as *
+
+.field
+  display: flex
+  flex-direction: column
+  gap: var(--half-rem)
+  width: 100%
+
+.label
+  @include font-body
+  color: var(--color-text)
+
+.list
+  display: flex
+  flex-direction: row
+  flex-wrap: wrap
+  column-gap: var(--one-rem)
+  row-gap: var(--half-rem)
+
+.tag
+  color: var(--color-text-secondary)
+  &[data-active="true"]
+    color: var(--color-text)
+
+.empty
+  @include font-body
+  color: var(--color-text-secondary)

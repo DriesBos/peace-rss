@@ -4,6 +4,8 @@ import { NextResponse } from 'next/server';
 import { requireMinifluxToken } from '@/lib/minifluxAuth';
 import { apiErrorResponse } from '@/lib/apiErrors';
 import { mfFetchUser } from '@/lib/miniflux';
+import { ensureAccount } from '@/lib/reader/account';
+import { syncUser } from '@/lib/reader/sync';
 
 export const runtime = 'nodejs';
 
@@ -13,7 +15,7 @@ export async function POST(request: Request) {
   try {
     const authResult = await requireMinifluxToken();
     if (!authResult.ok) return authResult.response;
-    const { token } = authResult;
+    const { token, userId } = authResult;
 
     const formData = await request.formData();
     const file = formData.get('file');
@@ -47,6 +49,14 @@ export async function POST(request: Request) {
       },
       body: opmlXml,
     });
+
+    // Copy the imported feeds over; their OPML folders become tags.
+    try {
+      await ensureAccount(userId, token);
+      await syncUser({ userId, token });
+    } catch (syncErr) {
+      console.error('Failed to sync after OPML import:', syncErr);
+    }
 
     return NextResponse.json({
       ok: true,

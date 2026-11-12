@@ -123,8 +123,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const showLandingPageInDevelopment = process.env.NODE_ENV === 'development';
-  const session = showLandingPageInDevelopment ? null : await getSession();
+  const session = await getSession();
 
   return (
     <html lang="en" suppressHydrationWarning>

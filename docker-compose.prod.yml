@@ -26,10 +26,6 @@ services:
       ADMIN_PASSWORD: ${MINIFLUX_ADMIN_PASSWORD}
     restart: unless-stopped
 
-  rss-bridge:
-    image: rssbridge/rss-bridge:latest
-    restart: unless-stopped
-
   frontend:
     build:
       context: ./frontend
@@ -43,14 +39,13 @@ services:
       MINIFLUX_BASE_URL: ${MINIFLUX_BASE_URL}
       MINIFLUX_ADMIN_USERNAME: ${MINIFLUX_ADMIN_USERNAME}
       MINIFLUX_ADMIN_PASSWORD: ${MINIFLUX_ADMIN_PASSWORD}
-      RSS_BRIDGE_BASE_URL: ${RSS_BRIDGE_BASE_URL}
-      SOCIAL_FEEDS_BASE_URL: ${SOCIAL_FEEDS_BASE_URL}
-      SOCIAL_FEED_TOKEN_SECRET: ${SOCIAL_FEED_TOKEN_SECRET}
-      SOCIAL_METRICS_TOKEN: ${SOCIAL_METRICS_TOKEN}
+      # Reader tables (schema `reader`: mirrored posts + tags). Defaults to the Miniflux database.
+      READER_DATABASE_URL: ${READER_DATABASE_URL:-postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable}
+      READER_TOKEN_SECRET: ${READER_TOKEN_SECRET:-}
+      READER_RETENTION_DAYS: ${READER_RETENTION_DAYS:-180}
     depends_on:
       - postgres
       - miniflux
-      - rss-bridge
     restart: unless-stopped
 
   caddy:

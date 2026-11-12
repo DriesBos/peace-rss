@@ -1,61 +1,38 @@
 import 'server-only';
 
 import { NextResponse } from 'next/server';
-import { requireMinifluxToken } from '@/lib/minifluxAuth';
-import { apiErrorResponse } from '@/lib/apiErrors';
+import { PublicApiError, apiErrorResponse } from '@/lib/apiErrors';
 import { mfFetchUser } from '@/lib/miniflux';
+import { getReaderContext } from '@/lib/reader/account';
+import { parseIdList, readJsonBody } from '@/lib/reader/http';
+import { setEntriesStatus } from '@/lib/reader/queries';
 
 export const runtime = 'nodejs';
 
-function isValidStatus(status: unknown): status is 'read' | 'unread' {
-  return status === 'read' || status === 'unread';
-}
-
-function isNumberArray(value: unknown): value is number[] {
-  if (!Array.isArray(value)) return false;
-  return value.every((v) => Number.isInteger(v));
-}
-
+/** POST /api/entries/status { entry_ids, status } */
 export async function POST(request: Request) {
   try {
-    const authResult = await requireMinifluxToken();
-    if (!authResult.ok) return authResult.response;
-    const { token } = authResult;
+    const { userId, token } = await getReaderContext();
+    const body = await readJsonBody(request);
+    const entryIds = parseIdList(body.entry_ids, 'entry_ids');
+    const status = body.status;
 
-    // 3. Parse request body
-    let body: unknown;
-    try {
-      body = await request.json();
-    } catch {
-      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
+    if (entryIds.length === 0) {
+      throw new PublicApiError('Missing or invalid entry_ids', 400);
+    }
+    if (status !== 'read' && status !== 'unread') {
+      throw new PublicApiError('Invalid status', 400);
     }
 
-    const bodyRecord =
-      typeof body === 'object' && body !== null
-        ? (body as { entry_ids?: unknown; status?: unknown })
-        : null;
-    const entryIds = bodyRecord?.entry_ids ?? null;
-    const status = bodyRecord?.status ?? null;
-
-    if (!isNumberArray(entryIds) || entryIds.length === 0) {
-      return NextResponse.json(
-        { error: 'Missing or invalid entry_ids' },
-        { status: 400 }
-      );
-    }
-
-    if (!isValidStatus(status)) {
-      return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
-    }
-
-    // 4. Update entries using per-user token
+    // Miniflux first, so the two copies cannot disagree after a failure.
     await mfFetchUser<void>(token, '/v1/entries', {
       method: 'PUT',
       body: JSON.stringify({ entry_ids: entryIds, status }),
     });
-    return NextResponse.json({ ok: true }, { status: 200 });
+    await setEntriesStatus(userId, entryIds, status);
+
+    return NextResponse.json({ ok: true });
   } catch (err) {
     return apiErrorResponse(err, 'Failed to update entry status');
   }
 }
-
