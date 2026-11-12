@@ -36,6 +36,9 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml \
 # Process env wins over Next's .env files, so override them with host URLs here.
 export MINIFLUX_BASE_URL="http://localhost:8080/miniflux"
 export RSS_BRIDGE_BASE_URL="http://localhost:8081"
+# Reader tables (mirrored posts + tags) live in the Docker Postgres, published on 5433.
+env_value() { grep -E "^$1=" .env | tail -1 | cut -d= -f2- | sed -e 's/^["'"'"']//' -e 's/["'"'"']$//'; }
+export READER_DATABASE_URL="postgres://$(env_value POSTGRES_USER):$(env_value POSTGRES_PASSWORD)@localhost:5433/$(env_value POSTGRES_DB)?sslmode=disable"
 # Miniflux (in Docker) fetches social feeds back from Next.js on the host.
 export SOCIAL_FEEDS_BASE_URL="http://host.docker.internal:3000"
 
