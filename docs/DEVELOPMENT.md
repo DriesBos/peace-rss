@@ -23,6 +23,7 @@ This starts `postgres`, `miniflux` and `rss-bridge` in Docker (via
 - Miniflux UI: `http://localhost:8080/miniflux/`
 
 Requires Docker (OrbStack) running and a root `.env` (symlink to `.env.local`).
+Port 3000 must be free (the script stops if it isn't).
 Services keep running after you stop Next.js, so the next `pnpm dev` is quick.
 
 ## Docker (full stack, production build)
