@@ -9,6 +9,8 @@ import {
   mfFetchAdmin,
   mfFetchUserBasicAuth,
 } from '@/lib/miniflux';
+import { ensureAccount } from '@/lib/reader/account';
+import { ensureInitialSync } from '@/lib/reader/sync';
 
 export const runtime = 'nodejs';
 
@@ -65,6 +67,15 @@ function generateRandomPassword(): string {
 }
 
 /**
+ * Registers the user in our own database and, on the first visit,
+ * waits for their feeds and entries to be copied over from Miniflux.
+ */
+async function prepareReader(userId: string, token: string): Promise<void> {
+  await ensureAccount(userId, token);
+  await ensureInitialSync({ userId, token });
+}
+
+/**
  * POST /api/bootstrap
  *
  * Provisions a Miniflux user for the currently authenticated Clerk user.
@@ -93,6 +104,7 @@ export async function POST() {
       | { minifluxToken?: string; minifluxUsername?: string }
       | undefined;
     if (metadata?.minifluxToken) {
+      await prepareReader(userId, metadata.minifluxToken);
       return NextResponse.json({
         ok: true,
         provisioned: true,
@@ -199,6 +211,8 @@ export async function POST() {
         { status: 500 }
       );
     }
+
+    await prepareReader(userId, apiKey.token);
 
     return NextResponse.json({
       ok: true,

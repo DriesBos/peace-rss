@@ -37,7 +37,12 @@ services:
       MINIFLUX_BASE_URL: ${MINIFLUX_BASE_URL}
       MINIFLUX_ADMIN_USERNAME: ${MINIFLUX_ADMIN_USERNAME}
       MINIFLUX_ADMIN_PASSWORD: ${MINIFLUX_ADMIN_PASSWORD}
+      # Reader tables (schema `reader`: mirrored posts + tags). Defaults to the Miniflux database.
+      READER_DATABASE_URL: ${READER_DATABASE_URL:-postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable}
+      READER_TOKEN_SECRET: ${READER_TOKEN_SECRET:-}
+      READER_RETENTION_DAYS: ${READER_RETENTION_DAYS:-180}
     depends_on:
+      - postgres
       - miniflux
     restart: unless-stopped
 

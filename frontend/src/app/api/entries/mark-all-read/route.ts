@@ -1,89 +1,48 @@
 import 'server-only';
 
 import { NextResponse } from 'next/server';
-import { auth, clerkClient } from '@clerk/nextjs/server';
 import { apiErrorResponse } from '@/lib/apiErrors';
 import { mfFetchUser } from '@/lib/miniflux';
+import { getReaderContext } from '@/lib/reader/account';
+import { chunk, parseIdList, readJsonBody } from '@/lib/reader/http';
+import {
+  filterOwnTagIds,
+  listEntryIds,
+  setEntriesStatus,
+} from '@/lib/reader/queries';
 
 export const runtime = 'nodejs';
 
-type MarkAllReadBody =
-  | { scope: 'user' }
-  | { scope: 'category'; category_id: number }
-  | { scope: 'feed'; feed_id: number };
-
-type MinifluxCurrentUser = {
-  id: number;
-};
-
-function isValidBody(value: unknown): value is MarkAllReadBody {
-  if (!value || typeof value !== 'object') return false;
-  const body = value as Record<string, unknown>;
-
-  if (body.scope === 'user') return true;
-  if (body.scope === 'category') {
-    return Number.isInteger(body.category_id);
-  }
-  if (body.scope === 'feed') {
-    return Number.isInteger(body.feed_id);
-  }
-  return false;
-}
-
+/**
+ * POST /api/entries/mark-all-read { tag_ids?: number[] }
+ * Marks every unread post in the current view as read: the posts that
+ * have all given tags, or without tags everything in the main list.
+ */
 export async function POST(request: Request) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const { userId, token } = await getReaderContext();
+    const body = await readJsonBody(request);
+    const requested = parseIdList(body.tag_ids, 'tag_ids');
+    const tagIds = await filterOwnTagIds(userId, requested);
+    if (tagIds.length !== requested.length) {
+      return NextResponse.json({ ok: true, count: 0 });
     }
 
-    const client = await clerkClient();
-    const user = await client.users.getUser(userId);
-    const metadata = user.privateMetadata as
-      | { minifluxToken?: string }
-      | undefined;
-    const token = metadata?.minifluxToken;
-
-    if (!token) {
-      return NextResponse.json(
-        { error: 'Not provisioned. Call /api/bootstrap first.' },
-        { status: 401 }
-      );
-    }
-
-    let body: unknown;
-    try {
-      body = await request.json();
-    } catch {
-      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 });
-    }
-
-    if (!isValidBody(body)) {
-      return NextResponse.json(
-        { error: 'Invalid mark-all-read body' },
-        { status: 400 }
-      );
-    }
-
-    if (body.scope === 'category') {
-      await mfFetchUser<void>(token, `/v1/categories/${body.category_id}/mark-all-as-read`, {
-        method: 'PUT',
-      });
-      return NextResponse.json({ ok: true });
-    }
-
-    if (body.scope === 'feed') {
-      await mfFetchUser<void>(token, `/v1/feeds/${body.feed_id}/mark-all-as-read`, {
-        method: 'PUT',
-      });
-      return NextResponse.json({ ok: true });
-    }
-
-    const currentUser = await mfFetchUser<MinifluxCurrentUser>(token, '/v1/me');
-    await mfFetchUser<void>(token, `/v1/users/${currentUser.id}/mark-all-as-read`, {
-      method: 'PUT',
+    const entryIds = await listEntryIds(userId, {
+      status: 'unread',
+      tagIds,
+      visibleOnly: tagIds.length === 0,
     });
-    return NextResponse.json({ ok: true });
+
+    for (const ids of chunk(entryIds, 500)) {
+      await mfFetchUser<void>(token, '/v1/entries', {
+        method: 'PUT',
+        body: JSON.stringify({ entry_ids: ids, status: 'read' }),
+      });
+      await setEntriesStatus(userId, ids, 'read');
+    }
+
+    return NextResponse.json({ ok: true, count: entryIds.length });
   } catch (err) {
     return apiErrorResponse(err, 'Failed to mark entries read');
   }

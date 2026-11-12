@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Show, RedirectToSignIn } from '@clerk/nextjs';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import styles from './page.module.sass';
 import { AddModal } from '@/components/AddModal/AddModal';
@@ -15,20 +15,15 @@ import { MenuModal } from '@/components/MenuModal/MenuModal';
 import { useKeydown } from '@/hooks/useKeydown';
 import { fetchJson } from '@/app/_lib/fetchJson';
 import type {
-  Category,
   DiscoveredFeed,
   Entry,
   Feed,
   ReaderPreferences,
+  Tag,
 } from '@/app/_lib/types';
 import { useReaderData } from '@/hooks/useReaderData';
 import { useReaderGestures } from '@/hooks/useReaderGestures';
-import {
-  fetchAllCount,
-  fetchReaderPreferences,
-  fetchStarredEntries,
-  fetchStarredCount,
-} from '@/lib/readerApi';
+import { fetchReaderPreferences, fetchStarredEntries } from '@/lib/readerApi';
 import { DEFAULT_ENTRIES_PAGE_SIZE } from '@/lib/entriesQuery';
 import { NOTIFICATION_COPY } from '@/lib/notificationCopy';
 import {
@@ -92,9 +87,8 @@ function normalizeReaderPreferences(
 
 export default function Home() {
   const [selectedEntryId, setSelectedEntryId] = useState<number | null>(null);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
-    null,
-  );
+  // Tags toggled on in the header; a post must have all of them.
+  const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
   const [statusFilter, setStatusFilter] = useState<'unread' | 'all'>('unread');
   const [isStarredView, setIsStarredView] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -107,17 +101,15 @@ export default function Home() {
   const [isProvisioned, setIsProvisioned] = useState(false);
   const [provisionError, setProvisionError] = useState<string | null>(null);
   const [newFeedUrl, setNewFeedUrl] = useState('');
-  const [newFeedCategoryId, setNewFeedCategoryId] = useState<number | null>(
-    null,
-  );
+  const [newFeedTagIds, setNewFeedTagIds] = useState<number[]>([]);
   const [addFeedLoading, setAddFeedLoading] = useState(false);
   const [addFeedError, setAddFeedError] = useState<string | null>(null);
   const [discoveredFeeds, setDiscoveredFeeds] = useState<DiscoveredFeed[]>([]);
   const [selectedDiscoveredFeedUrl, setSelectedDiscoveredFeedUrl] =
     useState('');
-  const [newCategoryTitle, setNewCategoryTitle] = useState('');
-  const [addCategoryLoading, setAddCategoryLoading] = useState(false);
-  const [addCategoryError, setAddCategoryError] = useState<string | null>(null);
+  const [newTagTitle, setNewTagTitle] = useState('');
+  const [addTagLoading, setAddTagLoading] = useState(false);
+  const [addTagError, setAddTagError] = useState<string | null>(null);
   const fetchingOriginalEntryIdsRef = useRef<Set<number>>(new Set());
   const [fetchingOriginalEntryIds, setFetchingOriginalEntryIds] = useState<
     Set<number>
@@ -129,16 +121,15 @@ export default function Home() {
   const [isOffline, setIsOffline] = useState(false);
 
   // Edit modal form state
-  const [editType, setEditType] = useState<'feed' | 'category' | null>(null);
+  const [editType, setEditType] = useState<'feed' | 'tag' | null>(null);
   const [editItemId, setEditItemId] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editFeedUrl, setEditFeedUrl] = useState('');
-  const [editCategoryId, setEditCategoryId] = useState<number | null>(null);
-  const [isEditingProtectedCategory, setIsEditingProtectedCategory] =
-    useState(false);
+  const [editTagIds, setEditTagIds] = useState<number[]>([]);
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
 
+  const queryClient = useQueryClient();
   const readerPreferencesQuery = useQuery({
     queryKey: readerQueryKeys.preferences,
     enabled: isProvisioned,
@@ -156,24 +147,12 @@ export default function Home() {
     }
   }, [readerPreferencesQuery.error]);
 
-  const allCountQuery = useQuery({
-    queryKey: readerQueryKeys.allCount,
-    enabled: readerDataEnabled,
-    queryFn: ({ signal }) => fetchAllCount({ signal }),
-  });
-  const starredCountQuery = useQuery({
-    queryKey: readerQueryKeys.starredCount,
-    enabled: readerDataEnabled,
-    queryFn: ({ signal }) => fetchStarredCount({ signal }),
-  });
   const starredEntriesQuery = useQuery({
     queryKey: readerQueryKeys.starredEntries(readerPreferences.entries_per_page),
     enabled: readerDataEnabled && activeModal === 'menu',
     queryFn: ({ signal }) =>
       fetchStarredEntries(readerPreferences.entries_per_page, { signal }),
   });
-  const totalAllCount = allCountQuery.data?.total ?? 0;
-  const totalStarredCount = starredCountQuery.data?.total ?? 0;
   const starredEntries = starredEntriesQuery.data?.entries ?? [];
 
   const view = useMemo(
@@ -181,21 +160,22 @@ export default function Home() {
       searchMode,
       searchQuery: activeSearchQuery,
       isStarredView,
-      selectedCategoryId,
+      selectedTagIds,
       statusFilter,
     }),
     [
       searchMode,
       activeSearchQuery,
       isStarredView,
-      selectedCategoryId,
+      selectedTagIds,
       statusFilter,
     ],
   );
 
   const {
     feeds,
-    categories,
+    tags,
+    counts,
     entries,
     total,
     isLoading,
@@ -226,22 +206,25 @@ export default function Home() {
     setActiveModal('none');
   }, []);
 
-  const defaultAddFeedCategoryId = useMemo(() => {
-    const firstRegularCategory = categories.find(
-      (category) => !isProtectedCategoryTitle(category.title),
-    );
-    return firstRegularCategory?.id ?? null;
-  }, [categories]);
+  // Tags a person can put on a feed: their own, minus the managed
+  // Instagram/Twitter ones. Automatic tags belong to posts, not feeds.
+  const assignableTags = useMemo(
+    () =>
+      tags.filter(
+        (tag) => tag.kind === 'manual' && !isProtectedCategoryTitle(tag.title),
+      ),
+    [tags],
+  );
 
   const resetAddModalForm = useCallback(() => {
-    setNewCategoryTitle('');
-    setAddCategoryError(null);
+    setNewTagTitle('');
+    setAddTagError(null);
     setNewFeedUrl('');
-    setNewFeedCategoryId(defaultAddFeedCategoryId);
+    setNewFeedTagIds([]);
     setAddFeedError(null);
     setDiscoveredFeeds([]);
     setSelectedDiscoveredFeedUrl('');
-  }, [defaultAddFeedCategoryId]);
+  }, []);
 
   const openAddModal = useCallback(() => {
     resetAddModalForm();
@@ -259,23 +242,6 @@ export default function Home() {
     setSelectedDiscoveredFeedUrl('');
     setAddFeedError(null);
   }, []);
-
-  useEffect(() => {
-    if (activeModal !== 'add') return;
-
-    const allowedCategoryIds = new Set(
-      categories
-        .filter((category) => !isProtectedCategoryTitle(category.title))
-        .map((category) => category.id),
-    );
-
-    setNewFeedCategoryId((previous) => {
-      if (previous !== null && allowedCategoryIds.has(previous)) {
-        return previous;
-      }
-      return defaultAddFeedCategoryId;
-    });
-  }, [activeModal, categories, defaultAddFeedCategoryId]);
 
   useEffect(() => {
     const win = getBrowserWindow();
@@ -296,17 +262,16 @@ export default function Home() {
     setEditItemId(null);
     setEditTitle('');
     setEditFeedUrl('');
-    setEditCategoryId(null);
-    setIsEditingProtectedCategory(false);
+    setEditTagIds([]);
     setEditError(null);
   }, []);
 
   const openEditModal = useCallback(
-    (type: 'feed' | 'category', item: Feed | Category) => {
-      if (type === 'category') {
-        const cat = item as Category;
-        if (isProtectedCategoryTitle(cat.title)) {
-          toast.error('This category is managed automatically.');
+    (type: 'feed' | 'tag', item: Feed | Tag) => {
+      if (type === 'tag') {
+        const tag = item as Tag;
+        if (tag.kind === 'auto' || isProtectedCategoryTitle(tag.title)) {
+          toast.error('This tag is managed automatically.');
           return;
         }
       }
@@ -314,13 +279,10 @@ export default function Home() {
       setEditType(type);
       setEditItemId(item.id);
       setEditTitle(item.title);
-      setIsEditingProtectedCategory(
-        type === 'category' && isProtectedCategoryTitle(item.title),
-      );
       if (type === 'feed') {
         const feed = item as Feed;
         setEditFeedUrl(feed.feed_url || '');
-        setEditCategoryId(feed.category?.id || null);
+        setEditTagIds(feed.tag_ids ?? []);
       }
       setActiveModal('edit');
       setEditError(null);
@@ -339,29 +301,12 @@ export default function Home() {
     return map;
   }, [feeds]);
 
-  const visibleHeaderCategories = categories;
-
-  const categoryUnreadCounts = useMemo(() => {
-    const counts = new Map<number, number>();
-    for (const category of categories) {
-      counts.set(category.id, category.total_unread ?? 0);
-    }
-    return counts;
-  }, [categories]);
-
-  const totalUnreadCount = useMemo(() => {
-    const visibleCategoryUnreadCount = categories.reduce((sum, category) => {
-      if (category.hide_globally) return sum;
-      return sum + (category.total_unread ?? 0);
-    }, 0);
-
-    const uncategorizedUnreadCount = feeds.reduce((sum, feed) => {
-      if (feed.hide_globally || feed.category?.id) return sum;
-      return sum + (feed.unread_count ?? 0);
-    }, 0);
-
-    return visibleCategoryUnreadCount + uncategorizedUnreadCount;
-  }, [categories, feeds]);
+  // Header: the person's own tags, then the automatic ones that
+  // currently match at least one post.
+  const headerTags = useMemo(
+    () => tags.filter((tag) => tag.kind === 'manual' || tag.has_entries),
+    [tags],
+  );
 
   const selectedEntry = useMemo(() => {
     return entries.find((e) => e.id === selectedEntryId) ?? null;
@@ -461,12 +406,24 @@ export default function Home() {
       if (!current || (current.status ?? 'unread') !== 'unread') return;
 
       void markEntryStatus([entryId], 'read')
-        .then(() => invalidateReaderData())
+        .then(() => {
+          // Keep the post in the loaded list (as read) so the open
+          // panel stays open; only the counts need re-reading.
+          setEntries((prev) =>
+            prev.map((entry) =>
+              entry.id === entryId ? { ...entry, status: 'read' } : entry,
+            ),
+          );
+          return Promise.all([
+            queryClient.invalidateQueries({ queryKey: readerQueryKeys.tags }),
+            queryClient.invalidateQueries({ queryKey: readerQueryKeys.feeds }),
+          ]);
+        })
         .catch((e) => {
           console.error('Failed to mark entry as read on open', e);
         });
     },
-    [invalidateReaderData, markEntryStatus],
+    [markEntryStatus, queryClient, setEntries],
   );
 
   const markSelectedEntryReadForExternalLink = useCallback(() => {
@@ -494,24 +451,14 @@ export default function Home() {
       return;
     }
 
-    if (selectedCategoryId !== null) {
-      await fetchJson<{ ok: true }>('/api/entries/mark-all-read', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          scope: 'category',
-          category_id: selectedCategoryId,
-        }),
-      });
-      return;
-    }
-
+    // Everything unread in the current view: the selected tags, or
+    // without tags the whole main list.
     await fetchJson<{ ok: true }>('/api/entries/mark-all-read', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ scope: 'user' }),
+      body: JSON.stringify({ tag_ids: selectedTagIds }),
     });
-  }, [isStarredView, markEntryStatus, searchMode, selectedCategoryId]);
+  }, [isStarredView, markEntryStatus, searchMode, selectedTagIds]);
 
   const setEntryStatusById = useCallback(
     async (entryId: number, status: 'read' | 'unread'): Promise<boolean> => {
@@ -619,10 +566,6 @@ export default function Home() {
       setAddFeedError('Enter a feed URL.');
       return false;
     }
-    if (newFeedCategoryId === null) {
-      setAddFeedError('Choose a category.');
-      return false;
-    }
 
     setAddFeedLoading(true);
     setAddFeedError(null);
@@ -631,8 +574,8 @@ export default function Home() {
       const requestBody: {
         feed_url?: string;
         selected_feed_url?: string;
-        category_id: number;
-      } = { category_id: newFeedCategoryId };
+        tag_ids: number[];
+      } = { tag_ids: newFeedTagIds };
       if (trimmedUrl) {
         requestBody.feed_url = trimmedUrl;
       }
@@ -669,7 +612,7 @@ export default function Home() {
       }
 
       setNewFeedUrl('');
-      setNewFeedCategoryId(defaultAddFeedCategoryId);
+      setNewFeedTagIds([]);
       setDiscoveredFeeds([]);
       setSelectedDiscoveredFeedUrl('');
       await invalidateReaderData();
@@ -682,57 +625,47 @@ export default function Home() {
     }
   }
 
-  async function addCategory(e: React.FormEvent): Promise<boolean> {
+  async function addTag(e: React.FormEvent): Promise<boolean> {
     e.preventDefault();
 
-    const trimmedTitle = newCategoryTitle.trim();
+    const trimmedTitle = newTagTitle.trim();
     if (!trimmedTitle) return false;
 
-    setAddCategoryLoading(true);
-    setAddCategoryError(null);
+    setAddTagLoading(true);
+    setAddTagError(null);
 
     try {
-      await fetchJson<unknown>('/api/categories/create', {
+      await fetchJson<unknown>('/api/tags', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: trimmedTitle }),
       });
 
-      setNewCategoryTitle('');
+      setNewTagTitle('');
       await invalidateReaderData();
       return true;
     } catch (e) {
-      setAddCategoryError(
-        e instanceof Error ? e.message : 'Failed to add category',
-      );
+      setAddTagError(e instanceof Error ? e.message : 'Failed to add tag');
       return false;
     } finally {
-      setAddCategoryLoading(false);
+      setAddTagLoading(false);
     }
   }
 
-  async function deleteCategory(categoryId: number): Promise<boolean> {
-    const category = categories.find((cat) => cat.id === categoryId);
-    if (category && isProtectedCategoryTitle(category.title)) {
-      toast.error('This category is managed automatically.');
-      return false;
-    }
-
+  async function deleteTag(tagId: number): Promise<boolean> {
     setIsLoading(true);
     setError(null);
 
     try {
-      await fetchJson<{ ok: boolean }>(`/api/categories/${categoryId}`, {
+      await fetchJson<{ ok: boolean }>(`/api/tags/${tagId}`, {
         method: 'DELETE',
       });
 
-      if (selectedCategoryId === categoryId) {
-        setSelectedCategoryId(null);
-      }
+      setSelectedTagIds((prev) => prev.filter((id) => id !== tagId));
       await invalidateReaderData();
       return true;
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to delete category');
+      setError(e instanceof Error ? e.message : 'Failed to delete tag');
       return false;
     } finally {
       setIsLoading(false);
@@ -758,14 +691,10 @@ export default function Home() {
     }
   }
 
-  async function updateCategory(e: React.FormEvent): Promise<boolean> {
+  async function updateTag(e: React.FormEvent): Promise<boolean> {
     e.preventDefault();
 
     if (!editItemId) return false;
-    if (isEditingProtectedCategory) {
-      setEditError('This category is managed automatically.');
-      return false;
-    }
 
     const trimmedTitle = editTitle.trim();
     if (!trimmedTitle) return false;
@@ -774,7 +703,7 @@ export default function Home() {
     setEditError(null);
 
     try {
-      await fetchJson<{ ok: boolean }>(`/api/categories/${editItemId}`, {
+      await fetchJson<{ ok: boolean }>(`/api/tags/${editItemId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: trimmedTitle }),
@@ -783,9 +712,7 @@ export default function Home() {
       await invalidateReaderData();
       return true;
     } catch (e) {
-      setEditError(
-        e instanceof Error ? e.message : 'Failed to update category',
-      );
+      setEditError(e instanceof Error ? e.message : 'Failed to update tag');
       return false;
     } finally {
       setEditLoading(false);
@@ -806,17 +733,11 @@ export default function Home() {
     setEditError(null);
 
     try {
-      const requestBody: {
-        title: string;
-        feed_url: string;
-        category_id?: number;
-      } = {
+      const requestBody = {
         title: trimmedTitle,
         feed_url: trimmedUrl,
+        tag_ids: editTagIds,
       };
-      if (editCategoryId !== null) {
-        requestBody.category_id = editCategoryId;
-      }
 
       await fetchJson<{ ok: boolean }>(`/api/feeds/${editItemId}`, {
         method: 'PUT',
@@ -850,44 +771,69 @@ export default function Home() {
     setIsCategoriesOpen((prev) => !prev);
   }, []);
 
-  const handleSelectUnread = useCallback(() => {
+  const closeSearch = useCallback(() => {
     setIsSearchOpen(false);
     setSearchQuery('');
     setActiveSearchQuery('');
     setSearchMode(false);
-    setSelectedCategoryId(null);
+  }, []);
+
+  // Unread and All switch the status and keep the selected tags.
+  const handleSelectUnread = useCallback(() => {
+    closeSearch();
     setIsStarredView(false);
     setStatusFilter('unread');
-  }, []);
+  }, [closeSearch]);
 
   const handleSelectAll = useCallback(() => {
-    setIsSearchOpen(false);
-    setSearchQuery('');
-    setActiveSearchQuery('');
-    setSearchMode(false);
-    setSelectedCategoryId(null);
+    closeSearch();
     setIsStarredView(false);
     setStatusFilter('all');
-  }, []);
+  }, [closeSearch]);
 
   const handleSelectStarred = useCallback(() => {
-    // Starred view is exclusive from search/category filters.
-    setIsSearchOpen(false);
-    setSearchQuery('');
-    setActiveSearchQuery('');
-    setSearchMode(false);
-    setSelectedCategoryId(null);
+    // Starred view is exclusive from search/tag filters.
+    closeSearch();
+    setSelectedTagIds([]);
     setIsStarredView(true);
+  }, [closeSearch]);
+
+  // Tags are toggles: several can be on at once and narrow the list
+  // to posts that have all of them.
+  const handleToggleTag = useCallback((tagId: number) => {
+    setIsStarredView(false);
+    setSelectedTagIds((prev) =>
+      prev.includes(tagId)
+        ? prev.filter((id) => id !== tagId)
+        : [...prev, tagId],
+    );
   }, []);
 
-  const handleSelectCategory = useCallback((categoryId: number) => {
-    setIsSearchOpen(false);
-    setSearchQuery('');
-    setActiveSearchQuery('');
-    setSearchMode(false);
-    setIsStarredView(false);
-    setSelectedCategoryId(categoryId);
-  }, []);
+  const handleToggleEntryTag = useCallback(
+    async (entryId: number, tagId: number, on: boolean) => {
+      try {
+        const result = await fetchJson<{ ok: boolean; tag_ids: number[] }>(
+          `/api/entries/${entryId}/tags`,
+          {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tag_id: tagId, on }),
+          },
+        );
+        setEntries((prev) =>
+          prev.map((entry) =>
+            entry.id === entryId
+              ? { ...entry, tag_ids: result.tag_ids }
+              : entry,
+          ),
+        );
+        await queryClient.invalidateQueries({ queryKey: readerQueryKeys.tags });
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : 'Failed to update tags');
+      }
+    },
+    [queryClient, setEntries],
+  );
 
   useEffect(() => {
     if (!readerDataEnabled || !isSearchOpen) return;
@@ -904,7 +850,6 @@ export default function Home() {
     const timeoutId = win.setTimeout(() => {
       setSearchMode(true);
       setIsStarredView(false);
-      setSelectedCategoryId(null);
       setSelectedEntryId(null);
       setActiveSearchQuery(trimmedQuery);
     }, 250);
@@ -938,6 +883,7 @@ export default function Home() {
           preview?: string;
           thumbnail_url?: string;
           reading_time?: number;
+          tag_ids?: number[];
         }>(`/api/entries/${targetEntry.id}/fetch-content`, { method: 'POST' });
 
         if (result.ok && result.content) {
@@ -951,6 +897,7 @@ export default function Home() {
                     preview: result.preview,
                     thumbnail_url: result.thumbnail_url ?? e.thumbnail_url,
                     reading_time: result.reading_time ?? e.reading_time,
+                    tag_ids: result.tag_ids ?? e.tag_ids,
                   }
                 : e,
             ),
@@ -1046,7 +993,7 @@ export default function Home() {
     setSelectedEntryId(null);
   }, [
     activeSearchQuery,
-    selectedCategoryId,
+    selectedTagIds,
     statusFilter,
     isStarredView,
     searchMode,
@@ -1078,6 +1025,38 @@ export default function Home() {
       win.removeEventListener('peace-rss:open-add-modal', onOpenAdd);
     };
   }, [openAddModal]);
+
+  // The selected tags live in the URL (?tags=games,review) so a
+  // combination can be bookmarked and survives a reload.
+  const didReadTagsFromUrlRef = useRef(false);
+  useEffect(() => {
+    if (didReadTagsFromUrlRef.current || tags.length === 0) return;
+    didReadTagsFromUrlRef.current = true;
+    const slugs = (searchParams.get('tags') ?? '')
+      .split(',')
+      .map((slug) => slug.trim())
+      .filter(Boolean);
+    if (slugs.length === 0) return;
+    const ids = slugs
+      .map((slug) => tags.find((tag) => tag.slug === slug)?.id)
+      .filter((id): id is number => typeof id === 'number');
+    if (ids.length > 0) setSelectedTagIds(ids);
+  }, [searchParams, tags]);
+
+  useEffect(() => {
+    if (!didReadTagsFromUrlRef.current) return;
+    const slugs = selectedTagIds
+      .map((id) => tags.find((tag) => tag.id === id)?.slug)
+      .filter((slug): slug is string => Boolean(slug));
+    const next = slugs.join(',');
+    if ((searchParams.get('tags') ?? '') === next) return;
+
+    const params = new URLSearchParams(searchParams.toString());
+    if (next) params.set('tags', next);
+    else params.delete('tags');
+    const qs = params.toString().replace(/%2C/g, ',');
+    router.replace(qs ? `/?${qs}` : '/', { scroll: false });
+  }, [router, searchParams, selectedTagIds, tags]);
 
   useEffect(() => {
     if (searchParams.get('openAdd') !== '1') return;
@@ -1238,7 +1217,7 @@ export default function Home() {
             <MenuModal
               isOpen={activeModal === 'menu'}
               onClose={closeMenuModal}
-              categories={categories}
+              tags={tags}
               feeds={feeds}
               openEditModal={openEditModal}
               openAddModal={openAddModal}
@@ -1250,16 +1229,16 @@ export default function Home() {
             <AddModal
               isOpen={activeModal === 'add'}
               onClose={closeAddModal}
-              categories={categories}
-              newCategoryTitle={newCategoryTitle}
-              setNewCategoryTitle={setNewCategoryTitle}
-              addCategoryLoading={addCategoryLoading}
-              addCategoryError={addCategoryError}
-              addCategory={addCategory}
+              tags={assignableTags}
+              newTagTitle={newTagTitle}
+              setNewTagTitle={setNewTagTitle}
+              addTagLoading={addTagLoading}
+              addTagError={addTagError}
+              addTag={addTag}
               newFeedUrl={newFeedUrl}
               setNewFeedUrl={handleSetNewFeedUrl}
-              newFeedCategoryId={newFeedCategoryId}
-              setNewFeedCategoryId={setNewFeedCategoryId}
+              newFeedTagIds={newFeedTagIds}
+              setNewFeedTagIds={setNewFeedTagIds}
               discoveredFeeds={discoveredFeeds}
               selectedDiscoveredFeedUrl={selectedDiscoveredFeedUrl}
               setSelectedDiscoveredFeedUrl={setSelectedDiscoveredFeedUrl}
@@ -1273,21 +1252,20 @@ export default function Home() {
               isOpen={activeModal === 'edit'}
               editType={editType}
               editItemId={editItemId}
-              categories={categories}
+              tags={assignableTags}
               editTitle={editTitle}
               editFeedUrl={editFeedUrl}
-              editCategoryId={editCategoryId}
-              isEditingProtectedCategory={isEditingProtectedCategory}
+              editTagIds={editTagIds}
               editLoading={editLoading}
               editError={editError}
               onClose={closeEditModal}
-              onDeleteCategory={deleteCategory}
+              onDeleteTag={deleteTag}
               onDeleteFeed={deleteFeed}
-              onUpdateCategory={updateCategory}
+              onUpdateTag={updateTag}
               onUpdateFeed={updateFeed}
               onChangeTitle={setEditTitle}
               onChangeFeedUrl={setEditFeedUrl}
-              onChangeCategoryId={setEditCategoryId}
+              onChangeTagIds={setEditTagIds}
             />
 
             <TheHeader
@@ -1296,15 +1274,14 @@ export default function Home() {
               isCategoriesOpen={isCategoriesOpen}
               onToggleCategories={toggleCategories}
               isOffline={isOffline}
-              categories={visibleHeaderCategories}
-              selectedCategoryId={selectedCategoryId}
+              tags={headerTags}
+              selectedTagIds={selectedTagIds}
               isUnreadView={isUnreadMode}
               isAllEntriesView={isAllMode}
               isStarredView={isStarredView}
-              categoryUnreadCounts={categoryUnreadCounts}
-              totalUnreadCount={totalUnreadCount}
-              totalAllCount={totalAllCount}
-              totalStarredCount={totalStarredCount}
+              totalUnreadCount={counts.unread}
+              totalAllCount={counts.all}
+              totalStarredCount={counts.starred}
               isLoading={isLoading}
               isSearchOpen={isSearchOpen}
               searchQuery={searchQuery}
@@ -1313,7 +1290,7 @@ export default function Home() {
               onSelectUnread={handleSelectUnread}
               onSelectAll={handleSelectAll}
               onSelectStarred={handleSelectStarred}
-              onSelectCategory={handleSelectCategory}
+              onToggleTag={handleToggleTag}
             />
 
             {error ? <div className={styles.error}>{error}</div> : null}
@@ -1334,6 +1311,11 @@ export default function Home() {
             <EntryPanel
               entry={selectedEntry}
               feedsById={feedsById}
+              tags={tags}
+              onToggleTag={(tagId, on) => {
+                if (!selectedEntry) return;
+                void handleToggleEntryTag(selectedEntry.id, tagId, on);
+              }}
               onClose={() => setSelectedEntryId(null)}
               onToggleStar={() => void toggleSelectedStar()}
               onOpenExternalLink={markSelectedEntryReadForExternalLink}

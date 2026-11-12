@@ -5,7 +5,7 @@ import styles from './TheHeader.module.sass';
 import { Button } from '@/components/Button/Button';
 import { IconMenu } from '@/components/icons/IconMenu';
 import { IconWrapper } from '@/components/icons/IconWrapper/IconWrapper';
-import type { Category } from '@/app/_lib/types';
+import type { Tag } from '@/app/_lib/types';
 import { IconSearch } from '@/components/icons/IconSearch';
 import { IconCategories } from '../icons/IconCategories';
 import { IconStar } from '../icons/IconStar';
@@ -16,12 +16,12 @@ export type TheHeaderProps = {
   isCategoriesOpen: boolean;
   onToggleCategories: () => void;
   isOffline: boolean;
-  categories: Category[];
-  selectedCategoryId: number | null;
+  tags: Tag[];
+  /** Tags that are toggled on; the list shows posts with all of them. */
+  selectedTagIds: number[];
   isUnreadView: boolean;
   isAllEntriesView: boolean;
   isStarredView: boolean;
-  categoryUnreadCounts: Map<number, number>;
   totalUnreadCount: number;
   totalAllCount: number;
   totalStarredCount: number;
@@ -33,7 +33,7 @@ export type TheHeaderProps = {
   onSelectUnread: () => void;
   onSelectAll: () => void;
   onSelectStarred: () => void;
-  onSelectCategory: (categoryId: number) => void;
+  onToggleTag: (tagId: number) => void;
 };
 
 export function TheHeader({
@@ -42,12 +42,11 @@ export function TheHeader({
   isCategoriesOpen,
   onToggleCategories,
   isOffline,
-  categories,
-  selectedCategoryId,
+  tags,
+  selectedTagIds,
   isUnreadView,
   isAllEntriesView,
   isStarredView,
-  categoryUnreadCounts,
   totalUnreadCount,
   totalAllCount,
   totalStarredCount,
@@ -59,7 +58,7 @@ export function TheHeader({
   onSelectUnread,
   onSelectAll,
   onSelectStarred,
-  onSelectCategory,
+  onToggleTag,
 }: TheHeaderProps) {
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const headerRef = useRef<HTMLElement | null>(null);
@@ -161,12 +160,12 @@ export function TheHeader({
               onClick={onToggleCategories}
               aria-expanded={isCategoriesOpen}
               aria-controls="header-categories-list"
-              aria-label="Toggle categories"
+              aria-label="Toggle tags"
             >
               <IconWrapper>
                 <IconCategories />
               </IconWrapper>
-              <span>Categories</span>
+              <span>Tags</span>
             </Button>
           </div>
         )}
@@ -223,25 +222,28 @@ export function TheHeader({
                 <span>Starred</span>
               </Button>
             </li>
-            {categories.map((cat) => (
-              <li key={cat.id}>
-                <Button
-                  type="button"
-                  variant="nav"
-                  active={selectedCategoryId === cat.id}
-                  className={`${styles.header_CategoryList_Item} ${
-                    selectedCategoryId === cat.id
-                      ? styles.categoryItemActive
-                      : ''
-                  }`}
-                  onClick={() => onSelectCategory(cat.id)}
-                  disabled={isLoading}
-                  count={categoryUnreadCounts.get(cat.id) ?? 0}
-                >
-                  <span>{cat.title}</span>
-                </Button>
-              </li>
-            ))}
+            {tags.map((tag) => {
+              const isOn = selectedTagIds.includes(tag.id);
+              return (
+                <li key={tag.id}>
+                  <Button
+                    type="button"
+                    variant="nav"
+                    active={isOn}
+                    aria-pressed={isOn}
+                    data-tag-kind={tag.kind}
+                    className={`${styles.header_CategoryList_Item} ${
+                      isOn ? styles.categoryItemActive : ''
+                    }`}
+                    onClick={() => onToggleTag(tag.id)}
+                    disabled={isLoading}
+                    count={tag.total_unread ?? 0}
+                  >
+                    <span>{tag.title}</span>
+                  </Button>
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>

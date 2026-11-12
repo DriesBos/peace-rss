@@ -5,21 +5,37 @@ import {
   useQuery,
   useQueryClient,
 } from '@tanstack/react-query';
-import type { Category, EntriesResponse, Entry, Feed } from '@/app/_lib/types';
+import type {
+  EntriesResponse,
+  Entry,
+  Feed,
+  ReaderCounts,
+  Tag,
+  TagsResponse,
+} from '@/app/_lib/types';
 import {
   buildEntriesUrl,
   DEFAULT_ENTRIES_PAGE_SIZE,
 } from '@/lib/entriesQuery';
-import { fetchCategories, fetchEntries, fetchFeeds } from '@/lib/readerApi';
+import {
+  fetchEntries,
+  fetchFeeds,
+  fetchTags,
+  syncReader,
+} from '@/lib/readerApi';
 import { readerQueryKeys, type EntriesQueryParams } from '@/lib/readerQueryKeys';
 
 export type ReaderView = {
   searchMode: boolean;
   searchQuery: string;
   isStarredView: boolean;
-  selectedCategoryId: number | null;
+  /** Posts must have all of these tags. */
+  selectedTagIds: number[];
   statusFilter: 'unread' | 'all';
 };
+
+const EMPTY_TAGS: Tag[] = [];
+const EMPTY_COUNTS: ReaderCounts = { unread: 0, all: 0, starred: 0 };
 
 type LoadEntriesOptions = {
   append?: boolean;
@@ -78,7 +94,7 @@ export function useReaderData({
       searchMode: view.searchMode,
       searchQuery: view.searchMode ? view.searchQuery.trim() : '',
       isStarredView: view.searchMode ? false : view.isStarredView,
-      selectedCategoryId: view.searchMode ? null : view.selectedCategoryId,
+      selectedTagIds: view.isStarredView ? [] : view.selectedTagIds,
       statusFilter:
         view.searchMode || view.isStarredView ? 'all' : view.statusFilter,
     }),
@@ -87,7 +103,7 @@ export function useReaderData({
       view.isStarredView,
       view.searchMode,
       view.searchQuery,
-      view.selectedCategoryId,
+      view.selectedTagIds,
       view.statusFilter,
     ],
   );
@@ -100,10 +116,10 @@ export function useReaderData({
     queryFn: ({ signal }) => fetchFeeds({ signal }),
   });
 
-  const categoriesQuery = useQuery({
-    queryKey: readerQueryKeys.categories,
+  const tagsQuery = useQuery({
+    queryKey: readerQueryKeys.tags,
     enabled: isProvisioned,
-    queryFn: ({ signal }) => fetchCategories({ signal }),
+    queryFn: ({ signal }) => fetchTags({ signal }),
   });
 
   const entriesQuery = useInfiniteQuery({
@@ -120,12 +136,14 @@ export function useReaderData({
         offset: pageParam,
         searchQuery: entriesParams.searchQuery,
         isStarredView: entriesParams.isStarredView,
-        selectedCategoryId: entriesParams.selectedCategoryId,
+        selectedTagIds: entriesParams.selectedTagIds,
         status: effectiveStatus,
+        // Feeds hidden from the main lists (social feeds) only show
+        // up once a tag is selected, in search or when starred.
         globallyVisible:
           !entriesParams.searchMode &&
           !entriesParams.isStarredView &&
-          entriesParams.selectedCategoryId === null,
+          entriesParams.selectedTagIds.length === 0,
       });
       return fetchEntries(url, { signal });
     },
@@ -146,11 +164,11 @@ export function useReaderData({
     return result.data ?? [];
   }, [feedsQuery]);
 
-  const loadCategories = useCallback(async (): Promise<Category[]> => {
-    const result = await categoriesQuery.refetch();
+  const loadTags = useCallback(async (): Promise<Tag[]> => {
+    const result = await tagsQuery.refetch();
     if (result.error) throw result.error;
-    return result.data ?? [];
-  }, [categoriesQuery]);
+    return result.data?.tags ?? [];
+  }, [tagsQuery]);
 
   const fetchEntriesData = useCallback(
     async (options: LoadEntriesOptions = {}): Promise<EntriesResponse> => {
@@ -169,12 +187,12 @@ export function useReaderData({
         offset,
         searchQuery: view.searchMode ? view.searchQuery : '',
         isStarredView: view.searchMode ? false : view.isStarredView,
-        selectedCategoryId: view.searchMode ? null : view.selectedCategoryId,
+        selectedTagIds: view.isStarredView ? [] : view.selectedTagIds,
         status: effectiveStatus,
         globallyVisible:
           !view.searchMode &&
           !view.isStarredView &&
-          view.selectedCategoryId === null,
+          view.selectedTagIds.length === 0,
         changedAfter,
         publishedAfter: publishedAfterOverride,
       });
@@ -215,19 +233,20 @@ export function useReaderData({
       setManualError(null);
 
       try {
-        const [entriesResult, feedsResult, categoriesResult] =
+        // Pull new posts from Miniflux into our copy before re-reading it.
+        await syncReader();
+        const [entriesResult, feedsResult, tagsResult] =
           await Promise.all([
             entriesQuery.refetch(),
             feedsQuery.refetch(),
-            categoriesQuery.refetch(),
-            queryClient.invalidateQueries({ queryKey: readerQueryKeys.counts }),
+            tagsQuery.refetch(),
             queryClient.invalidateQueries({
               queryKey: readerQueryKeys.starredEntriesRoot,
             }),
             ...(extraTasks?.() ?? []),
           ]);
         const firstError =
-          entriesResult.error ?? feedsResult.error ?? categoriesResult.error;
+          entriesResult.error ?? feedsResult.error ?? tagsResult.error;
         if (firstError) throw firstError;
         setLastRefreshedAt(Date.now());
         return toEntriesResponse(entriesResult.data);
@@ -240,12 +259,12 @@ export function useReaderData({
       }
     },
     [
-      categoriesQuery,
       entriesQuery,
       feedsQuery,
       isProvisioned,
       manualLoading,
       queryClient,
+      tagsQuery,
     ],
   );
 
@@ -288,12 +307,12 @@ export function useReaderData({
     [queryClient],
   );
 
-  const setCategories = useCallback(
-    (updater: ListUpdater<Category>) => {
-      queryClient.setQueryData<Category[]>(
-        readerQueryKeys.categories,
-        (data) => applyListUpdater(updater, data ?? []),
-      );
+  const setTags = useCallback(
+    (updater: ListUpdater<Tag>) => {
+      queryClient.setQueryData<TagsResponse>(readerQueryKeys.tags, (data) => ({
+        counts: data?.counts ?? EMPTY_COUNTS,
+        tags: applyListUpdater(updater, data?.tags ?? []),
+      }));
     },
     [queryClient],
   );
@@ -301,12 +320,13 @@ export function useReaderData({
   const queryError =
     errorMessage(entriesQuery.error) ??
     errorMessage(feedsQuery.error) ??
-    errorMessage(categoriesQuery.error);
+    errorMessage(tagsQuery.error);
   const entries = flattenEntries(entriesQuery.data);
 
   return {
     feeds: feedsQuery.data ?? [],
-    categories: categoriesQuery.data ?? [],
+    tags: tagsQuery.data?.tags ?? EMPTY_TAGS,
+    counts: tagsQuery.data?.counts ?? EMPTY_COUNTS,
     entries,
     total: entriesQuery.data?.pages[0]?.total ?? entries.length,
     isLoading:
@@ -314,18 +334,18 @@ export function useReaderData({
       entriesQuery.isPending ||
       entriesQuery.isFetchingNextPage ||
       feedsQuery.isPending ||
-      categoriesQuery.isPending,
+      tagsQuery.isPending,
     isRefreshingFeeds,
     error: manualError ?? queryError,
     lastRefreshedAt,
     setTotal: () => {},
     setEntries,
     setFeeds,
-    setCategories,
+    setTags,
     setIsLoading: setManualLoading,
     setError: setManualError,
     loadFeeds,
-    loadCategories,
+    loadTags,
     fetchEntriesData,
     loadEntries,
     resetEntries,

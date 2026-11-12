@@ -5,12 +5,23 @@
 - Articles are marked (set to `read`) when the user marks them.
 - Articles are marked (set to `read`) when the user opens them in the reader.
 - Opening an external link from the selected entry marks that entry as `read`.
-- Marking a full page as read uses Miniflux server-side mark-all endpoints for home and category views.
+- Marking everything as read applies to the current view: the selected tags, or without tags the whole main list.
 
 ## Entry Loading
 
-- Home queries use Miniflux's `globally_visible=true` filter so hidden feeds/categories do not leak into global `Unread` and `All`.
+- Lists are read from our own `reader` tables (see Tags And The Reader Database). Feeds with `hide_globally=true` stay out of `Unread` and `All` until a tag is selected.
 - Original article fetching is manual. The reader shows Miniflux entry content by default, and `Fetch source` updates the entry through Miniflux when requested.
+
+## Tags And The Reader Database
+
+- Miniflux only fetches feeds. The app copies feeds and posts into its own Postgres schema `reader` (created and migrated on start, `READER_DATABASE_URL`) and reads lists, counts and search from there.
+- Sync runs inside the Next.js server every `READER_SYNC_INTERVAL_SECONDS` (default 60), on refresh (`POST /api/sync`) and after adding feeds. `GET /api/sync` compares mirror and Miniflux counts.
+- Read and star changes go to Miniflux first, then to the mirror.
+- Tags replace categories in the UI. On first sync every Miniflux category becomes a tag on its feeds.
+- Feeds carry tags; a post has its feed's tags plus its own. Tags can be switched on or off per post in the entry panel.
+- Auto tags are set per post when it is synced: `Video`, `Audio`, `Images` (3+ images and under 150 words) and `Long-form` (10+ minutes reading time). An auto tag removed by hand stays removed.
+- The header bar shows `Unread`, `All`, `Starred` and all tags. Tags are toggles: several can be on at once and the list shows posts that have all of them. The selection lives in the URL as `?tags=slug,slug`.
+- Posts older than `READER_RETENTION_DAYS` (default 180) are dropped from the mirror unless starred or tagged by hand.
 
 ## Hidden Global Feeds
 

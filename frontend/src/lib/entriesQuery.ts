@@ -7,7 +7,8 @@ type EntriesQueryOptions = {
   direction?: 'asc' | 'desc';
   searchQuery?: string;
   isStarredView?: boolean;
-  selectedCategoryId?: number | null;
+  /** Posts must have all of these tags. */
+  selectedTagIds?: number[];
   status?: 'read' | 'unread' | 'all' | null;
   globallyVisible?: boolean;
   changedAfter?: number;
@@ -21,7 +22,7 @@ export function buildEntriesUrl({
   direction = 'desc',
   searchQuery,
   isStarredView = false,
-  selectedCategoryId = null,
+  selectedTagIds = [],
   status = 'unread',
   globallyVisible = false,
   changedAfter,
@@ -43,8 +44,8 @@ export function buildEntriesUrl({
     qs.set('status', status);
   }
 
-  if (!trimmedQuery && selectedCategoryId !== null) {
-    qs.set('category_id', String(selectedCategoryId));
+  if (selectedTagIds.length > 0) {
+    qs.set('tags', selectedTagIds.join(','));
   }
 
   if (globallyVisible) {

@@ -5,26 +5,27 @@ import styles from './AddModal.module.sass';
 import { ModalContainer } from '@/components/ModalContainer/ModalContainer';
 import { LabeledInput } from '@/components/LabeledInput/LabeledInput';
 import { LabeledSelect } from '@/components/LabeledSelect/LabeledSelect';
-import type { Category, DiscoveredFeed } from '@/app/_lib/types';
+import { TagPicker } from '@/components/TagPicker/TagPicker';
+import type { DiscoveredFeed, Tag } from '@/app/_lib/types';
 import { toast } from 'sonner';
 import { NOTIFICATION_COPY } from '@/lib/notificationCopy';
 import { useKeydown } from '@/hooks/useKeydown';
 import { Button } from '@/components/Button/Button';
-import { isProtectedCategoryTitle } from '@/lib/protectedCategories';
 
 export type AddModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  categories: Category[];
-  newCategoryTitle: string;
-  setNewCategoryTitle: (value: string) => void;
-  addCategoryLoading: boolean;
-  addCategoryError: string | null;
-  addCategory: (e: React.FormEvent) => Promise<boolean>;
+  /** Tags that can be put on a feed. */
+  tags: Tag[];
+  newTagTitle: string;
+  setNewTagTitle: (value: string) => void;
+  addTagLoading: boolean;
+  addTagError: string | null;
+  addTag: (e: React.FormEvent) => Promise<boolean>;
   newFeedUrl: string;
   setNewFeedUrl: (value: string) => void;
-  newFeedCategoryId: number | null;
-  setNewFeedCategoryId: (value: number | null) => void;
+  newFeedTagIds: number[];
+  setNewFeedTagIds: (value: number[]) => void;
   discoveredFeeds: DiscoveredFeed[];
   selectedDiscoveredFeedUrl: string;
   setSelectedDiscoveredFeedUrl: (value: string) => void;
@@ -37,16 +38,16 @@ export type AddModalProps = {
 export function AddModal({
   isOpen,
   onClose,
-  categories,
-  newCategoryTitle,
-  setNewCategoryTitle,
-  addCategoryLoading,
-  addCategoryError,
-  addCategory,
+  tags,
+  newTagTitle,
+  setNewTagTitle,
+  addTagLoading,
+  addTagError,
+  addTag,
   newFeedUrl,
   setNewFeedUrl,
-  newFeedCategoryId,
-  setNewFeedCategoryId,
+  newFeedTagIds,
+  setNewFeedTagIds,
   discoveredFeeds,
   selectedDiscoveredFeedUrl,
   setSelectedDiscoveredFeedUrl,
@@ -56,16 +57,14 @@ export function AddModal({
   isLoading,
 }: AddModalProps) {
   const isChoosingDiscoveredFeed = discoveredFeeds.length > 0;
-  const hasCategoryChoice = newFeedCategoryId !== null;
   const canSubmitFeed = isChoosingDiscoveredFeed
-    ? Boolean(selectedDiscoveredFeedUrl) && hasCategoryChoice
-    : Boolean(newFeedUrl.trim()) && hasCategoryChoice;
+    ? Boolean(selectedDiscoveredFeedUrl)
+    : Boolean(newFeedUrl.trim());
 
-  const handleAddCategory = async (event: React.FormEvent) => {
-    const didSucceed = await addCategory(event);
+  const handleAddTag = async (event: React.FormEvent) => {
+    const didSucceed = await addTag(event);
     if (didSucceed) {
-      toast.success(NOTIFICATION_COPY.app.categoryAdded);
-      onClose();
+      toast.success(NOTIFICATION_COPY.app.tagAdded);
     }
   };
 
@@ -90,15 +89,6 @@ export function AddModal({
     },
   );
 
-  const categoryOptions = useMemo(() => {
-    return categories
-      .filter((cat) => !isProtectedCategoryTitle(cat.title))
-      .map((cat) => ({
-        value: String(cat.id),
-        label: cat.title,
-      }));
-  }, [categories]);
-
   const discoveredFeedOptions = useMemo(() => {
     return discoveredFeeds.map((feed) => ({
       value: feed.url,
@@ -109,29 +99,6 @@ export function AddModal({
   return (
     <ModalContainer isOpen={isOpen} onClose={onClose} ariaLabel="Add">
       <div className={styles.modalAdd}>
-        <form onSubmit={handleAddCategory} className={styles.formBlock}>
-          <LabeledInput
-            id="add-category-title"
-            label="Category name"
-            value={newCategoryTitle}
-            onChange={setNewCategoryTitle}
-            placeholder="Category name.."
-            disabled={addCategoryLoading || isLoading}
-          />
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={
-              addCategoryLoading || isLoading || !newCategoryTitle.trim()
-            }
-          >
-            {addCategoryLoading ? 'Adding...' : 'Add category'}
-          </Button>
-          {addCategoryError && (
-            <div className={styles.error}>{addCategoryError}</div>
-          )}
-        </form>
-
         <form onSubmit={handleAddFeed} className={styles.formBlock}>
           <LabeledInput
             id="add-feed-url"
@@ -141,22 +108,20 @@ export function AddModal({
             placeholder="Add web address..."
             disabled={addFeedLoading || isLoading}
           />
-          <LabeledSelect
-            id="add-feed-category"
-            label="Category"
-            value={newFeedCategoryId ? String(newFeedCategoryId) : ''}
-            onChange={(value) =>
-              setNewFeedCategoryId(value ? Number(value) : null)
+          <TagPicker
+            label="Tags"
+            tags={tags}
+            selectedIds={newFeedTagIds}
+            onToggle={(tagId, on) =>
+              setNewFeedTagIds(
+                on
+                  ? [...newFeedTagIds, tagId]
+                  : newFeedTagIds.filter((id) => id !== tagId),
+              )
             }
-            placeholder="Select category"
-            options={categoryOptions}
             disabled={addFeedLoading || isLoading}
+            emptyHint="No tags yet. Add one below; tags are optional."
           />
-          {!hasCategoryChoice ? (
-            <div className={styles.help}>
-              Create a category first before adding feeds.
-            </div>
-          ) : null}
           {isChoosingDiscoveredFeed ? (
             <>
               <LabeledSelect
@@ -185,6 +150,25 @@ export function AddModal({
                 : 'Add feed'}
           </button>
           {addFeedError && <div className={styles.error}>{addFeedError}</div>}
+        </form>
+
+        <form onSubmit={handleAddTag} className={styles.formBlock}>
+          <LabeledInput
+            id="add-tag-title"
+            label="New tag"
+            value={newTagTitle}
+            onChange={setNewTagTitle}
+            placeholder="Tag name.."
+            disabled={addTagLoading || isLoading}
+          />
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={addTagLoading || isLoading || !newTagTitle.trim()}
+          >
+            {addTagLoading ? 'Adding...' : 'Add tag'}
+          </Button>
+          {addTagError && <div className={styles.error}>{addTagError}</div>}
         </form>
       </div>
     </ModalContainer>

@@ -5,6 +5,9 @@ import { auth, clerkClient } from '@clerk/nextjs/server';
 import { apiErrorStatus } from '@/lib/apiErrors';
 import { MinifluxApiError, mfFetchUser } from '@/lib/miniflux';
 import { isYouTubeFeedUrl } from '@/lib/youtube';
+import { ensureAccount } from '@/lib/reader/account';
+import { setFeedTags } from '@/lib/reader/queries';
+import { syncUser } from '@/lib/reader/sync';
 
 export const runtime = 'nodejs';
 
@@ -18,6 +21,8 @@ type CreateFeedRequest = {
   feed_url?: string;
   category_id?: number;
   selected_feed_url?: string;
+  /** Tags to put on the new feed (our own tags, see lib/reader). */
+  tag_ids?: number[];
 };
 
 type DiscoveredFeed = {
@@ -435,8 +440,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { feed_url, category_id, selected_feed_url } =
+    const { feed_url, category_id, selected_feed_url, tag_ids } =
       body as CreateFeedRequest;
+    const tagIds = Array.isArray(tag_ids)
+      ? tag_ids.filter((id) => Number.isInteger(id) && id > 0)
+      : [];
     const trimmedUrl = typeof feed_url === 'string' ? feed_url.trim() : '';
     const trimmedSelectedFeedUrl =
       typeof selected_feed_url === 'string' ? selected_feed_url.trim() : '';
@@ -612,6 +620,21 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify(requestBody),
       }
     );
+
+    // 7. Mirror the new feed and its first entries, then tag it.
+    try {
+      const ctx = { userId, token };
+      await ensureAccount(userId, token);
+      await syncUser(ctx);
+      const newFeedId =
+        (createdFeed as { feed_id?: number }).feed_id ?? createdFeed.id;
+      if (Number.isInteger(newFeedId)) {
+        await setFeedTags(userId, newFeedId, tagIds);
+      }
+    } catch (mirrorErr) {
+      // The feed exists in Miniflux; the background sync will catch up.
+      console.error('Failed to mirror new feed:', mirrorErr);
+    }
 
     return NextResponse.json(createdFeed);
   } catch (err) {

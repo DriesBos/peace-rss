@@ -35,6 +35,9 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml \
 # The env files point at the Docker hostname (miniflux:8080).
 # Process env wins over Next's .env files, so override them with host URLs here.
 export MINIFLUX_BASE_URL="http://localhost:8080/miniflux"
+# Reader tables (mirrored posts + tags) live in the Docker Postgres, published on 5433.
+env_value() { grep -E "^$1=" .env | tail -1 | cut -d= -f2- | sed -e 's/^["'"'"']//' -e 's/["'"'"']$//'; }
+export READER_DATABASE_URL="postgres://$(env_value POSTGRES_USER):$(env_value POSTGRES_PASSWORD)@localhost:5433/$(env_value POSTGRES_DB)?sslmode=disable"
 
 echo "Miniflux: http://localhost:8080/miniflux/"
 if [ "${1:-}" = "--https" ]; then
