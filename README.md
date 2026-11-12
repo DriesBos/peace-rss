@@ -1,6 +1,6 @@
 # Komorebi Reader
 
-A minimalist RSS reader built on Miniflux, wrapped in a modern Next.js UI with Clerk auth.
+A minimalist RSS reader built on Miniflux, wrapped in a modern Next.js UI with self-hosted Better Auth.
 
 ## What This Repo Contains
 

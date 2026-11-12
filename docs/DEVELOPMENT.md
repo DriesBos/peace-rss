@@ -6,7 +6,7 @@
 
 ## Environment
 - Copy `ENV-TEMPLATE.md` to `.env` and fill values.
-- Required variables include Clerk keys, Miniflux config, and Postgres credentials.
+- Required variables include Better Auth secrets, a Resend key (optional locally), Miniflux config, and Postgres credentials.
 
 ## Quick Start (hot reload)
 From the repo root:
@@ -67,9 +67,11 @@ docker compose up -d --build frontend
 
 ## Local Reading Data
 
-The local Miniflux/Postgres services use their own Docker volume. Use Clerk
-development keys (`pk_test_` and `sk_test_`) locally; logging in with the same
-email address as production creates a separate development account.
+The local Miniflux/Postgres services use their own Docker volume. Auth uses a
+separate `komorebi_auth` database on the same local Postgres, so logging in with
+the same email address as production creates a separate development account.
+Without `RESEND_API_KEY`, verification and password-reset links are printed to
+the Next.js log instead of emailed.
 
 To copy subscriptions into local development:
 

@@ -1,7 +1,8 @@
 import 'server-only';
 
 import { NextResponse } from 'next/server';
-import { auth, clerkClient } from '@clerk/nextjs/server';
+import { getSession } from '@/lib/auth';
+import { getMinifluxAccount } from '@/lib/minifluxAccount';
 
 export type MinifluxAuthResult =
   | { ok: true; userId: string; token: string }
@@ -12,20 +13,18 @@ export type MinifluxAuthResult =
  * Every API route goes through this, so the auth provider lives in one place.
  */
 export async function requireMinifluxToken(): Promise<MinifluxAuthResult> {
-  const { userId } = await auth();
-  if (!userId) {
+  const session = await getSession();
+  if (!session) {
     return {
       ok: false,
       response: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }),
     };
   }
 
-  const client = await clerkClient();
-  const user = await client.users.getUser(userId);
-  const metadata = user.privateMetadata as { minifluxToken?: string } | undefined;
-  const token = metadata?.minifluxToken;
+  const userId = session.user.id;
+  const account = await getMinifluxAccount(userId);
 
-  if (!token) {
+  if (!account) {
     return {
       ok: false,
       response: NextResponse.json(
@@ -35,5 +34,5 @@ export async function requireMinifluxToken(): Promise<MinifluxAuthResult> {
     };
   }
 
-  return { ok: true, userId, token };
+  return { ok: true, userId, token: account.token };
 }

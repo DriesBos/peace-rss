@@ -9,7 +9,7 @@
 
 ## Auth
 
-- Clerk (frontend + server-side keys)
+- Better Auth (self-hosted, email + password, Resend for emails)
 
 ## Backend Services
 

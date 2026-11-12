@@ -6,14 +6,24 @@ Copy this template to create your `.env` file in the project root.
 
 ```bash
 # ============================================
-# Clerk Authentication
+# Authentication (Better Auth, self-hosted)
 # ============================================
-# Get these from: https://dashboard.clerk.com/
-# Development: Use keys starting with pk_test_ and sk_test_
-# Production: Use keys starting with pk_live_ and sk_live_
+# Signs session cookies. Generate with: openssl rand -base64 32
+BETTER_AUTH_SECRET=replace_with_a_long_random_secret
+# Public URL of the app (exact origin users visit)
+BETTER_AUTH_URL=https://komorebi-reader.com
+# Encrypts each user's Miniflux API token at rest. Generate with: openssl rand -base64 32
+# Never change it after users exist, or stored tokens become unreadable.
+MINIFLUX_TOKEN_KEY=replace_with_a_long_random_secret
+# Optional: auth database name on the shared Postgres (created on startup)
+# AUTH_POSTGRES_DB=komorebi_auth
 
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_xxxxx
-CLERK_SECRET_KEY=sk_test_xxxxx
+# ============================================
+# Email (Resend) for verification and password reset
+# ============================================
+# Without RESEND_API_KEY, emails are logged to the frontend container instead.
+RESEND_API_KEY=re_xxxxx
+AUTH_EMAIL_FROM="Komorebi Reader <no-reply@komorebi-reader.com>"
 
 # ============================================
 # Miniflux Configuration
@@ -60,9 +70,9 @@ POSTGRES_DB=miniflux
 ## Important Notes
 
 1. **Never commit the `.env` file** - it's already in `.gitignore`
-2. **Different keys for dev/prod**:
-   - Local development: Use Clerk test keys
-   - Production server: Use Clerk live keys
+2. **Different secrets for dev/prod**:
+   - Local development: `BETTER_AUTH_URL=http://localhost`, Resend key optional
+   - Production server: its own `BETTER_AUTH_SECRET` and `MINIFLUX_TOKEN_KEY`
 3. **MINIFLUX_BASE_URL**:
    - Local Docker: `http://miniflux:8080/miniflux`
    - Production Docker: Same (internal DNS)
@@ -92,11 +102,12 @@ docker compose up -d --build
 
 ```bash
 # Check that frontend has all env vars
-docker compose exec frontend env | grep -E 'CLERK|MINIFLUX'
+docker compose exec frontend env | grep -E 'AUTH|MINIFLUX|RESEND'
 
 # Should show:
-# NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_...
-# CLERK_SECRET_KEY=sk_...
+# BETTER_AUTH_SECRET=...
+# BETTER_AUTH_URL=https://komorebi-reader.com
+# AUTH_DATABASE_URL=postgres://...@postgres:5432/komorebi_auth?sslmode=disable
 # MINIFLUX_BASE_URL=http://miniflux:8080/miniflux
 # MINIFLUX_ADMIN_USERNAME=admin
 # MINIFLUX_ADMIN_PASSWORD=...

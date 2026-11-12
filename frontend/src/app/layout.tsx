@@ -1,9 +1,5 @@
 import type { Metadata, Viewport } from 'next';
 import localFont from 'next/font/local';
-import {
-  ClerkProvider,
-  Show,
-} from '@clerk/nextjs';
 import '@/styles/vars.sass';
 import '@/styles/reset.css';
 import '@/styles/globals.sass';
@@ -17,6 +13,7 @@ import { MainKomorebiLayer } from '@/components/MainKomorebiLayer/MainKomorebiLa
 import { QueryProvider } from '@/components/QueryProvider/QueryProvider';
 import { SpacingWideController } from '@/components/SpacingWideController/SpacingWideController';
 import { TypeSizeController } from '@/components/TypeSizeController/TypeSizeController';
+import { getSession } from '@/lib/auth';
 import { DEFAULT_FONT_FAMILY } from '@/lib/fontFamily';
 import { DEFAULT_KOMOREBI_MAIN } from '@/lib/komorebi';
 import { DEFAULT_THEME, THEME_OPTIONS } from '@/lib/theme';
@@ -121,59 +118,53 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   const showLandingPageInDevelopment = process.env.NODE_ENV === 'development';
+  const session = showLandingPageInDevelopment ? null : await getSession();
 
   return (
-    <ClerkProvider signInFallbackRedirectUrl="/">
-      <html lang="en" suppressHydrationWarning>
-        <body
-          className={`${untitledSans.variable} ${soulSister.variable} ${cheltenham.variable} ${imperial.variable}`}
-          data-font-family={DEFAULT_FONT_FAMILY}
-          data-komorebi-main={DEFAULT_KOMOREBI_MAIN}
-          data-spacing-wide="false"
-          data-type-size={DEFAULT_TYPE_SIZE}
+    <html lang="en" suppressHydrationWarning>
+      <body
+        className={`${untitledSans.variable} ${soulSister.variable} ${cheltenham.variable} ${imperial.variable}`}
+        data-font-family={DEFAULT_FONT_FAMILY}
+        data-komorebi-main={DEFAULT_KOMOREBI_MAIN}
+        data-spacing-wide="false"
+        data-type-size={DEFAULT_TYPE_SIZE}
+      >
+        <ThemeProvider
+          attribute="data-theme"
+          defaultTheme={DEFAULT_THEME}
+          themes={THEME_OPTIONS.filter((theme) => theme !== 'system')}
+          enableSystem={true}
+          storageKey="peace-rss-theme"
         >
-          <ThemeProvider
-            attribute="data-theme"
-            defaultTheme={DEFAULT_THEME}
-            themes={THEME_OPTIONS.filter((theme) => theme !== 'system')}
-            enableSystem={true}
-            storageKey="peace-rss-theme"
-          >
-            <SpacingWideController />
-            <FontFamilyController />
-            <TypeSizeController />
-            <KomorebiMainController />
-            <Notifications />
-            <QueryProvider>
-              <main>
-                {showLandingPageInDevelopment ? (
-                  <LandingPage />
-                ) : (
-                  <>
-                    <Show when="signed-out">
-                      <LandingPage />
-                    </Show>
-                    <Show when="signed-in">
-                      <MainKomorebiLayer />
-                      <div className="mainContentLayer">
-                        <GlobalKeybindings />
-                        {children}
-                      </div>
-                    </Show>
-                  </>
-                )}
-              </main>
-            </QueryProvider>
-            <div id="modal-root" />
-          </ThemeProvider>
-        </body>
-      </html>
-    </ClerkProvider>
+          <SpacingWideController />
+          <FontFamilyController />
+          <TypeSizeController />
+          <KomorebiMainController />
+          <Notifications />
+          <QueryProvider>
+            <main>
+              {!session ? (
+                <LandingPage />
+              ) : (
+                <>
+                  <MainKomorebiLayer />
+                  <div className="mainContentLayer">
+                    <GlobalKeybindings />
+                    {children}
+                  </div>
+                </>
+              )}
+            </main>
+          </QueryProvider>
+          <div id="modal-root" />
+        </ThemeProvider>
+      </body>
+    </html>
   );
 }

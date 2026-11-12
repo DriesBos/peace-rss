@@ -21,7 +21,7 @@ if [ ! -d frontend/node_modules ]; then
   pnpm --dir frontend install
 fi
 
-# Clerk, social feeds and the URLs below all assume port 3000, so don't let Next fall back.
+# Auth, social feeds and the URLs below all assume port 3000, so don't let Next fall back.
 if pid=$(lsof -ti tcp:3000 -sTCP:LISTEN 2>/dev/null | head -1) && [ -n "$pid" ]; then
   echo "Port 3000 is in use by: $(ps -p "$pid" -o pid=,command= | cut -c1-120)" >&2
   echo "Stop it (kill $pid) and run pnpm dev again." >&2
@@ -38,6 +38,15 @@ export MINIFLUX_BASE_URL="http://localhost:8080/miniflux"
 export RSS_BRIDGE_BASE_URL="http://localhost:8081"
 # Miniflux (in Docker) fetches social feeds back from Next.js on the host.
 export SOCIAL_FEEDS_BASE_URL="http://host.docker.internal:3000"
+# Better Auth: auth database on the Docker Postgres (exposed on 5433), and the host origin.
+env_value() { grep -E "^$1=" .env | tail -1 | cut -d= -f2- | sed -e 's/^"//' -e 's/"$//' || true; }
+AUTH_DB="$(env_value AUTH_POSTGRES_DB)"
+export AUTH_DATABASE_URL="postgres://$(env_value POSTGRES_USER):$(env_value POSTGRES_PASSWORD)@localhost:5433/${AUTH_DB:-komorebi_auth}?sslmode=disable"
+if [ "${1:-}" = "--https" ]; then
+  export BETTER_AUTH_URL="https://localhost:3000"
+else
+  export BETTER_AUTH_URL="http://localhost:3000"
+fi
 
 echo "Miniflux: http://localhost:8080/miniflux/"
 if [ "${1:-}" = "--https" ]; then

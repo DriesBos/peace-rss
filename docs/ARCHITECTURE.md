@@ -7,8 +7,9 @@
 4. Miniflux reads/writes feeds in Postgres.
 
 ## Auth Flow
-- Clerk handles user auth in the frontend.
-- API routes use Clerk session data plus Miniflux tokens/credentials to access Miniflux.
+- Better Auth runs inside the Next.js app (`/api/auth/*`, config in `frontend/src/lib/auth.ts`) with its tables in a separate `komorebi_auth` database on the same Postgres. The app creates the database and tables on startup (`instrumentation.ts`).
+- Sessions last 90 days and slide forward with use.
+- API routes call `requireMinifluxToken()` (`frontend/src/lib/minifluxAuth.ts`), which reads the session and the user's encrypted Miniflux token from the `miniflux_account` table.
 
 ## Key Runtime Pieces
 - Next.js App Router UI and API routes live in `frontend/src/app`.

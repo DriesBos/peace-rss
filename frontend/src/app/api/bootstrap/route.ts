@@ -1,7 +1,8 @@
 import 'server-only';
 
 import { NextResponse } from 'next/server';
-import { auth, clerkClient } from '@clerk/nextjs/server';
+import { getSession } from '@/lib/auth';
+import { getMinifluxAccount, saveMinifluxAccount } from '@/lib/minifluxAccount';
 import { randomBytes, randomInt } from 'node:crypto';
 import { apiErrorResponse } from '@/lib/apiErrors';
 import {
@@ -26,7 +27,7 @@ type MinifluxApiKey = {
 };
 
 /**
- * Generate a stable, sanitized username from Clerk user data
+ * Generate a stable, sanitized username from the user's email and id
  * Format: emailPrefix-userIdSuffix (e.g., driesbos-7h3k)
  */
 function generateUsername(email: string | undefined, userId: string): string {
@@ -67,41 +68,36 @@ function generateRandomPassword(): string {
 /**
  * POST /api/bootstrap
  *
- * Provisions a Miniflux user for the currently authenticated Clerk user.
+ * Provisions a Miniflux user for the currently signed-in user.
  * If already provisioned, returns success immediately.
  *
  * Steps:
- * 1. Check if user already has minifluxToken in Clerk privateMetadata
+ * 1. Check if user already has a miniflux_account row
  * 2. If not, create Miniflux user (admin endpoint)
  * 3. Create API key for that user (authenticated as the new user)
- * 4. Store token in Clerk privateMetadata
+ * 4. Store the (encrypted) token in miniflux_account
  */
 export async function POST() {
   try {
-    // 1. Require Clerk authentication
-    const { userId } = await auth();
-    if (!userId) {
+    // 1. Require a session
+    const session = await getSession();
+    if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const userId = session.user.id;
 
-    // 2. Get Clerk user data
-    const client = await clerkClient();
-    const user = await client.users.getUser(userId);
-
-    // 3. Check if already provisioned
-    const metadata = user.privateMetadata as
-      | { minifluxToken?: string; minifluxUsername?: string }
-      | undefined;
-    if (metadata?.minifluxToken) {
+    // 2-3. Check if already provisioned
+    const existingAccount = await getMinifluxAccount(userId);
+    if (existingAccount) {
       return NextResponse.json({
         ok: true,
         provisioned: true,
-        minifluxUsername: metadata.minifluxUsername ?? null,
+        minifluxUsername: existingAccount.username,
       });
     }
 
     // 4. Provision new Miniflux user
-    const email = user.emailAddresses[0]?.emailAddress;
+    const email = session.user.email;
     let username = generateUsername(email, userId);
     const password = generateRandomPassword();
 
@@ -160,7 +156,7 @@ export async function POST() {
         {
           method: 'POST',
           body: JSON.stringify({
-            description: `Auto-generated for Clerk user ${userId}`,
+            description: `Auto-generated for Komorebi user ${userId}`,
           }),
         }
       );
@@ -181,19 +177,16 @@ export async function POST() {
       );
     }
 
-    // 7. Store token in Clerk privateMetadata (merge, don't overwrite)
+    // 7. Store token in miniflux_account
     try {
-      const existing = (user.privateMetadata ?? {}) as Record<string, unknown>;
-
-      await client.users.updateUser(userId, {
-        privateMetadata: {
-          ...existing,
-          minifluxToken: apiKey.token,
-          minifluxUsername: username,
-        },
+      await saveMinifluxAccount({
+        userId,
+        minifluxUserId: minifluxUser?.id ?? null,
+        username,
+        token: apiKey.token,
       });
     } catch (err) {
-      console.error('Failed to update Clerk metadata:', err);
+      console.error('Failed to save Miniflux account link:', err);
       return NextResponse.json(
         { error: 'Failed to save user token' },
         { status: 500 }
