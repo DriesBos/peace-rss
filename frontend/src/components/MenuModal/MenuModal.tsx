@@ -12,6 +12,7 @@ import {
 import Link from 'next/link';
 import { UserButton } from '@clerk/nextjs';
 import { useTheme } from 'next-themes';
+import { useQueryClient } from '@tanstack/react-query';
 import styles from './MenuModal.module.sass';
 import { ModalContainer } from '@/components/ModalContainer/ModalContainer';
 import { IconEdit } from '@/components/icons/IconEdit';
@@ -58,6 +59,8 @@ import {
   type ThemeOption,
 } from '@/lib/theme';
 import { IconArrowShortRight } from '../icons/IconArrowShortRight';
+import { fetchJson } from '@/app/_lib/fetchJson';
+import { readerQueryKeys } from '@/lib/readerQueryKeys';
 
 type MenuView = 'feeds' | 'settings' | 'other';
 
@@ -74,6 +77,7 @@ export type MenuModalProps = {
 };
 
 const THEME_TOAST_DEBOUNCE_MS = 350;
+const MAX_OPML_FILE_SIZE_BYTES = 5 * 1024 * 1024;
 
 function buildInitialCollapsedCategories(categories: Category[]) {
   const initialSet = new Set<number | string>();
@@ -106,6 +110,71 @@ export function MenuModal({
   );
   const [typeSize, setTypeSizeChoice] = useState<TypeSize>(DEFAULT_TYPE_SIZE);
   const { theme, setTheme } = useTheme();
+  const queryClient = useQueryClient();
+  const opmlFileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedOpmlFile, setSelectedOpmlFile] = useState<File | null>(null);
+  const [opmlImportLoading, setOpmlImportLoading] = useState(false);
+  const [opmlExportLoading, setOpmlExportLoading] = useState(false);
+
+  const handleOpmlFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+    setSelectedOpmlFile(null);
+    if (file && (file.size === 0 || file.size > MAX_OPML_FILE_SIZE_BYTES)) {
+      toast.error(
+        file.size === 0
+          ? 'OPML file is empty.'
+          : 'Choose an OPML file no larger than 5 MB.',
+      );
+      event.target.value = '';
+      return;
+    }
+    setSelectedOpmlFile(file);
+  };
+
+  const handleImportOpml = async () => {
+    if (!selectedOpmlFile || opmlImportLoading || opmlExportLoading) return;
+    setOpmlImportLoading(true);
+    try {
+      const body = new FormData();
+      body.append('file', selectedOpmlFile);
+      await fetchJson('/api/opml/import', { method: 'POST', body });
+      setSelectedOpmlFile(null);
+      if (opmlFileInputRef.current) opmlFileInputRef.current.value = '';
+      await queryClient.invalidateQueries({ queryKey: readerQueryKeys.all });
+      toast.success(
+        'Subscriptions imported. Articles may take a moment to arrive; refresh feeds to check.',
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Could not import subscriptions.',
+      );
+    } finally {
+      setOpmlImportLoading(false);
+    }
+  };
+
+  const handleExportOpml = async () => {
+    if (opmlImportLoading || opmlExportLoading) return;
+    setOpmlExportLoading(true);
+    try {
+      const response = await fetch('/api/opml/export', { cache: 'no-store' });
+      if (!response.ok) throw new Error('Could not export subscriptions.');
+      const url = URL.createObjectURL(await response.blob());
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'feeds.opml';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Could not export subscriptions.',
+      );
+    } finally {
+      setOpmlExportLoading(false);
+    }
+  };
 
   const displayTheme =
     typeof theme === 'string' && isThemeOption(theme) ? theme : DEFAULT_THEME;
@@ -664,10 +733,17 @@ export function MenuModal({
               </div>
             </div>
 
-            {/* <div className={styles.viewLook_opml}>
+            <div
+              className={styles.viewLook_opml}
+              aria-busy={opmlImportLoading || opmlExportLoading}
+            >
               <LabelWithCount count="OPML">
-                <span>Import / Export</span>
+                <span>Subscriptions</span>
               </LabelWithCount>
+              <p id="opml-help">
+                Import an OPML export from another reader to copy its subscriptions.
+                Saved articles and reading history stay in the original reader.
+              </p>
               <div className={styles.viewLook_opmlActions}>
                 <Button
                   type="button"
@@ -686,6 +762,8 @@ export function MenuModal({
                   ref={opmlFileInputRef}
                   className={styles.viewLook_opmlFileInput}
                   type="file"
+                  aria-label="Choose OPML subscriptions file"
+                  aria-describedby="opml-help"
                   accept=".opml,.xml,text/xml,application/xml"
                   onChange={handleOpmlFileChange}
                   disabled={isLoading || opmlExportLoading || opmlImportLoading}
@@ -706,7 +784,7 @@ export function MenuModal({
                   </span>
                 </Button>
               </div>
-            </div> */}
+            </div>
           </div>
         )}
 
