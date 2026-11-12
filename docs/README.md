@@ -4,5 +4,6 @@
 - Architecture: `docs/ARCHITECTURE.md`
 - Project structure: `docs/PROJECT-STRUCTURE.md`
 - Development workflow: `docs/DEVELOPMENT.md`
+- Deployment and branches: `docs/DEPLOYMENT.md`
 - App behavior: `docs/APP-BEHAVIOR.md`
-- PWA guide: `docs/pwa/PWA.md`
+- Agent rules: `AGENTS.md`
