@@ -26,24 +26,21 @@
 ## Hidden Global Feeds
 
 - Feeds and categories marked `hide_globally=true` in Miniflux are excluded from the global `Unread` and `All` views.
-- Instagram and Twitter/X feeds created through the social feed flow are marked `hide_globally=true`.
-- RSS-Bridge is only used for these social feeds (Instagram and Twitter/X).
 
-## Feed Discovery (Non-Social URLs)
+## Feed Discovery
 
 - For a standard website URL, the backend first calls Miniflux discovery (`POST /v1/discover`) to ask Miniflux which RSS/Atom feeds it can detect for that page.
 - In the current add-feed flow, "auto-discover" means this discovery step runs automatically and the first discovered feed URL is used when results are returned.
 - If discovery returns no results or fails, the backend falls back to creating the feed with the original URL directly.
-- For `medium.com` URLs only, the backend now tries an RSS-Bridge `findfeed` fallback before the final direct-URL fallback.
 - For `medium.com` URLs, the backend first rewrites page/profile URLs to canonical feed URLs (for example, `https://mres.medium.com/` → `https://mres.medium.com/feed`, `https://medium.com/@name` → `https://medium.com/feed/@name`).
 
 ## Protected Categories
 
-- `Instagram` and `Twitter` categories are protected: they cannot be edited or deleted, and feeds cannot be manually moved into them.
-- The Add/Edit UI mirrors these rules for protected social categories.
+- Legacy: `Instagram` and `Twitter` categories (from the removed social feeds feature) are still protected: they cannot be edited or deleted, and feeds cannot be manually moved into them. This protection is scheduled for removal.
+- The Add/Edit UI mirrors these rules.
 
 ## Layout Variants
 
 - The UI uses `data-layout` attributes to style layouts:
-  - `EntryList` uses `data-layout` for category-specific list layouts (`youtube`, `instagram`, `twitter`).
+  - `EntryList` uses `data-layout` for category-specific list layouts (`youtube`).
   - `EntryItem` uses `data-layout` for entry-specific rendering/styling.

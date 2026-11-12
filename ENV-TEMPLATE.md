@@ -47,22 +47,6 @@ CLEANUP_ARCHIVE_UNREAD_DAYS=90
 CLEANUP_FREQUENCY_HOURS=24
 
 # ============================================
-# RSS-Bridge Social Feeds
-# ============================================
-# Internal RSS-Bridge URL used by frontend server routes
-RSS_BRIDGE_BASE_URL=http://rss-bridge
-
-# URL Miniflux will subscribe to for social feeds (must be reachable by Miniflux container)
-# Docker setup: http://frontend:3000
-SOCIAL_FEEDS_BASE_URL=http://frontend:3000
-
-# Secret used to encrypt social feed proxy tokens (use a long random value)
-SOCIAL_FEED_TOKEN_SECRET=replace_with_a_long_random_secret
-
-# Optional token to protect /api/social/metrics (set to enable endpoint)
-SOCIAL_METRICS_TOKEN=replace_with_metrics_token
-
-# ============================================
 # PostgreSQL Database
 # ============================================
 POSTGRES_USER=miniflux
@@ -116,14 +100,4 @@ docker compose exec frontend env | grep -E 'CLERK|MINIFLUX'
 # CLEANUP_ARCHIVE_READ_DAYS=30
 # CLEANUP_ARCHIVE_UNREAD_DAYS=90
 # CLEANUP_FREQUENCY_HOURS=24
-# RSS_BRIDGE_BASE_URL=http://rss-bridge
-# SOCIAL_FEEDS_BASE_URL=http://frontend:3000
-# SOCIAL_FEED_TOKEN_SECRET=...
-# SOCIAL_METRICS_TOKEN=...
-# SOCIAL_CREATE_RATE_LIMIT_PER_MINUTE=20
-# SOCIAL_PROXY_GLOBAL_RATE_LIMIT_PER_MINUTE=300
-# SOCIAL_PROXY_SOURCE_RATE_LIMIT_PER_MINUTE=120
-# SOCIAL_PROXY_UPSTREAM_TIMEOUT_MS=8000
-# SOCIAL_PROXY_CACHE_TTL_MS=120000
-# SOCIAL_DISCOVERY_CACHE_TTL_MS=600000
 ```
