@@ -1,0 +1,23 @@
+# Local dev overlay: run backing services in Docker, Next.js on the host.
+# Used by `pnpm dev` at the repo root (see scripts/dev.sh).
+services:
+  postgres:
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  miniflux:
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      CREATE_ADMIN: '1'
+      BASE_URL: http://localhost:8080/miniflux
+    ports:
+      - '127.0.0.1:8080:8080'
+
+  rss-bridge:
+    ports:
+      - '127.0.0.1:3001:80'
