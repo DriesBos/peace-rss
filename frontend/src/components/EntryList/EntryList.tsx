@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useWindowVirtualizer } from '@tanstack/react-virtual';
+import { Loader } from '@/components/Loader/Loader';
 import styles from './EntryList.module.sass';
 import { EntryItem } from '@/components/EntryItem/EntryItem';
 import { Button } from '@/components/Button/Button';
@@ -87,9 +88,7 @@ export function EntryList({
     return () => window.removeEventListener('resize', updateLayout);
   }, []);
 
-  const emptyMessage = isLoading
-    ? 'loading...'
-    : searchMode
+  const emptyMessage = searchMode
     ? 'No results found.'
     : isAllEntriesView
     ? 'No entries.'
@@ -99,7 +98,9 @@ export function EntryList({
 
   return (
     <div className={styles.entryList}>
-      {entries.length === 0 ? (
+      {entries.length === 0 && isLoading ? (
+        <Loader />
+      ) : entries.length === 0 ? (
         <div className={styles.muted}>{emptyMessage}</div>
       ) : (
         <div

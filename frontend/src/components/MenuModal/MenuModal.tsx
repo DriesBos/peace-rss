@@ -58,8 +58,9 @@ import {
   type ThemeOption,
 } from '@/lib/theme';
 import { IconArrowShortRight } from '../icons/IconArrowShortRight';
+import { DEV_PAGES, DEV_TOOLS_ENABLED } from '@/lib/devTools';
 
-type MenuView = 'feeds' | 'settings' | 'other';
+type MenuView = 'feeds' | 'settings' | 'other' | 'dev';
 
 export type MenuModalProps = {
   isOpen: boolean;
@@ -405,6 +406,16 @@ export function MenuModal({
             >
               <span>Info</span>
             </Button>
+            {DEV_TOOLS_ENABLED && (
+              <Button
+                variant="nav"
+                type="button"
+                active={activeView === 'dev'}
+                onClick={() => setActiveView('dev')}
+              >
+                <span>Dev</span>
+              </Button>
+            )}
           </div>
           <LabelWithCount count={timeParts.period}>
             <span>{timeParts.hours}</span>
@@ -744,6 +755,25 @@ export function MenuModal({
               >
                 IG
               </a>
+            </div>
+          </div>
+        )}
+
+        {DEV_TOOLS_ENABLED && activeView === 'dev' && (
+          <div className={styles.viewOther}>
+            <div className={styles.viewOther_Links}>
+              {DEV_PAGES.map((page) => (
+                <Link
+                  key={page.href}
+                  href={page.href}
+                  className={styles.viewOther_Links_Item}
+                >
+                  <span>{page.label}</span>
+                  <IconWrapper>
+                    <IconArrowShortRight />
+                  </IconWrapper>
+                </Link>
+              ))}
             </div>
           </div>
         )}

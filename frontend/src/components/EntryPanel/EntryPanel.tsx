@@ -2,6 +2,7 @@
 
 import { createElement, useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
+import { Loader } from '@/components/Loader/Loader';
 import styles from './EntryPanel.module.sass';
 import { SlidePanel } from '@/components/SlidePanel/SlidePanel';
 import { FormattedDate } from '@/components/FormattedDate';
@@ -755,7 +756,7 @@ export function EntryPanel({
           ) : null}
 
           {showLoading ? (
-            <div className={styles.entry_Loading}>Loading original content...</div>
+            <Loader />
           ) : showContent ? (
             lazy ? (
               <div
