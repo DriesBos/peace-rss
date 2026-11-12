@@ -126,8 +126,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const showLandingPageInDevelopment = process.env.NODE_ENV === 'development';
-
   return (
     <ClerkProvider signInFallbackRedirectUrl="/">
       <html lang="en" suppressHydrationWarning>
@@ -152,22 +150,16 @@ export default function RootLayout({
             <Notifications />
             <QueryProvider>
               <main>
-                {showLandingPageInDevelopment ? (
+                <Show when="signed-out">
                   <LandingPage />
-                ) : (
-                  <>
-                    <Show when="signed-out">
-                      <LandingPage />
-                    </Show>
-                    <Show when="signed-in">
-                      <MainKomorebiLayer />
-                      <div className="mainContentLayer">
-                        <GlobalKeybindings />
-                        {children}
-                      </div>
-                    </Show>
-                  </>
-                )}
+                </Show>
+                <Show when="signed-in">
+                  <MainKomorebiLayer />
+                  <div className="mainContentLayer">
+                    <GlobalKeybindings />
+                    {children}
+                  </div>
+                </Show>
               </main>
             </QueryProvider>
             <div id="modal-root" />
