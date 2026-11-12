@@ -8,6 +8,9 @@
 
 .lazyEntryImage
   animation: fadeIn 0.6s ease-in-out forwards
+  // Framed images fade in through the data-loading surface instead.
+  [data-loading] > &
+    animation: none
 
 .entry
   &_Container
@@ -90,6 +93,22 @@
       position: relative !important
       width: 100%
       height: auto !important
+    // Keep the loading surface inside the side padding.
+    &::before
+      left: var(--space-sides-general-wide)
+      right: var(--space-sides-general-wide)
+    &[data-loading="true"]:not([style*="aspect-ratio"])
+      aspect-ratio: 3 / 2
+  &_ImageFrame
+    display: block
+    width: 100%
+    margin-bottom: 1rem
+    border-radius: var(--border-radius-image)
+    &[data-loading="true"]:not([style*="aspect-ratio"])
+      aspect-ratio: 3 / 2
+    img
+      display: block
+      margin-bottom: 0 !important
   &_noContent
     @include font-body
     display: flex

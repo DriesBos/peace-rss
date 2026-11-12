@@ -1,8 +1,9 @@
 'use client';
 
 import { createElement, useEffect, useMemo, useRef, useState } from 'react';
-import type { CSSProperties, ReactNode } from 'react';
+import type { CSSProperties, ImgHTMLAttributes, ReactNode } from 'react';
 import { Loader } from '@/components/Loader/Loader';
+import { useImageLoadState } from '@/hooks/useImageLoadState';
 import styles from './EntryPanel.module.sass';
 import { SlidePanel } from '@/components/SlidePanel/SlidePanel';
 import { FormattedDate } from '@/components/FormattedDate';
@@ -425,11 +426,15 @@ function createLazyImageElement(
       ? decodingAttr
       : 'async';
 
+  const inPicture = element.parentElement?.tagName.toLowerCase() === 'picture';
+  const width = Number(element.getAttribute('width')) || undefined;
+  const height = Number(element.getAttribute('height')) || undefined;
+
   return (
-    // Native img is more reliable here than next/image for arbitrary article HTML.
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
+    <ArticleImage
       key={key}
+      framed={!inPicture}
+      aspectRatio={width && height ? `${width} / ${height}` : undefined}
       {...restProps}
       src={resolvedSrc}
       alt={alt}
@@ -441,6 +446,40 @@ function createLazyImageElement(
       className={combinedClassName || undefined}
       style={Object.keys(mergedStyle).length ? mergedStyle : {}}
     />
+  );
+}
+
+type ArticleImageProps = ImgHTMLAttributes<HTMLImageElement> & {
+  framed: boolean;
+  aspectRatio?: string;
+};
+
+// Article image on a pulsing data-loading surface until it loads.
+// Images inside <picture> stay unwrapped so <source> keeps working.
+function ArticleImage({ framed, aspectRatio, ...imgAttrs }: ArticleImageProps) {
+  const { dataLoading, attachImage, onLoad, onError } = useImageLoadState(
+    typeof imgAttrs.src === 'string' ? imgAttrs.src : undefined,
+  );
+  const img = (
+    // Native img is more reliable here than next/image for arbitrary article HTML.
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      alt=""
+      {...imgAttrs}
+      ref={attachImage}
+      onLoad={onLoad}
+      onError={onError}
+    />
+  );
+  if (!framed) return img;
+  return (
+    <span
+      className={styles.entry_ImageFrame}
+      data-loading={dataLoading}
+      style={aspectRatio ? { aspectRatio } : undefined}
+    >
+      {img}
+    </span>
   );
 }
 
@@ -562,6 +601,12 @@ export function EntryPanel({
   );
   const [isPinnedLeadImageErrored, setIsPinnedLeadImageErrored] =
     useState(false);
+  const {
+    dataLoading: leadImageLoading,
+    attachImage: attachLeadImage,
+    onLoad: onLeadImageLoad,
+    onError: onLeadImageError,
+  } = useImageLoadState(pinnedLeadImage?.url);
   const content = currentEntry?.content?.trim() ?? '';
   const hasContent = Boolean(content);
   const sourceFeedTitle =
@@ -733,6 +778,7 @@ export function EntryPanel({
           {pinnedLeadImage && !isPinnedLeadImageErrored ? (
             <div
               className={styles.entry_LeadImageWrapper}
+              data-loading={leadImageLoading}
               style={
                 pinnedLeadImage.width && pinnedLeadImage.height
                   ? {
@@ -750,7 +796,12 @@ export function EntryPanel({
                 loading="eager"
                 fetchPriority="high"
                 referrerPolicy="no-referrer"
-                onError={() => setIsPinnedLeadImageErrored(true)}
+                ref={attachLeadImage}
+                onLoad={onLeadImageLoad}
+                onError={() => {
+                  onLeadImageError();
+                  setIsPinnedLeadImageErrored(true);
+                }}
               />
             </div>
           ) : null}

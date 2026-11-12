@@ -1,0 +1,47 @@
+// Loading surfaces
+//
+// Put data-loading on any image box, container or section:
+//   data-loading="true"   pulses (text color, 0.05 → 0.12, 1.6s cycle)
+//   data-loading="false"  loaded: the surface fades out, a child img fades in
+//   data-loading="error"  failed: a still block at 0.05
+// The surface sits behind the element's children, so content covers it.
+
+@keyframes loadingPulse
+  from
+    opacity: 0.05
+  to
+    opacity: 0.12
+
+[data-loading]
+  position: relative
+  isolation: isolate
+  &::before
+    content: ''
+    position: absolute
+    inset: 0
+    z-index: -1
+    border-radius: inherit
+    background: var(--color-text)
+    opacity: 0
+    pointer-events: none
+    transition: opacity 0.33s ease
+  > img
+    transition: opacity 0.33s ease
+
+[data-loading="true"]
+  &::before
+    opacity: 0.05
+    animation: loadingPulse 0.8s ease-in-out infinite alternate
+  > img
+    opacity: 0
+
+[data-loading="error"]
+  &::before
+    opacity: 0.05
+  > img
+    opacity: 0
+
+@media (prefers-reduced-motion: reduce)
+  [data-loading="true"]::before
+    animation: none
+    opacity: 0.08

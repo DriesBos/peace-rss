@@ -250,6 +250,28 @@ export function PrimitivePreviews() {
           <Loader fill />
         </div>
       </Row>
+      <Row
+        name="Loading surface"
+        path="styles/loading.sass"
+        props='data-loading="true" pulses · "false" loaded · "error" still block'
+      >
+        {(['true', 'error', 'false'] as const).map((value) => (
+          <div
+            key={value}
+            data-loading={value}
+            style={{
+              width: 120,
+              aspectRatio: '4 / 3',
+              borderRadius: 'var(--border-radius-containers)',
+              display: 'flex',
+              alignItems: 'flex-end',
+              padding: 8,
+            }}
+          >
+            <span className={styles.code}>{value}</span>
+          </div>
+        ))}
+      </Row>
       <Row name="FormattedDate" path="components/FormattedDate" props="date">
         <span>
           <FormattedDate date={SAMPLE_DATE} />

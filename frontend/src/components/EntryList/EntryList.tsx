@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useWindowVirtualizer } from '@tanstack/react-virtual';
-import { Loader } from '@/components/Loader/Loader';
 import styles from './EntryList.module.sass';
 import { EntryItem } from '@/components/EntryItem/EntryItem';
 import { Button } from '@/components/Button/Button';
@@ -36,6 +35,8 @@ function chunkEntries(entries: Entry[], columnCount: number): Entry[][] {
   }
   return rows;
 }
+
+const SKELETON_CARD_COUNT = 6;
 
 export type EntryListProps = {
   entries: Entry[];
@@ -99,7 +100,22 @@ export function EntryList({
   return (
     <div className={styles.entryList}>
       {entries.length === 0 && isLoading ? (
-        <Loader />
+        <div
+          className={styles.entryList_Skeleton}
+          style={{
+            gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))`,
+          }}
+          role="status"
+          aria-label="Loading entries"
+        >
+          {Array.from({ length: SKELETON_CARD_COUNT }, (_, index) => (
+            <div
+              key={index}
+              className={styles.entryList_SkeletonCard}
+              data-loading="true"
+            />
+          ))}
+        </div>
       ) : entries.length === 0 ? (
         <div className={styles.muted}>{emptyMessage}</div>
       ) : (
