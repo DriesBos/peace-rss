@@ -1,5 +1,11 @@
 # Deployment
 
+## Branches
+
+- `preview`: day-to-day work. Pushes here do not deploy.
+- `main`: production. Every push deploys to the VPS.
+- To release, merge `preview` into `main`.
+
 ## GitHub Actions Deploy
 
 This repo includes a production deploy workflow at `.github/workflows/deploy.yml`.
